@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <common/args.h>
+#include <common/init.h>
 #include <sync.h>
 #include <test/util/logging.h>
 #include <test/util/setup_common.h>
@@ -23,6 +24,15 @@
 using util::ToString;
 
 BOOST_FIXTURE_TEST_SUITE(argsman_tests, BasicTestingSetup)
+
+BOOST_AUTO_TEST_CASE(chain_isolation_interlock)
+{
+    BOOST_CHECK(common::IsChainAllowedByIsolationInterlock(ChainType::REGTEST));
+    BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::MAIN));
+    BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::TESTNET));
+    BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::TESTNET4));
+    BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::SIGNET));
+}
 
 BOOST_AUTO_TEST_CASE(util_datadir)
 {

@@ -8,7 +8,7 @@ Every item begins **Unresolved**. A code change is not complete merely because a
 | Area | Inherited Bitcoin behavior | Required project disposition | Status |
 | --- | --- | --- | --- |
 | Genesis | Bitcoin network genesis blocks and hashes | Generate a new genesis using the committed fair-launch procedure | Unresolved |
-| Chain identity | Bitcoin chain parameter selection | Add unique project mainnet, testnet, signet-equivalent, and regtest identities | Unresolved |
+| Chain identity | Bitcoin chain parameter selection | Add unique project mainnet, testnet, signet-equivalent, and regtest identities | Guarded: inherited public network startup is disabled; replacement unresolved |
 | Message magic | Bitcoin P2P start bytes | Replace for every project network and test cross-rejection | Unresolved |
 | Ports | Bitcoin P2P and RPC defaults | Allocate unique defaults and test that no Bitcoin endpoint is contacted | Unresolved |
 | Seeds | Bitcoin DNS and fixed seeds | Remove all inherited seeds; add only independently operated project seeds after testnet | Unresolved |
