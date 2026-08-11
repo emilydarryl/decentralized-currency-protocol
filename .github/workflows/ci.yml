@@ -1,8 +1,8 @@
-# Cost-controlled CI for the private development repository.
+# Cost-controlled CI for the development repository.
 #
 # The full upstream Bitcoin Core matrix is intentionally not run here. It is
 # designed for bitcoin/bitcoin's public CI infrastructure and would duplicate
-# expensive macOS, Windows, cross-build, and fuzz jobs in this private fork.
+# macOS, Windows, cross-build, and fuzz jobs in this experimental fork.
 
 name: CI
 
@@ -22,6 +22,10 @@ jobs:
     name: Linux build and focused unit tests
     runs-on: ubuntu-24.04
     timeout-minutes: 45
+    env:
+      # The intentionally unmodified Bitcoin Core import. Its pre-existing
+      # whitespace is outside this project's review scope.
+      UPSTREAM_BASELINE_COMMIT: 3bcc424bb60c76d5679c570945c816cf2b752ae0
 
     steps:
       - name: Check out source
@@ -33,7 +37,12 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git diff --check "${{ github.event.pull_request.base.sha }}"...HEAD
+            base_commit="${{ github.event.pull_request.base.sha }}"
+            if ! git merge-base --is-ancestor "$UPSTREAM_BASELINE_COMMIT" "$base_commit"; then
+              echo "Bootstrap PR detected; excluding the unmodified upstream import."
+              base_commit="$UPSTREAM_BASELINE_COMMIT"
+            fi
+            git diff --check "$base_commit"...HEAD
           else
             git diff --check HEAD^
           fi
