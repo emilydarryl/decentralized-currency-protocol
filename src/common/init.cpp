@@ -17,7 +17,7 @@
 namespace common {
 bool IsChainAllowedByIsolationInterlock(const ChainType chain)
 {
-    return chain == ChainType::REGTEST;
+    return chain == ChainType::LABNET;
 }
 
 std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn settings_abort_fn)
@@ -45,16 +45,15 @@ std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn setting
         }
 
         // Check for chain settings (Params() calls are only valid after this clause).
-        // This fork must not contact an inherited public Bitcoin network while
-        // its own genesis and network identifiers remain unresolved.
+        // This fork may start only its independently identified laboratory
+        // chain. Inherited Bitcoin parameters remain test fixtures only.
         const ChainType chain{args.GetChainType()};
         if (!IsChainAllowedByIsolationInterlock(chain)) {
             return ConfigError{
                 ConfigStatus::FAILED,
                 Untranslated(
-                    "Public Bitcoin networks are disabled in this experimental fork until "
-                    "project-specific genesis blocks and network identifiers are implemented. "
-                    "Use -regtest for isolated local development.")};
+                    "Inherited Bitcoin networks, including Bitcoin regtest, are disabled in this "
+                    "experimental fork. Use -chain=labnet for isolated project development.")};
         }
         SelectParams(chain);
 

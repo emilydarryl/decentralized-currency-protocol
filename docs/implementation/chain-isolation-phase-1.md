@@ -6,12 +6,15 @@ The imported Bitcoin Core baseline contains valid parameters for Bitcoin mainnet
 
 ## Active rule
 
-Network-capable application initialization accepts only `regtest`. Selecting the default chain, `main`, `test`, `testnet4`, or `signet` fails before project data directories are created and before node networking starts.
+Network-capable application initialization accepts only the project-specific
+`labnet`. Selecting the default chain, `main`, `test`, `testnet4`, `signet`, or
+Bitcoin `regtest` fails before data directories are created and before node
+networking starts.
 
 The expected error is:
 
 ```text
-Public Bitcoin networks are disabled in this experimental fork until project-specific genesis blocks and network identifiers are implemented. Use -regtest for isolated local development.
+Inherited Bitcoin networks, including Bitcoin regtest, are disabled in this experimental fork. Use -chain=labnet for isolated project development.
 ```
 
 ## Why parameters remain in the source
@@ -19,7 +22,11 @@ Public Bitcoin networks are disabled in this experimental fork until project-spe
 Deleting inherited parameters before replacements exist would make comparison harder and unnecessarily destroy upstream test coverage. The temporary interlock separates two concerns:
 
 1. inherited constructors remain available to deterministic unit and differential tests; and
-2. application startup cannot join an inherited public Bitcoin network.
+2. application startup cannot join any inherited Bitcoin network.
+
+Labnet's identity is specified in `labnet-identity-v1.md`. It is a
+non-production laboratory network and does not satisfy the removal criteria
+for a public network.
 
 ## Removal criteria
 

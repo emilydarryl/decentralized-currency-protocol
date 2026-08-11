@@ -36,10 +36,9 @@ using SettingsAbortFn = std::function<bool(const bilingual_str& message, const s
 /**
  * Return true only for networks that this experimental fork may start.
  *
- * Until project-specific genesis blocks and network identifiers exist, public
- * Bitcoin networks are deliberately disabled. Keeping this policy separate
- * from chain parameter construction preserves low-level upstream test coverage
- * while preventing node startup on an inherited public network.
+ * Labnet is the only startable chain. All inherited Bitcoin networks,
+ * including Bitcoin regtest, remain constructible only for low-level upstream
+ * compatibility tests and are rejected during application initialization.
  */
 bool IsChainAllowedByIsolationInterlock(ChainType chain);
 

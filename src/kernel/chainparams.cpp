@@ -688,6 +688,60 @@ public:
     }
 };
 
+/**
+ * Project laboratory network. This deliberately retains regtest's inexpensive
+ * consensus settings while replacing every chain-identity surface. It has no
+ * monetary value and is not a production genesis.
+ */
+class CLabNetParams final : public CRegTestParams
+{
+public:
+    explicit CLabNetParams(const RegTestOptions& opts) : CRegTestParams(opts)
+    {
+        m_chain_type = ChainType::LABNET;
+
+        // First four bytes of SHA256("decentralized-currency-protocol/labnet/p2p/v1").
+        pchMessageStart = {0xd1, 0xf5, 0xf7, 0x1d};
+        nDefaultPort = 29444;
+
+        constexpr uint32_t LABNET_GENESIS_TIME{1786406400}; // 2026-08-11 00:00:00 UTC
+        constexpr uint32_t LABNET_GENESIS_NONCE{0};
+        constexpr uint32_t LABNET_GENESIS_BITS{0x207fffff};
+        const char* timestamp{"Decentralized Currency Protocol labnet genesis v1 - no monetary value"};
+        genesis = CreateGenesisBlock(
+            timestamp,
+            CScript{} << OP_RETURN,
+            LABNET_GENESIS_TIME,
+            LABNET_GENESIS_NONCE,
+            LABNET_GENESIS_BITS,
+            /*nVersion=*/1,
+            /*genesisReward=*/0);
+        consensus.hashGenesisBlock = genesis.GetHash();
+        assert(consensus.hashGenesisBlock == uint256{"5e0a0388d08796f24641a42cdcf87c7dc786b15a2b33e50b52dfb16d080bc28f"});
+        assert(genesis.hashMerkleRoot == uint256{"6744cd92d9f1c63c0f74e4c38f907cf3a6c3a79874647a44240ff76e1b40a445"});
+
+        // Discovery remains manual until independently operated test seeds exist.
+        vFixedSeeds.clear();
+        vSeeds.clear();
+
+        // Bitcoin regtest snapshots are chain-bound and must never cross into labnet.
+        m_assumeutxo_data.clear();
+        chainTxData = ChainTxData{
+            .nTime = LABNET_GENESIS_TIME,
+            .tx_count = 1,
+            .dTxRate = 0,
+        };
+
+        // Namespace bytes are deterministically derived from documented v1 labels.
+        base58Prefixes[PUBKEY_ADDRESS] = {9};
+        base58Prefixes[SCRIPT_ADDRESS] = {72};
+        base58Prefixes[SECRET_KEY] = {176};
+        base58Prefixes[EXT_PUBLIC_KEY] = {0xa4, 0x8a, 0xaf, 0x01};
+        base58Prefixes[EXT_SECRET_KEY] = {0xd9, 0x2c, 0x57, 0x68};
+        bech32_hrp = "dcprt";
+    }
+};
+
 std::unique_ptr<const CChainParams> CChainParams::SigNet(const SigNetOptions& options)
 {
     return std::make_unique<const SigNetParams>(options);
@@ -696,6 +750,11 @@ std::unique_ptr<const CChainParams> CChainParams::SigNet(const SigNetOptions& op
 std::unique_ptr<const CChainParams> CChainParams::RegTest(const RegTestOptions& options)
 {
     return std::make_unique<const CRegTestParams>(options);
+}
+
+std::unique_ptr<const CChainParams> CChainParams::LabNet(const RegTestOptions& options)
+{
+    return std::make_unique<const CLabNetParams>(options);
 }
 
 std::unique_ptr<const CChainParams> CChainParams::Main()
@@ -730,6 +789,7 @@ std::optional<ChainType> GetNetworkForMagic(const MessageStartChars& message)
     const auto testnet_msg = CChainParams::TestNet()->MessageStart();
     const auto testnet4_msg = CChainParams::TestNet4()->MessageStart();
     const auto regtest_msg = CChainParams::RegTest({})->MessageStart();
+    const auto labnet_msg = CChainParams::LabNet({})->MessageStart();
     const auto signet_msg = CChainParams::SigNet({})->MessageStart();
 
     if (std::ranges::equal(message, mainnet_msg)) {
@@ -740,6 +800,8 @@ std::optional<ChainType> GetNetworkForMagic(const MessageStartChars& message)
         return ChainType::TESTNET4;
     } else if (std::ranges::equal(message, regtest_msg)) {
         return ChainType::REGTEST;
+    } else if (std::ranges::equal(message, labnet_msg)) {
+        return ChainType::LABNET;
     } else if (std::ranges::equal(message, signet_msg)) {
         return ChainType::SIGNET;
     }

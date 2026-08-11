@@ -79,11 +79,8 @@ jobs:
         shell: bash
         run: cmake --build build --target test_bitcoin --parallel 2
 
-      - name: Run chain-isolation unit test when present
+      - name: Run project isolation unit tests
         shell: bash
         run: |
-          if grep -q "chain_isolation_interlock" src/test/argsman_tests.cpp; then
-            build/bin/test_bitcoin --run_test=argsman_tests/chain_isolation_interlock
-          else
-            build/bin/test_bitcoin --run_test=argsman_tests
-          fi
+          build/bin/test_bitcoin --run_test=argsman_tests/chain_isolation_interlock
+          build/bin/test_bitcoin --run_test=chainparams_tests/labnet_identity_isolated_from_bitcoin
