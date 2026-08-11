@@ -38,6 +38,7 @@ from .util import (
     append_config,
     delete_cookie_file,
     get_auth_cookie,
+    get_chain_data_dir,
     get_rpc_proxy,
     rpc_url,
     wait_until_helper_internal,
@@ -545,7 +546,7 @@ class TestNode():
 
     @property
     def chain_path(self) -> Path:
-        return self.datadir_path / self.chain
+        return self.datadir_path / get_chain_data_dir(self.chain)
 
     @property
     def debug_log_path(self) -> Path:

@@ -88,6 +88,7 @@ TX_MIN_STANDARD_VERSION = 1
 TX_MAX_STANDARD_VERSION = 3
 
 MAGIC_BYTES = {
+    "labnet": b"\xd1\xf5\xf7\x1d",
     "mainnet": b"\xf9\xbe\xb4\xd9",
     "testnet4": b"\x1c\x16\x3f\x28",
     "regtest": b"\xfa\xbf\xb5\xda",

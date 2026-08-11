@@ -96,6 +96,8 @@ EXTENDED_SCRIPTS = [
 TOOL_BENCH_SANITY_CHECK = "tool_bench_sanity_check.py"
 
 BASE_SCRIPTS = [
+    # Project-specific isolated-network integration coverage.
+    'feature_labnet_smoke.py',
     # Special scripts that are "expanded" later
     TOOL_BENCH_SANITY_CHECK,
     # Scripts that are run by default.
