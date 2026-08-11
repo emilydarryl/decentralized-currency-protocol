@@ -13,6 +13,7 @@
 #include <vector>
 
 class ArgsManager;
+enum class ChainType;
 
 namespace common {
 enum class ConfigStatus {
@@ -31,6 +32,16 @@ struct ConfigError {
 //! settings.json file exists and can't be parsed, or to ignore the error and
 //! overwrite the file.
 using SettingsAbortFn = std::function<bool(const bilingual_str& message, const std::vector<std::string>& details)>;
+
+/**
+ * Return true only for networks that this experimental fork may start.
+ *
+ * Until project-specific genesis blocks and network identifiers exist, public
+ * Bitcoin networks are deliberately disabled. Keeping this policy separate
+ * from chain parameter construction preserves low-level upstream test coverage
+ * while preventing node startup on an inherited public network.
+ */
+bool IsChainAllowedByIsolationInterlock(ChainType chain);
 
 /* Read config files, and create datadir and settings.json if they don't exist. */
 std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn settings_abort_fn = nullptr);

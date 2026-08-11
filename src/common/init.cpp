@@ -15,6 +15,11 @@
 #include <optional>
 
 namespace common {
+bool IsChainAllowedByIsolationInterlock(const ChainType chain)
+{
+    return chain == ChainType::REGTEST;
+}
+
 std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn settings_abort_fn)
 {
     try {
@@ -39,8 +44,19 @@ std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn setting
             return ConfigError{ConfigStatus::FAILED, strprintf(_("Error reading configuration file: %s"), error)};
         }
 
-        // Check for chain settings (Params() calls are only valid after this clause)
-        SelectParams(args.GetChainType());
+        // Check for chain settings (Params() calls are only valid after this clause).
+        // This fork must not contact an inherited public Bitcoin network while
+        // its own genesis and network identifiers remain unresolved.
+        const ChainType chain{args.GetChainType()};
+        if (!IsChainAllowedByIsolationInterlock(chain)) {
+            return ConfigError{
+                ConfigStatus::FAILED,
+                Untranslated(
+                    "Public Bitcoin networks are disabled in this experimental fork until "
+                    "project-specific genesis blocks and network identifiers are implemented. "
+                    "Use -regtest for isolated local development.")};
+        }
+        SelectParams(chain);
 
         // Create datadir if it does not exist.
         const auto base_path{args.GetDataDirBase()};
