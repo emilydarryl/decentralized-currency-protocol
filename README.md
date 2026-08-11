@@ -2,7 +2,7 @@
 
 Status: Working draft v0.1  
 Protocol name and ticker: Unassigned  
-Implementation status: Research only; not safe for monetary use
+Implementation status: Bitcoin Core v31.0 bootstrap; experimental and not safe for monetary use
 
 This directory turns the design discussion into an auditable protocol project. The objective is universal Bitcoin-like money for people, businesses, devices, and autonomous software. It prioritizes independent validation, post-quantum cryptography, private-by-default wallet behavior, decentralized block construction, and safe optional delegation.
 
@@ -12,9 +12,11 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 ## Documents
 
-- [protocol-specification.md](protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
-- [threat-model.md](threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
-- [references.md](references.md) lists the primary standards and research that informed the draft. It is non-normative.
+- [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
+- [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
+- [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
+- [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
+- [inherited-assumptions.md](docs/implementation/inherited-assumptions.md) tracks every inherited network and consensus dependency that must be replaced or reviewed.
 
 ## Design priorities
 
@@ -74,7 +76,7 @@ The Bitcoin Core foundation does not remove the improvements developed in this d
 | People and software | Give people, businesses, devices, and autonomous agents equal access; AI receives no protocol privilege | Committed architecture |
 | Delegated payments | Isolate master keys; use finite capability wallets, deterministic policy checks, mandates, replay protection, receipts, and safe failure | Optional application profile |
 
-â€œCommitted profileâ€ means required behavior for software distributed under the project's official wallet or miner label. It is not misrepresented as a consensus rule when nodes cannot objectively verify it.
+“Committed profile” means required behavior for software distributed under the project's official wallet or miner label. It is not misrepresented as a consensus rule when nodes cannot objectively verify it.
 
 ## Mainnet blockers
 
@@ -96,4 +98,3 @@ The following must be resolved before an implementation can be considered a main
 ## Project rule
 
 Features marked **Research** are not promises and must not silently become consensus requirements. They require a separate specification, security analysis, testnet deployment, and explicit user adoption.
-

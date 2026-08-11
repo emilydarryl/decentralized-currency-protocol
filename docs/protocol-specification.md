@@ -306,7 +306,7 @@ Before mainnet:
 
 ### 9.1 Reference hardware target
 
-Consensus limits SHALL be chosen so a fully validating pruned node remains practical on low-cost consumer hardware and a residential connection. The candidate worst-case historical growth budget is 30â€“50 GB per year, subject to benchmark validation.
+Consensus limits SHALL be chosen so a fully validating pruned node remains practical on low-cost consumer hardware and a residential connection. The candidate worst-case historical growth budget is 30–50 GB per year, subject to benchmark validation.
 
 ### 9.2 Multidimensional resource accounting
 
@@ -438,7 +438,7 @@ Wallets SHOULD support user-controlled incoming, outgoing, account, and auditor 
 
 The official wallet MUST never broadcast a transaction directly and MUST fail closed unless a locally enabled, audited anonymity transport is operational.
 
-â€œAuditedâ€ does not mean authorized by a foundation or government. It means the local user has enabled a transport implementation with a public protocol and security review.
+“Audited” does not mean authorized by a foundation or government. It means the local user has enabled a transport implementation with a public protocol and security review.
 
 ### 13.2 Component isolation
 
@@ -602,7 +602,7 @@ Hash-locked delivery MAY exchange payment for revelation of a committed decrypti
 
 ### 14.10 Safe failure
 
-The signer MUST refuse payment when policy state, chain state, privacy transport, quote validity, fee bounds, or replay state cannot be verified. â€œUnable to verifyâ€ MUST NOT be delegated back to the AI model.
+The signer MUST refuse payment when policy state, chain state, privacy transport, quote validity, fee bounds, or replay state cannot be verified. “Unable to verify” MUST NOT be delegated back to the AI model.
 
 ## 15. Peer-to-peer network
 

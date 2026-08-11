@@ -1,0 +1,89 @@
+# Cost-controlled CI for the development repository.
+#
+# The full upstream Bitcoin Core matrix is intentionally not run here. It is
+# designed for bitcoin/bitcoin's public CI infrastructure and would duplicate
+# macOS, Windows, cross-build, and fuzz jobs in this experimental fork.
+
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux-unit:
+    name: Linux build and focused unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      # The intentionally unmodified Bitcoin Core import. Its pre-existing
+      # whitespace is outside this project's review scope.
+      UPSTREAM_BASELINE_COMMIT: 3bcc424bb60c76d5679c570945c816cf2b752ae0
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Check changed-file whitespace
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base_commit="${{ github.event.pull_request.base.sha }}"
+            if ! git merge-base --is-ancestor "$UPSTREAM_BASELINE_COMMIT" "$base_commit"; then
+              echo "Bootstrap PR detected; excluding the unmodified upstream import."
+              base_commit="$UPSTREAM_BASELINE_COMMIT"
+            fi
+            git diff --check "$base_commit"...HEAD
+          else
+            git diff --check HEAD^
+          fi
+
+      - name: Install minimal build dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential \
+            cmake \
+            libboost-dev \
+            libevent-dev \
+            ninja-build \
+            pkgconf
+
+      - name: Configure minimal unit-test build
+        shell: bash
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DBUILD_BENCH=OFF \
+            -DBUILD_BITCOIN_BIN=OFF \
+            -DBUILD_CLI=OFF \
+            -DBUILD_DAEMON=OFF \
+            -DBUILD_FUZZ_BINARY=OFF \
+            -DBUILD_GUI=OFF \
+            -DBUILD_TX=OFF \
+            -DBUILD_UTIL=OFF \
+            -DENABLE_IPC=OFF \
+            -DENABLE_WALLET=OFF \
+            -DWITH_ZMQ=OFF
+
+      - name: Build unit-test binary
+        shell: bash
+        run: cmake --build build --target test_bitcoin --parallel 2
+
+      - name: Run chain-isolation unit test when present
+        shell: bash
+        run: |
+          if grep -q "chain_isolation_interlock" src/test/argsman_tests.cpp; then
+            build/bin/test_bitcoin --run_test=argsman_tests/chain_isolation_interlock
+          else
+            build/bin/test_bitcoin --run_test=argsman_tests
+          fi

@@ -265,7 +265,7 @@ The following invariants are release-blocking:
 - versioned cryptographic programs;
 - address reuse prohibition.
 
-**Residual risk:** ML-DSA or SLH-DSA may receive new cryptanalysis or implementation attacks. â€œPost-quantumâ€ is an assumption, not a permanent guarantee.
+**Residual risk:** ML-DSA or SLH-DSA may receive new cryptanalysis or implementation attacks. “Post-quantum” is an assumption, not a permanent guarantee.
 
 ### T9. Quantum mining advantage
 
@@ -692,5 +692,5 @@ If an active cryptographic break requires a consensus restriction, the restricti
 - Legal coercion of identifiable companies and infrastructure.
 - Human approval of an unsafe mandate.
 
-These risks must be communicated to users. They must not be hidden behind the labels â€œdecentralized,â€ â€œprivate,â€ â€œtrustless,â€ â€œAI-safe,â€ or â€œquantum-proof.â€
+These risks must be communicated to users. They must not be hidden behind the labels “decentralized,” “private,” “trustless,” “AI-safe,” or “quantum-proof.”
 
