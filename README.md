@@ -36,6 +36,7 @@ In descending order:
 - The reference implementation will be a code fork of a pinned Bitcoin Core release, not a fork of Bitcoin's live chain or UTXO set.
 - Bitcoin Knots will be maintained as a separate upstream patch source. Knots changes will be ported selectively with provenance, review, and tests; the project will not continuously merge two moving codebases.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
+- A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
 - Nakamoto-style proof-of-work remains the consensus mechanism.
 - Proof-of-work uses a permanent, deterministic algorithm family; human-selected periodic algorithm rotation is rejected.
 - The final proof-of-work construction is not yet selected and is a mainnet blocker.

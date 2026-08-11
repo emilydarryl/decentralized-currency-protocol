@@ -27,11 +27,12 @@ BOOST_FIXTURE_TEST_SUITE(argsman_tests, BasicTestingSetup)
 
 BOOST_AUTO_TEST_CASE(chain_isolation_interlock)
 {
-    BOOST_CHECK(common::IsChainAllowedByIsolationInterlock(ChainType::REGTEST));
+    BOOST_CHECK(common::IsChainAllowedByIsolationInterlock(ChainType::LABNET));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::MAIN));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::TESTNET));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::TESTNET4));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::SIGNET));
+    BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::REGTEST));
 }
 
 BOOST_AUTO_TEST_CASE(util_datadir)
