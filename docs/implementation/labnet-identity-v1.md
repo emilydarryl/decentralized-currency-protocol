@@ -79,3 +79,10 @@ above and proves that labnet's genesis, wire magic, P2P port, Bech32 HRP, and
 all Base58/extended-key versions differ from each inherited Bitcoin network.
 `argsman_tests/chain_isolation_interlock` proves labnet is the only chain that
 application initialization may start.
+
+`feature_labnet_smoke.py` builds on those static checks by starting two daemon
+processes through `-chain=labnet`, connecting them explicitly, mining a clean
+chain, transferring one test-only coin between independent wallets, and
+confirming the payment through the command-line client. The functional-test
+framework maps the `labnet` selector to the isolated `dcp-labnet` data
+subdirectory and carries labnet's distinct P2P magic for future wire tests.

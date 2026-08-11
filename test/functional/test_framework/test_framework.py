@@ -34,6 +34,7 @@ from .util import (
     export_env_build_path,
     find_vout_for_address,
     get_binary_paths,
+    get_chain_data_dir,
     get_datadir_path,
     initialize_datadir,
     p2p_port,
@@ -831,7 +832,7 @@ class BitcoinTestFramework(metaclass=BitcoinTestMetaClass):
             self.nodes = []
 
             def cache_path(*paths):
-                return os.path.join(cache_node_dir, self.chain, *paths)
+                return os.path.join(cache_node_dir, get_chain_data_dir(self.chain), *paths)
 
             os.rmdir(cache_path('wallets'))  # Remove empty wallets dir
             for entry in os.listdir(cache_path()):

@@ -30,6 +30,18 @@ SATOSHI_PRECISION = Decimal('0.00000001')
 
 logger = logging.getLogger("TestFramework.utils")
 
+CHAIN_DATA_DIRS = {
+    # Labnet's user-facing chain selector is intentionally different from its
+    # on-disk namespace so it cannot collide with inherited Bitcoin data.
+    "labnet": "dcp-labnet",
+}
+
+
+def get_chain_data_dir(chain):
+    """Return the network-specific data directory for a chain selector."""
+    return CHAIN_DATA_DIRS.get(chain, chain)
+
+
 # Assert functions
 ##################
 
@@ -633,7 +645,7 @@ def get_auth_cookie(datadir, chain):
                     assert password is None  # Ensure that there is only one rpcpassword line
                     password = line.split("=")[1].strip("\n")
     try:
-        with open(os.path.join(datadir, chain, ".cookie"), 'r') as f:
+        with open(os.path.join(datadir, get_chain_data_dir(chain), ".cookie"), 'r') as f:
             userpass = f.read()
             split_userpass = userpass.split(':')
             user = split_userpass[0]
@@ -647,9 +659,10 @@ def get_auth_cookie(datadir, chain):
 
 # If a cookie file exists in the given datadir, delete it.
 def delete_cookie_file(datadir, chain):
-    if os.path.isfile(os.path.join(datadir, chain, ".cookie")):
+    cookie_path = os.path.join(datadir, get_chain_data_dir(chain), ".cookie")
+    if os.path.isfile(cookie_path):
         logger.debug("Deleting leftover cookie file")
-        os.remove(os.path.join(datadir, chain, ".cookie"))
+        os.remove(cookie_path)
 
 
 def softfork_active(node, key):
