@@ -7,7 +7,10 @@
 from decimal import Decimal
 
 from test_framework.test_framework import BitcoinTestFramework, SkipTest
-from test_framework.util import assert_equal
+from test_framework.util import (
+    assert_equal,
+    get_datadir_path,
+)
 
 
 class LabnetSmokeTest(BitcoinTestFramework):
@@ -22,6 +25,14 @@ class LabnetSmokeTest(BitcoinTestFramework):
         if not self.is_wallet_compiled():
             raise SkipTest("wallet has not been compiled")
         self.skip_if_no_cli()
+
+    def setup_chain(self):
+        super().setup_chain()
+        config_path = get_datadir_path(self.options.tmpdir, 0) / "bitcoin.conf"
+        config_lines = config_path.read_text(encoding="utf-8").splitlines()
+        assert_equal(config_lines[0], "chain=labnet")
+        assert "labnet=1" not in config_lines
+        assert "[labnet]" in config_lines
 
     def run_test(self):
         self.log.info("Confirm both command-line clients selected isolated labnet")

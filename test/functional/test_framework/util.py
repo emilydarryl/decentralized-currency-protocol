@@ -563,7 +563,10 @@ def write_config(config_path, *, n, chain, extra_config="", disable_autoconnect=
         chain_name_conf_section = chain
     with open(config_path, 'w') as f:
         if chain_name_conf_arg:
-            f.write("{}=1\n".format(chain_name_conf_arg))
+            if chain == 'labnet':
+                f.write("chain=labnet\n")
+            else:
+                f.write("{}=1\n".format(chain_name_conf_arg))
         if chain_name_conf_section:
             f.write("[{}]\n".format(chain_name_conf_section))
         f.write("port=" + str(p2p_port(n)) + "\n")
