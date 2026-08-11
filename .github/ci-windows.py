@@ -101,11 +101,11 @@ def check_manifests(ci_type):
         return
 
     release_dir = Path.cwd() / "build" / "bin" / "Release"
-    manifest_path = release_dir / "bitcoind.manifest"
+    manifest_path = release_dir / "sovrd.manifest"
     cmd_bitcoind_manifest = [
         "mt.exe",
         "-nologo",
-        f"-inputresource:{release_dir / 'bitcoind.exe'}",
+        f"-inputresource:{release_dir / 'sovrd.exe'}",
         f"-out:{manifest_path}",
     ]
     run(cmd_bitcoind_manifest)
@@ -163,8 +163,8 @@ def run_tests(ci_type):
         os.environ["DIR_UNIT_TEST_DATA"] = str(workspace / "unit_test_data")
         test_envs = {
             "BITCOIN_BIN": "bitcoin.exe",
-            "BITCOIND": "bitcoind.exe",
-            "BITCOINCLI": "bitcoin-cli.exe",
+            "BITCOIND": "sovrd.exe",
+            "BITCOINCLI": "sovr-cli.exe",
             "BITCOIN_BENCH": "bench_bitcoin.exe",
             "BITCOINTX": "bitcoin-tx.exe",
             "BITCOINUTIL": "bitcoin-util.exe",

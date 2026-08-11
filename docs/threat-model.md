@@ -1,4 +1,4 @@
-# Decentralized Currency Protocol Threat Model
+# Soveroot Threat Model
 
 Version: 0.1 working draft  
 Applies to: protocol specification v0.1

@@ -1,4 +1,4 @@
-# Decentralized Currency Protocol Specification
+# Soveroot Protocol Specification
 
 Version: 0.1 working draft  
 Status: Pre-implementation research specification

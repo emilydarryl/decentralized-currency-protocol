@@ -23,14 +23,14 @@ static constexpr auto HELP_USAGE = R"(Usage: %s [OPTIONS] COMMAND...
 
 Options:
   -m, --multiprocess     Run multiprocess binaries bitcoin-node, bitcoin-gui.
-  -M, --monolithic       Run monolithic binaries bitcoind, bitcoin-qt. (Default behavior)
+  -M, --monolithic       Run monolithic binaries sovrd, bitcoin-qt. (Default behavior)
   -v, --version          Show version information
   -h, --help             Show full help message
 
 Commands:
   gui [ARGS]     Start GUI, equivalent to running 'bitcoin-qt [ARGS]' or 'bitcoin-gui [ARGS]'.
-  node [ARGS]    Start node, equivalent to running 'bitcoind [ARGS]' or 'bitcoin-node [ARGS]'.
-  rpc [ARGS]     Call RPC method, equivalent to running 'bitcoin-cli -named [ARGS]'.
+  node [ARGS]    Start node, equivalent to running 'sovrd [ARGS]' or 'bitcoin-node [ARGS]'.
+  rpc [ARGS]     Call RPC method, equivalent to running 'sovr-cli -named [ARGS]'.
   wallet [ARGS]  Call wallet command, equivalent to running 'bitcoin-wallet [ARGS]'.
   tx [ARGS]      Manipulate hex-encoded transactions, equivalent to running 'bitcoin-tx [ARGS]'.
   help           Show full help message.
@@ -85,9 +85,9 @@ int main(int argc, char* argv[])
         } else if (cmd.command == "gui") {
             args.emplace_back(UseMultiprocess(cmd) ? "bitcoin-gui" : "bitcoin-qt");
         } else if (cmd.command == "node") {
-            args.emplace_back(UseMultiprocess(cmd) ? "bitcoin-node" : "bitcoind");
+            args.emplace_back(UseMultiprocess(cmd) ? "bitcoin-node" : "sovrd");
         } else if (cmd.command == "rpc") {
-            args.emplace_back("bitcoin-cli");
+            args.emplace_back("sovr-cli");
             // Since "bitcoin rpc" is a new interface that doesn't need to be
             // backward compatible, enable -named by default so it is convenient
             // for callers to use a mix of named and unnamed parameters. Callers

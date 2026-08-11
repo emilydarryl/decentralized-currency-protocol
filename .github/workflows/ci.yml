@@ -80,12 +80,22 @@ jobs:
         shell: bash
         run: cmake --build build --target bitcoind bitcoin-cli test_bitcoin --parallel 2
 
+      - name: Verify Soveroot public binary names
+        shell: bash
+        run: |
+          test -x build/bin/sovrd
+          test -x build/bin/sovr-cli
+          test ! -e build/bin/bitcoind
+          test ! -e build/bin/bitcoin-cli
+          build/bin/sovrd -version
+          build/bin/sovr-cli -version
+
       - name: Run project isolation unit tests
         shell: bash
         run: |
           build/bin/test_bitcoin --run_test=argsman_tests/chain_isolation_interlock
           build/bin/test_bitcoin --run_test=chainparams_tests/labnet_identity_isolated_from_bitcoin
 
-      - name: Run two-node labnet smoke test through bitcoin-cli
+      - name: Run two-node labnet smoke test through sovr-cli
         shell: bash
         run: build/test/functional/test_runner.py feature_labnet_smoke.py --jobs=1 --usecli

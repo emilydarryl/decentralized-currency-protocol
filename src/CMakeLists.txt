@@ -310,6 +310,7 @@ if(BUILD_DAEMON)
     bitcoind.cpp
     init/bitcoind.cpp
   )
+  set_target_properties(bitcoind PROPERTIES OUTPUT_NAME sovrd)
   add_windows_resources(bitcoind bitcoind-res.rc)
   add_windows_application_manifest(bitcoind)
   target_link_libraries(bitcoind
@@ -317,7 +318,7 @@ if(BUILD_DAEMON)
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  install_binary_component(bitcoind HAS_MANPAGE)
+  install_binary_component(bitcoind)
 endif()
 if(ENABLE_IPC AND BUILD_DAEMON)
   add_executable(bitcoin-node
@@ -348,6 +349,7 @@ target_link_libraries(bitcoin_cli
 # Bitcoin Core RPC client
 if(BUILD_CLI)
   add_executable(bitcoin-cli bitcoin-cli.cpp)
+  set_target_properties(bitcoin-cli PROPERTIES OUTPUT_NAME sovr-cli)
   add_windows_resources(bitcoin-cli bitcoin-cli-res.rc)
   add_windows_application_manifest(bitcoin-cli)
   target_link_libraries(bitcoin-cli
@@ -358,7 +360,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  install_binary_component(bitcoin-cli HAS_MANPAGE)
+  install_binary_component(bitcoin-cli)
 endif()
 
 
