@@ -13,6 +13,7 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <list>
 #include <limits>
 #include <numeric>
 #include <span>
@@ -21,6 +22,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <unordered_map>
 #include <vector>
 
 namespace {
@@ -38,6 +40,7 @@ constexpr char DOMAIN_DATASET[] = "Soveroot/PowResearch/Dataset/v1\0";
 constexpr char DOMAIN_REGISTERS[] = "Soveroot/PowResearch/Registers/v1\0";
 constexpr char DOMAIN_COMMITMENT[] = "Soveroot/PowResearch/Commitment/v1\0";
 constexpr char DOMAIN_RESULT[] = "Soveroot/PowResearch/Result/v1\0";
+constexpr char DOMAIN_ACCESS_TRACE[] = "Soveroot/PowResearch/AccessTrace/v1\0";
 
 struct Params {
     std::size_t dataset_bytes;
@@ -81,6 +84,50 @@ struct SpillStats {
     std::uint64_t spill_writes{0};
     std::size_t logical_retained_bytes{0};
     std::size_t spill_file_bytes{0};
+};
+
+struct TraceEvent {
+    std::size_t word;
+    bool is_write;
+};
+
+struct CacheTraceStats {
+    std::size_t capacity_words;
+    std::uint64_t materialized_read_hits;
+    std::uint64_t materialized_read_misses;
+    std::uint64_t evictions;
+};
+
+struct TraceSummary {
+    std::uint64_t reads{0};
+    std::uint64_t writes{0};
+    std::uint64_t initial_zero_reads{0};
+    std::uint64_t materialized_reads{0};
+    std::size_t distinct_read_words{0};
+    std::size_t distinct_written_words{0};
+    std::size_t maximum_live_values{0};
+    Bytes trace_commitment;
+    CacheTraceStats half_capacity{};
+    CacheTraceStats quarter_capacity{};
+};
+
+class TraceRecorder {
+public:
+    explicit TraceRecorder(std::size_t word_count) : m_word_count(word_count)
+    {
+        m_events.reserve(word_count * 4);
+    }
+
+    void Read(std::size_t word) { m_events.push_back({word, false}); }
+    void Write(std::size_t word) { m_events.push_back({word, true}); }
+
+    TraceSummary Summarize() const;
+
+private:
+    CacheTraceStats SimulateCache(std::size_t capacity_words) const;
+
+    std::size_t m_word_count;
+    std::vector<TraceEvent> m_events;
 };
 
 constexpr std::array<std::uint64_t, 24> KECCAK_ROUND_CONSTANTS{
@@ -293,24 +340,133 @@ void WriteMemory(Bytes& memory, std::uint64_t selector, std::uint64_t value)
     WriteLE64(memory.data() + word * 8, value);
 }
 
+CacheTraceStats TraceRecorder::SimulateCache(std::size_t capacity_words) const
+{
+    if (capacity_words == 0 || capacity_words > m_word_count) {
+        throw std::invalid_argument("trace cache capacity is invalid");
+    }
+    std::vector<bool> written(m_word_count, false);
+    std::list<std::size_t> recent;
+    std::unordered_map<std::size_t, std::list<std::size_t>::iterator> cached;
+    cached.reserve(capacity_words);
+    CacheTraceStats stats{capacity_words, 0, 0, 0};
+
+    auto touch = [&](std::size_t word) {
+        const auto found = cached.find(word);
+        if (found != cached.end()) {
+            recent.erase(found->second);
+            recent.push_front(word);
+            found->second = recent.begin();
+            return;
+        }
+        if (cached.size() == capacity_words) {
+            cached.erase(recent.back());
+            recent.pop_back();
+            ++stats.evictions;
+        }
+        recent.push_front(word);
+        cached.emplace(word, recent.begin());
+    };
+
+    for (const TraceEvent& event : m_events) {
+        if (event.is_write) {
+            written[event.word] = true;
+            touch(event.word);
+        } else if (written[event.word]) {
+            if (cached.contains(event.word)) {
+                ++stats.materialized_read_hits;
+            } else {
+                ++stats.materialized_read_misses;
+            }
+            touch(event.word);
+        }
+    }
+    return stats;
+}
+
+TraceSummary TraceRecorder::Summarize() const
+{
+    TraceSummary summary{};
+    std::vector<bool> read_words(m_word_count, false);
+    std::vector<bool> written_words(m_word_count, false);
+    std::vector<bool> materialized_read(m_events.size(), false);
+    Bytes encoded_trace = DomainBytes(DOMAIN_ACCESS_TRACE);
+    encoded_trace.reserve(encoded_trace.size() + m_events.size() * 9);
+
+    for (std::size_t index{0}; index < m_events.size(); ++index) {
+        const TraceEvent& event = m_events[index];
+        encoded_trace.push_back(event.is_write ? 1 : 0);
+        AppendLE64(encoded_trace, event.word);
+        if (event.is_write) {
+            ++summary.writes;
+            written_words[event.word] = true;
+        } else {
+            ++summary.reads;
+            read_words[event.word] = true;
+            if (written_words[event.word]) {
+                ++summary.materialized_reads;
+                materialized_read[index] = true;
+            } else {
+                ++summary.initial_zero_reads;
+            }
+        }
+    }
+    summary.distinct_read_words = static_cast<std::size_t>(
+        std::count(read_words.begin(), read_words.end(), true));
+    summary.distinct_written_words = static_cast<std::size_t>(
+        std::count(written_words.begin(), written_words.end(), true));
+
+    std::vector<bool> live(m_word_count, false);
+    std::size_t live_count{0};
+    for (std::size_t index{m_events.size()}; index > 0; --index) {
+        const TraceEvent& event = m_events[index - 1];
+        if (event.is_write) {
+            if (live[event.word]) {
+                live[event.word] = false;
+                --live_count;
+            }
+        } else if (materialized_read[index - 1] && !live[event.word]) {
+            live[event.word] = true;
+            ++live_count;
+            summary.maximum_live_values = std::max(summary.maximum_live_values, live_count);
+        }
+    }
+
+    summary.trace_commitment = Sha3_384(encoded_trace);
+    summary.half_capacity = SimulateCache(m_word_count / 2);
+    summary.quarter_capacity = SimulateCache(m_word_count / 4);
+    return summary;
+}
+
 class FullScratchpad {
 public:
-    explicit FullScratchpad(std::size_t bytes) : m_memory(bytes, 0) {}
+    explicit FullScratchpad(std::size_t bytes, TraceRecorder* trace = nullptr)
+        : m_memory(bytes, 0), m_trace(trace)
+    {
+    }
 
     std::uint64_t Read(std::uint64_t selector)
     {
+        if (m_trace != nullptr) m_trace->Read(Word(selector));
         return ReadMemory(m_memory, selector);
     }
 
     void Write(std::uint64_t selector, std::uint64_t value)
     {
+        if (m_trace != nullptr) m_trace->Write(Word(selector));
         WriteMemory(m_memory, selector, value);
     }
 
     void ExportStats(SpillStats*) const {}
 
 private:
+    std::size_t Word(std::uint64_t selector) const
+    {
+        return static_cast<std::size_t>(selector) & (m_memory.size() / 8 - 1);
+    }
+
     Bytes m_memory;
+    TraceRecorder* m_trace;
 };
 
 class StaticHalfSpillScratchpad {
@@ -642,6 +798,51 @@ void PrintResult(const ExecutionResult& result)
     std::cout << '\n';
 }
 
+void PrintTrace(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const EpochContext context = PrepareEpoch(seed, params);
+    TraceRecorder recorder(params.scratchpad_bytes / 8);
+    const ExecutionResult result = EvaluateWithScratchpad<FullScratchpad>(
+        context, header, nonce, nullptr, nullptr, &recorder);
+    const TraceSummary trace = recorder.Summarize();
+    auto print_cache = [](std::string_view name, const CacheTraceStats& cache, bool comma) {
+        std::cout << "    \"" << name << "\": {\"capacity_words\": " << cache.capacity_words
+                  << ", \"materialized_read_hits\": " << cache.materialized_read_hits
+                  << ", \"materialized_read_misses\": " << cache.materialized_read_misses
+                  << ", \"evictions\": " << cache.evictions << "}"
+                  << (comma ? "," : "") << '\n';
+    };
+
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-access-trace-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"digest\": \"" << Hex(result.digest) << "\",\n"
+              << "  \"memory_commitment\": \"" << Hex(result.memory_commitment) << "\",\n"
+              << "  \"trace\": {\n"
+              << "    \"trace_commitment\": \"" << Hex(trace.trace_commitment) << "\",\n"
+              << "    \"reads\": " << trace.reads << ",\n"
+              << "    \"writes\": " << trace.writes << ",\n"
+              << "    \"initial_zero_reads\": " << trace.initial_zero_reads << ",\n"
+              << "    \"materialized_reads\": " << trace.materialized_reads << ",\n"
+              << "    \"distinct_read_words\": " << trace.distinct_read_words << ",\n"
+              << "    \"distinct_written_words\": " << trace.distinct_written_words << ",\n"
+              << "    \"maximum_live_values\": " << trace.maximum_live_values << ",\n"
+              << "    \"cache_simulations\": {\n";
+    print_cache("half_capacity_lru", trace.half_capacity, true);
+    print_cache("quarter_capacity_lru", trace.quarter_capacity, false);
+    std::cout << "    }\n"
+              << "  }\n"
+              << "}\n";
+}
+
 std::string CompilerDescription()
 {
 #if defined(__clang__)
@@ -819,6 +1020,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "trace") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintTrace(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 10 && std::string_view{argv[1]} == "benchmark-half-spill") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -852,6 +1061,7 @@ int main(int argc, char* argv[])
             std::cerr << "NON-CONSENSUS Soveroot PoW v1 research implementation\n"
                       << "usage: powvm_v1_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp trace SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n";
             return 2;

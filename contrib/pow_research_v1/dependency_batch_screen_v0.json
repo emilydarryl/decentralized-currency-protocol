@@ -1,0 +1,54 @@
+{
+  "batch_experiment": {
+    "attempts": [
+      1,
+      4,
+      16,
+      64,
+      256,
+      1024,
+      4096
+    ],
+    "backend_order": "deterministic rotation by seed index",
+    "inclusive_cost": "epoch preparation plus the sum of nonce-attempt timings divided by batch size",
+    "profile": {
+      "dataset_bytes": 2097152,
+      "passes": 3,
+      "scratchpad_bytes": 262144
+    },
+    "seeds": 8
+  },
+  "format": "soveroot-pow-v1-dependency-batch-screen-v0",
+  "gate_mapping": {
+    "facility_amortization": "INFORMATIONAL_ONLY",
+    "time_memory_tradeoff": "NOT_ASSESSED"
+  },
+  "limitations": [
+    "the access trace is collected with the full scratchpad",
+    "LRU misses are simulations and do not produce a valid PoW with reduced memory",
+    "dynamic traces are not known before executing their value-dependent addresses",
+    "shared runners do not measure hardware occupancy, power, temperature, or memory traffic",
+    "sequential batches do not model optimized parallel mining hardware"
+  ],
+  "status": "PREDECLARED NON-CONSENSUS DIAGNOSTIC METHOD",
+  "trace_experiment": {
+    "cache_capacities": [
+      "1/2 scratchpad words",
+      "1/4 scratchpad words"
+    ],
+    "profile": {
+      "dataset_bytes": 2097152,
+      "passes": 3,
+      "scratchpad_bytes": 262144
+    },
+    "records": [
+      "initial-zero versus materialized reads",
+      "distinct read and written words",
+      "maximum offline live-value count",
+      "materialized-read LRU hits and misses",
+      "domain-separated access-trace commitment"
+    ],
+    "seeds": 8
+  },
+  "version": "0.1"
+}
