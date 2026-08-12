@@ -16,6 +16,7 @@ from contrib.pow_research_cpp.render_report_v1 import render as render_v1
 
 ROOT = Path(__file__).resolve().parents[2]
 GATES = ROOT / "contrib" / "pow_research" / "gates_v0.json"
+RESEARCH_STATUS = ROOT / "contrib" / "pow_research" / "research_status_v0.json"
 V1_SCREENING = ROOT / "contrib" / "pow_research_v1" / "screening_v0.json"
 
 
@@ -27,6 +28,19 @@ class EvaluationGatesTest(unittest.TestCase):
         self.assertEqual(len(identifiers), len(set(identifiers)))
         self.assertTrue(all(gate["mandatory"] for gate in document["gates"]))
         self.assertIn("cannot retroactively", document["decision_rule"])
+
+    def test_research_dashboard_covers_every_gate_without_claiming_a_pass(self) -> None:
+        policy = json.loads(GATES.read_text(encoding="utf-8"))
+        status = json.loads(RESEARCH_STATUS.read_text(encoding="utf-8"))
+        policy_ids = [gate["id"] for gate in policy["gates"]]
+        dashboard_ids = [gate["id"] for gate in status["pow_gates"]]
+        self.assertEqual(status["format"], "soveroot-research-status-v0")
+        self.assertEqual(dashboard_ids, policy_ids)
+        self.assertEqual(status["pow_gate_summary"]["passed"], 0)
+        self.assertEqual(status["pow_gate_summary"]["open"], len(policy_ids))
+        self.assertTrue(all(gate["state"] == "OPEN" for gate in status["pow_gates"]))
+        self.assertTrue(all(gate["assessment"] == "NOT_ASSESSED" for gate in status["pow_gates"]))
+        self.assertTrue(all(gate["gap"] for gate in status["pow_gates"]))
 
     def test_report_is_explicitly_informational(self) -> None:
         matrix = {

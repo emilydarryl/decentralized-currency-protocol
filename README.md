@@ -18,6 +18,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 ## Documents
 
+- [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.
@@ -27,6 +28,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [pow-v1-candidate-spec.md](docs/pow-v1-candidate-spec.md) defines the isolated byte-level v1 research workload for independent implementations and screening.
 - [pow-v1-half-memory-attack.md](docs/pow-v1-half-memory-attack.md) defines the exact-output half-scratchpad spill adversary and the reasons its measurements cannot yet decide the time-memory gate.
 - [pow-v1-dependency-batch-screen.md](docs/pow-v1-dependency-batch-screen.md) defines exact dependency tracing and the predeclared 4,096-attempt batch-amortization diagnostic.
+- [pow-v1-bounded-pebbling-plan.md](docs/pow-v1-bounded-pebbling-plan.md) predeclares the exact byte-accounted, no-spill attack required to assess the half-memory gate.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
