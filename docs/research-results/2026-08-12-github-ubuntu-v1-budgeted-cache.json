@@ -1,0 +1,532 @@
+{
+  "cases": [
+    {
+      "digest": "2b63cbb94094d0db27b146536553a598f14d8ad73bd002283590090c1097b2f95f45e82b4cde329630c3092638bad0cc",
+      "materialized_reads": 172572,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211468,
+            "materialized_read_hits": 47886,
+            "materialized_read_misses": 124686,
+            "miss_share_ppm": 722515
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34378,
+            "materialized_read_hits": 133951,
+            "materialized_read_misses": 38621,
+            "miss_share_ppm": 223796
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 235101,
+            "materialized_read_hits": 32126,
+            "materialized_read_misses": 140446,
+            "miss_share_ppm": 813840
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 48024,
+            "materialized_read_hits": 114439,
+            "materialized_read_misses": 58133,
+            "miss_share_ppm": 336862
+          }
+        }
+      },
+      "seed_index": 0,
+      "trace_commitment": "50540525226b52966b68c50f34898b5c92f09574049e5bf20a5e694cd746b90f92c37c46876e73b500236e0a20015ddb"
+    },
+    {
+      "digest": "d2173de353c45cce4024bfce34828efb05ab90c2d106285fb064b3eb1a25d8dc2ec54f9c95e29330b078da80ef27d446",
+      "materialized_reads": 172411,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211312,
+            "materialized_read_hits": 48008,
+            "materialized_read_misses": 124403,
+            "miss_share_ppm": 721549
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34568,
+            "materialized_read_hits": 133709,
+            "materialized_read_misses": 38702,
+            "miss_share_ppm": 224475
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 234981,
+            "materialized_read_hits": 32236,
+            "materialized_read_misses": 140175,
+            "miss_share_ppm": 813028
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 47962,
+            "materialized_read_hits": 114381,
+            "materialized_read_misses": 58030,
+            "miss_share_ppm": 336579
+          }
+        }
+      },
+      "seed_index": 1,
+      "trace_commitment": "665da83bafeda86de1b4f9b761c41337d7e83bc9099e5d8bb0bfa6e7025bda55b47f0225efb111e127c5aa3b9b202958"
+    },
+    {
+      "digest": "d4f2b8d39da753160c3f5ec174cc63a9b928d3f448e27116c3d33dd7208086fac952c542e4120e87f58db6fbc258c0bd",
+      "materialized_reads": 172448,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211343,
+            "materialized_read_hits": 47830,
+            "materialized_read_misses": 124618,
+            "miss_share_ppm": 722641
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34338,
+            "materialized_read_hits": 133888,
+            "materialized_read_misses": 38560,
+            "miss_share_ppm": 223603
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 235059,
+            "materialized_read_hits": 32039,
+            "materialized_read_misses": 140409,
+            "miss_share_ppm": 814210
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 47934,
+            "materialized_read_hits": 114412,
+            "materialized_read_misses": 58036,
+            "miss_share_ppm": 336542
+          }
+        }
+      },
+      "seed_index": 2,
+      "trace_commitment": "a7ee2e88de4baa09075314b1be64d61324bc28fdb1f699c05ac51b88fd9e498ba75ce7dba7da6daf9866b6b84424cea1"
+    },
+    {
+      "digest": "de3c4372548fb35bfb6c733d943b468aff853c191ae0c5e560491120b84c8b1d5c35a189734d2e2443994f4a42b5ba35",
+      "materialized_reads": 172453,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211607,
+            "materialized_read_hits": 47810,
+            "materialized_read_misses": 124643,
+            "miss_share_ppm": 722765
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34494,
+            "materialized_read_hits": 133821,
+            "materialized_read_misses": 38632,
+            "miss_share_ppm": 224014
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 235219,
+            "materialized_read_hits": 32075,
+            "materialized_read_misses": 140378,
+            "miss_share_ppm": 814007
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 47941,
+            "materialized_read_hits": 114415,
+            "materialized_read_misses": 58038,
+            "miss_share_ppm": 336543
+          }
+        }
+      },
+      "seed_index": 3,
+      "trace_commitment": "62c39abfd22908b9ccf5aab8e8ab50742c4a58ce233b38beda0ad90e6645edb6c4d8eae294d3a79971bd174ed0be97bd"
+    },
+    {
+      "digest": "22cd057a402f6551f051fc4bc81a0e82b7774969053c86efebbacf4c2784321efaf989135b0e84e0f0f138781d1eca68",
+      "materialized_reads": 172588,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211364,
+            "materialized_read_hits": 48144,
+            "materialized_read_misses": 124444,
+            "miss_share_ppm": 721046
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34373,
+            "materialized_read_hits": 134163,
+            "materialized_read_misses": 38425,
+            "miss_share_ppm": 222640
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 234824,
+            "materialized_read_hits": 32434,
+            "materialized_read_misses": 140154,
+            "miss_share_ppm": 812072
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 48068,
+            "materialized_read_hits": 114626,
+            "materialized_read_misses": 57962,
+            "miss_share_ppm": 335840
+          }
+        }
+      },
+      "seed_index": 4,
+      "trace_commitment": "a8fdf29cf2e78a486e0f750287393b1acd8dd87f77b2cb705571b5300f27b4e39f87433e837245cb23f0e683d1a1337d"
+    },
+    {
+      "digest": "91bf4b0bca815391b0b2da5bd2eeaeb2510b57001fdc794456550fe6f78f68dec2b8173538555b0892f95f97d5c0c815",
+      "materialized_reads": 172644,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211296,
+            "materialized_read_hits": 48086,
+            "materialized_read_misses": 124558,
+            "miss_share_ppm": 721473
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34515,
+            "materialized_read_hits": 134058,
+            "materialized_read_misses": 38586,
+            "miss_share_ppm": 223500
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 235047,
+            "materialized_read_hits": 32234,
+            "materialized_read_misses": 140410,
+            "miss_share_ppm": 813292
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 48016,
+            "materialized_read_hits": 114588,
+            "materialized_read_misses": 58056,
+            "miss_share_ppm": 336275
+          }
+        }
+      },
+      "seed_index": 5,
+      "trace_commitment": "8867a545a3854349ffc39d0b6b981534579a30209dad8defb6a03c4933a4868f475b5c84706e7ff2f031abb2b44bbfda"
+    },
+    {
+      "digest": "082c9593b12dcf44068fe520d54fc58eda1533c0935789a9a9633e35d8833e5236d998121f01b3275958bcbe4448f41f",
+      "materialized_reads": 172423,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211191,
+            "materialized_read_hits": 48087,
+            "materialized_read_misses": 124336,
+            "miss_share_ppm": 721110
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34454,
+            "materialized_read_hits": 133914,
+            "materialized_read_misses": 38509,
+            "miss_share_ppm": 223340
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 234867,
+            "materialized_read_hits": 32346,
+            "materialized_read_misses": 140077,
+            "miss_share_ppm": 812403
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 47857,
+            "materialized_read_hits": 114661,
+            "materialized_read_misses": 57762,
+            "miss_share_ppm": 335001
+          }
+        }
+      },
+      "seed_index": 6,
+      "trace_commitment": "1f4de6d28617d80cc700e8c6038f4b7265454d966f5f15b4c116fa32d2ca2fc1d40e94abe3d1e03254ff07f9c107b44f"
+    },
+    {
+      "digest": "6be21533a17bf114ea1d717f8d9ec0719b2462d30f4067825a91f26fabb047feb0b5773ac0de45906689d51bcfe83509",
+      "materialized_reads": 172546,
+      "scenarios": {
+        "compact_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 16,
+          "lru": {
+            "capacity_words": 8192,
+            "evictions": 211465,
+            "materialized_read_hits": 48151,
+            "materialized_read_misses": 124395,
+            "miss_share_ppm": 720938
+          },
+          "offline_optimal": {
+            "capacity_words": 8192,
+            "evictions": 34179,
+            "materialized_read_hits": 134319,
+            "materialized_read_misses": 38227,
+            "miss_share_ppm": 221546
+          }
+        },
+        "conservative_half_budget": {
+          "budget_bytes": 131072,
+          "entry_bytes": 24,
+          "lru": {
+            "capacity_words": 5461,
+            "evictions": 234716,
+            "materialized_read_hits": 32673,
+            "materialized_read_misses": 139873,
+            "miss_share_ppm": 810641
+          },
+          "offline_optimal": {
+            "capacity_words": 5461,
+            "evictions": 47834,
+            "materialized_read_hits": 114878,
+            "materialized_read_misses": 57668,
+            "miss_share_ppm": 334218
+          }
+        }
+      },
+      "seed_index": 7,
+      "trace_commitment": "9cd386475c66ecea6260694d7e55f6950c83c0fae54a28bc99743ea9c5c6f5425012af9baf8de310eb8b02cfa1617fb1"
+    }
+  ],
+  "config": {
+    "dataset_bytes": 2097152,
+    "name": "baseline",
+    "passes": 3,
+    "scratchpad_bytes": 262144
+  },
+  "format": "soveroot-pow-v1-budgeted-cache-matrix-v0",
+  "host": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "logical_cpus": 4,
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-1020-azure-x86_64-with-glibc2.39",
+    "runner_image": "ubuntu24"
+  },
+  "profile": "standard",
+  "seed_count": 8,
+  "source_revision": "9b5647219b60665f8962f1421b166877406312eb",
+  "summaries": {
+    "compact_half_budget": {
+      "budget_bytes": 131072,
+      "entry_bytes": 16,
+      "lru": {
+        "capacity_words": {
+          "max": 8192,
+          "mean": 8192,
+          "median": 8192,
+          "min": 8192,
+          "spread_ppm": 0
+        },
+        "evictions": {
+          "max": 211607,
+          "mean": 211380,
+          "median": 211353,
+          "min": 211191,
+          "spread_ppm": 1969
+        },
+        "materialized_read_hits": {
+          "max": 48151,
+          "mean": 48000,
+          "median": 48047,
+          "min": 47810,
+          "spread_ppm": 7132
+        },
+        "materialized_read_misses": {
+          "max": 124686,
+          "mean": 124510,
+          "median": 124501,
+          "min": 124336,
+          "spread_ppm": 2814
+        },
+        "miss_share_ppm": {
+          "max": 722765,
+          "mean": 721754,
+          "median": 721511,
+          "min": 720938,
+          "spread_ppm": 2534
+        }
+      },
+      "offline_optimal": {
+        "capacity_words": {
+          "max": 8192,
+          "mean": 8192,
+          "median": 8192,
+          "min": 8192,
+          "spread_ppm": 0
+        },
+        "evictions": {
+          "max": 34568,
+          "mean": 34412,
+          "median": 34416,
+          "min": 34179,
+          "spread_ppm": 11381
+        },
+        "materialized_read_hits": {
+          "max": 134319,
+          "mean": 133977,
+          "median": 133932,
+          "min": 133709,
+          "spread_ppm": 4562
+        },
+        "materialized_read_misses": {
+          "max": 38702,
+          "mean": 38532,
+          "median": 38573,
+          "min": 38227,
+          "spread_ppm": 12425
+        },
+        "miss_share_ppm": {
+          "max": 224475,
+          "mean": 223364,
+          "median": 223551,
+          "min": 221546,
+          "spread_ppm": 13220
+        }
+      }
+    },
+    "conservative_half_budget": {
+      "budget_bytes": 131072,
+      "entry_bytes": 24,
+      "lru": {
+        "capacity_words": {
+          "max": 5461,
+          "mean": 5461,
+          "median": 5461,
+          "min": 5461,
+          "spread_ppm": 0
+        },
+        "evictions": {
+          "max": 235219,
+          "mean": 234976,
+          "median": 235014,
+          "min": 234716,
+          "spread_ppm": 2143
+        },
+        "materialized_read_hits": {
+          "max": 32673,
+          "mean": 32270,
+          "median": 32235,
+          "min": 32039,
+          "spread_ppm": 19788
+        },
+        "materialized_read_misses": {
+          "max": 140446,
+          "mean": 140240,
+          "median": 140276,
+          "min": 139873,
+          "spread_ppm": 4096
+        },
+        "miss_share_ppm": {
+          "max": 814210,
+          "mean": 812936,
+          "median": 813160,
+          "min": 810641,
+          "spread_ppm": 4402
+        }
+      },
+      "offline_optimal": {
+        "capacity_words": {
+          "max": 5461,
+          "mean": 5461,
+          "median": 5461,
+          "min": 5461,
+          "spread_ppm": 0
+        },
+        "evictions": {
+          "max": 48068,
+          "mean": 47954,
+          "median": 47951,
+          "min": 47834,
+          "spread_ppm": 4891
+        },
+        "materialized_read_hits": {
+          "max": 114878,
+          "mean": 114550,
+          "median": 114513,
+          "min": 114381,
+          "spread_ppm": 4345
+        },
+        "materialized_read_misses": {
+          "max": 58133,
+          "mean": 57960,
+          "median": 58033,
+          "min": 57668,
+          "spread_ppm": 8063
+        },
+        "miss_share_ppm": {
+          "max": 336862,
+          "mean": 335982,
+          "median": 336408,
+          "min": 334218,
+          "spread_ppm": 7911
+        }
+      }
+    }
+  },
+  "warning": "NON-CONSENSUS CACHE LOWER BOUND; misses do not produce valid reduced-memory proofs"
+}
