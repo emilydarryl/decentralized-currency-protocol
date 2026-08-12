@@ -8,6 +8,8 @@ These sources informed the v0.1 working draft. Their inclusion does not import t
 - Bitcoin Core, [reference implementation repository](https://github.com/bitcoin/bitcoin).
 - Bitcoin Knots, [implementation repository](https://github.com/bitcoinknots/bitcoin).
 - Bitcoin Improvement Proposals repository, [BIP process and specifications](https://github.com/bitcoin/bips).
+- Bitcoin BIP 9, [Version bits with timeout and delay](https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki).
+- Bitcoin BIP 8, [Version bits with lock-in by height](https://github.com/bitcoin/bips/blob/master/bip-0008.mediawiki).
 
 ## Post-quantum cryptography
 

@@ -20,6 +20,8 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
+- [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.
+- [pow-vm-research.md](docs/pow-vm-research.md) defines the research envelope, benchmark gates, and rejection criteria for the candidate proof-of-work VM.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
 - [inherited-assumptions.md](docs/implementation/inherited-assumptions.md) tracks every inherited network and consensus dependency that must be replaced or reviewed.
@@ -49,6 +51,7 @@ In descending order:
 - Nakamoto-style proof-of-work remains the consensus mechanism.
 - Proof-of-work uses a permanent, deterministic algorithm family; human-selected periodic algorithm rotation is rejected.
 - The final proof-of-work construction is not yet selected and is a mainnet blocker.
+- Miner signaling is readiness telemetry, not a binding vote. Deployments expire safely when readiness thresholds are missed; forced activation requires a separate, explicitly consented fork proposal.
 - SHA3-384 with explicit domain separation is the candidate general-purpose hash primitive.
 - ML-DSA-65 is the candidate default transaction signature.
 - SLH-DSA is an independent backup/recovery signature family, not a required second signature on every ordinary payment.
@@ -104,6 +107,7 @@ The following must be resolved before an implementation can be considered a main
 10. Build at least two independent consensus implementations and a shared conformance corpus.
 11. Pin the initial Bitcoin Core tag and commit, inventory candidate Knots patches, and document every inherited consensus and policy assumption.
 12. Demonstrate through automated tests that addresses, signatures, messages, data directories, peer discovery, and chain data cannot be confused with any Bitcoin network.
+13. Validate the upgrade and activation process through simulated miner veto, minority-fork, stalled-chain, and partial-economic-adoption scenarios.
 
 ## Project rule
 
