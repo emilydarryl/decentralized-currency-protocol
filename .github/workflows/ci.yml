@@ -75,6 +75,7 @@ jobs:
             contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_half_memory_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_trace_vectors_v1.py --binary build/powvm_v1_cpp
           python3 contrib/pow_research_cpp/benchmark_matrix_v1.py \
             --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-benchmark-smoke.json
           python3 contrib/pow_research_cpp/render_report_v1.py \
@@ -91,6 +92,16 @@ jobs:
             --method contrib/pow_research_v1/half_memory_attack_v0.json \
             --label "CI smoke" --output build/pow-v1-half-memory-smoke.md
           python3 -c "import json; d=json.load(open('build/pow-v1-half-memory-smoke.json')); assert d['all_exact_outputs_match']"
+          python3 contrib/pow_research_cpp/dependency_trace_v1.py \
+            --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-dependency-smoke.json
+          python3 contrib/pow_research_cpp/batch_amortization_v1.py \
+            --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-batch-smoke.json
+          python3 contrib/pow_research_cpp/render_dependency_batch_report_v1.py \
+            --trace build/pow-v1-dependency-smoke.json \
+            --batch build/pow-v1-batch-smoke.json \
+            --gates contrib/pow_research/gates_v0.json \
+            --method contrib/pow_research_v1/dependency_batch_screen_v0.json \
+            --label "CI smoke" --output build/pow-v1-dependency-batch-smoke.md
           python3 contrib/pow_research_cpp/benchmark_matrix.py \
             --binary build/powvm_cpp --profile smoke --output build/pow-benchmark-smoke.json
           python3 -c "import json; d=json.load(open('build/pow-benchmark-smoke.json')); assert all(set(r['median_phase_ns_across_seeds']) == {'input_setup','scratchpad_init','vm_execute','finalize'} for r in d['results'])"

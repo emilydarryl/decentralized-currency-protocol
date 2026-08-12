@@ -59,6 +59,18 @@ python3 contrib/pow_research_cpp/render_half_memory_report_v1.py \
 
 This backend retains exactly half the logical scratchpad byte array and must reproduce every canonical output. It uses external storage, does not bound the operating system page cache, does not measure physical peak memory, and is not optimized. It is therefore an attack-development baseline, not a result of the mandatory time-memory-tradeoff gate. The manual `PoW v1 half-memory attack benchmark` workflow preserves its paired raw samples and report.
 
+Trace mode records the exact dynamic scratchpad access stream without changing the canonical digest or memory commitment. The dependency matrix summarizes cold reads, materialized reads, offline live-value pressure, and simulated half- and quarter-capacity LRU misses. The paired batch harness separately measures sequential batches through 4,096 attempts:
+
+```bash
+python3 test/pow_research/run_cpp_trace_vectors_v1.py --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/dependency_trace_v1.py \
+  --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-dependency.json
+python3 contrib/pow_research_cpp/batch_amortization_v1.py \
+  --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-batch.json
+```
+
+These are diagnostics for designing a no-spill recomputation attack and controlled facility testing. A full-memory trace, cache simulation, or sequential shared-runner batch cannot decide either mandatory gate.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.
