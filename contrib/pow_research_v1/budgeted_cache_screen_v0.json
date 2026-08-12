@@ -1,0 +1,27 @@
+{
+  "accounting": {
+    "attack_storage_budget": "one half of the declared scratchpad bytes",
+    "compact_entry_bytes": 16,
+    "compact_entry_layout": "8-byte value plus 4-byte word index plus 4-byte generation or replacement metadata",
+    "conservative_entry_bytes": 24,
+    "conservative_entry_layout": "8-byte value plus 8-byte word/version identity plus 8-byte replacement metadata",
+    "unbudgeted_state": "none within the simulated value cache; an executable attacker must also deduct control state, queues, allocator overhead, and checkpoints"
+  },
+  "format": "soveroot-pow-v1-budgeted-cache-screen-v0",
+  "policies": {
+    "lru": "online least-recently-used write-allocate cache over materialized scratch values",
+    "offline_optimal": "Belady-style oracle using the completed dynamic trace and discarding values with no future read before overwrite"
+  },
+  "gate_mapping": {
+    "gate_id": "time_memory_tradeoff",
+    "status": "NOT_ASSESSED",
+    "why_not_decisive": [
+      "cache misses do not recompute values or produce a valid proof",
+      "the offline optimal policy knows future value-dependent accesses that an online miner does not know",
+      "the simulated cache does not include executable control state, queues, stack, checkpoints, or allocator overhead",
+      "a full scratch snapshot cannot fit within the half-memory budget"
+    ]
+  },
+  "status": "PREDECLARED NON-CONSENSUS LOWER-BOUND SCREEN",
+  "version": "0.1"
+}

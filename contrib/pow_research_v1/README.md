@@ -24,3 +24,5 @@ The fixed-size memory commitment is not proof that retaining the declared scratc
 The machine-readable copy of the predeclared v1 workload screens is [`screening_v0.json`](screening_v0.json). It is consumed by the standalone v1 report renderer; changing it requires the same versioned justification as changing the human-readable objectives.
 
 Adversarial methods are versioned separately. The no-spill exact-output replay baseline is documented in [`recomputation_baseline_v0.json`](recomputation_baseline_v0.json) and [the corresponding method note](../../docs/pow-v1-recomputation-baseline.md). Its 150% peak scratch allocation makes it explicitly ineligible for the half-memory gate.
+
+The metadata-aware cache lower-bound method is frozen in [`budgeted_cache_screen_v0.json`](budgeted_cache_screen_v0.json) and [its method note](../../docs/pow-v1-budgeted-cache-screen.md). It compares online LRU with an offline-optimal oracle under an explicit half-scratch byte budget; misses remain diagnostic rather than valid proofs.

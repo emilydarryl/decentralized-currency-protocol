@@ -13,9 +13,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <list>
 #include <limits>
 #include <numeric>
+#include <set>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -114,6 +116,13 @@ struct CacheTraceStats {
     std::uint64_t evictions;
 };
 
+struct BudgetCacheScenario {
+    std::size_t budget_bytes;
+    std::size_t entry_bytes;
+    CacheTraceStats lru;
+    CacheTraceStats offline_optimal;
+};
+
 struct TraceSummary {
     std::uint64_t reads{0};
     std::uint64_t writes{0};
@@ -125,6 +134,8 @@ struct TraceSummary {
     Bytes trace_commitment;
     CacheTraceStats half_capacity{};
     CacheTraceStats quarter_capacity{};
+    BudgetCacheScenario compact_half_budget{};
+    BudgetCacheScenario conservative_half_budget{};
 };
 
 class TraceRecorder {
@@ -141,6 +152,7 @@ public:
 
 private:
     CacheTraceStats SimulateCache(std::size_t capacity_words) const;
+    CacheTraceStats SimulateOfflineOptimal(std::size_t capacity_words) const;
 
     std::size_t m_word_count;
     std::vector<TraceEvent> m_events;
@@ -400,6 +412,74 @@ CacheTraceStats TraceRecorder::SimulateCache(std::size_t capacity_words) const
     return stats;
 }
 
+CacheTraceStats TraceRecorder::SimulateOfflineOptimal(std::size_t capacity_words) const
+{
+    if (capacity_words == 0 || capacity_words > m_word_count) {
+        throw std::invalid_argument("trace cache capacity is invalid");
+    }
+    struct Access {
+        std::size_t word;
+        bool is_write;
+    };
+    constexpr std::size_t NEVER = std::numeric_limits<std::size_t>::max();
+    std::vector<bool> written(m_word_count, false);
+    std::vector<Access> accesses;
+    accesses.reserve(m_events.size());
+    for (const TraceEvent& event : m_events) {
+        if (event.is_write) {
+            written[event.word] = true;
+            accesses.push_back({event.word, true});
+        } else if (written[event.word]) {
+            accesses.push_back({event.word, false});
+        }
+    }
+
+    std::vector<std::size_t> next_use(accesses.size(), NEVER);
+    std::vector<std::size_t> next_read(m_word_count, NEVER);
+    for (std::size_t index{accesses.size()}; index > 0; --index) {
+        const Access& access = accesses[index - 1];
+        next_use[index - 1] = next_read[access.word];
+        if (access.is_write) {
+            next_read[access.word] = NEVER;
+        } else {
+            next_read[access.word] = index - 1;
+        }
+    }
+
+    std::unordered_map<std::size_t, std::size_t> cached;
+    cached.reserve(capacity_words);
+    std::set<std::pair<std::size_t, std::size_t>> by_next_use;
+    CacheTraceStats stats{capacity_words, 0, 0, 0};
+    for (std::size_t index{0}; index < accesses.size(); ++index) {
+        const Access& access = accesses[index];
+        const auto found = cached.find(access.word);
+        if (!access.is_write) {
+            if (found == cached.end()) {
+                ++stats.materialized_read_misses;
+            } else {
+                ++stats.materialized_read_hits;
+            }
+        }
+        if (found != cached.end()) {
+            by_next_use.erase({found->second, access.word});
+            cached.erase(found);
+        }
+
+        const std::size_t next = next_use[index];
+        if (next == NEVER) continue;
+        if (cached.size() == capacity_words) {
+            const auto farthest = std::prev(by_next_use.end());
+            if (farthest->first <= next) continue;
+            cached.erase(farthest->second);
+            by_next_use.erase(farthest);
+            ++stats.evictions;
+        }
+        cached.emplace(access.word, next);
+        by_next_use.emplace(next, access.word);
+    }
+    return stats;
+}
+
 TraceSummary TraceRecorder::Summarize() const
 {
     TraceSummary summary{};
@@ -451,6 +531,18 @@ TraceSummary TraceRecorder::Summarize() const
     summary.trace_commitment = Sha3_384(encoded_trace);
     summary.half_capacity = SimulateCache(m_word_count / 2);
     summary.quarter_capacity = SimulateCache(m_word_count / 4);
+    const std::size_t half_budget_bytes = m_word_count * 8 / 2;
+    auto budget_scenario = [&](std::size_t entry_bytes) {
+        const std::size_t capacity = std::max<std::size_t>(1, half_budget_bytes / entry_bytes);
+        return BudgetCacheScenario{
+            half_budget_bytes,
+            entry_bytes,
+            SimulateCache(capacity),
+            SimulateOfflineOptimal(capacity),
+        };
+    };
+    summary.compact_half_budget = budget_scenario(16);
+    summary.conservative_half_budget = budget_scenario(24);
     return summary;
 }
 
@@ -965,6 +1057,21 @@ void PrintTrace(
                   << ", \"evictions\": " << cache.evictions << "}"
                   << (comma ? "," : "") << '\n';
     };
+    auto print_budget_cache = [](std::string_view name, const BudgetCacheScenario& scenario, bool comma) {
+        auto fields = [](const CacheTraceStats& stats) {
+            std::ostringstream output;
+            output << "{\"capacity_words\": " << stats.capacity_words
+                   << ", \"materialized_read_hits\": " << stats.materialized_read_hits
+                   << ", \"materialized_read_misses\": " << stats.materialized_read_misses
+                   << ", \"evictions\": " << stats.evictions << "}";
+            return output.str();
+        };
+        std::cout << "    \"" << name << "\": {\"budget_bytes\": " << scenario.budget_bytes
+                  << ", \"entry_bytes\": " << scenario.entry_bytes
+                  << ", \"lru\": " << fields(scenario.lru)
+                  << ", \"offline_optimal\": " << fields(scenario.offline_optimal) << "}"
+                  << (comma ? "," : "") << '\n';
+    };
 
     std::cout << "{\n"
               << "  \"format\": \"soveroot-pow-v1-access-trace-v0\",\n"
@@ -986,7 +1093,9 @@ void PrintTrace(
               << "    \"maximum_live_values\": " << trace.maximum_live_values << ",\n"
               << "    \"cache_simulations\": {\n";
     print_cache("half_capacity_lru", trace.half_capacity, true);
-    print_cache("quarter_capacity_lru", trace.quarter_capacity, false);
+    print_cache("quarter_capacity_lru", trace.quarter_capacity, true);
+    print_budget_cache("compact_half_budget", trace.compact_half_budget, true);
+    print_budget_cache("conservative_half_budget", trace.conservative_half_budget, false);
     std::cout << "    }\n"
               << "  }\n"
               << "}\n";
