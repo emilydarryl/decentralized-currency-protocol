@@ -2,6 +2,11 @@
 
 This directory preserves raw, versioned measurements and their human-readable reports. Results are evidence about a particular implementation, source revision, machine, compiler, and method. They are not consensus parameters or claims of production readiness.
 
+## Adversarial screens
+
+- [`2026-08-12-github-ubuntu-v1-half-memory-spill.md`](2026-08-12-github-ubuntu-v1-half-memory-spill.md) — first exact-output half-scratchpad storage attack on shared GitHub runner `31628959519`. All 24 paired attempts matched; the deliberately simple spill backend retained 3.91% of normal throughput. External storage, unmeasured OS cache and resident memory, and the absence of recomputation make the result informational only; the mandatory time-memory gate remains open.
+- [`2026-08-12-github-ubuntu-v1-half-memory-spill.json`](2026-08-12-github-ubuntu-v1-half-memory-spill.json) — complete paired raw samples and spill-access counts. SHA3-384: `6693f66826146bb27e0be0351a3919165358a483b92077f7b706c6944a5032ade715de3aa4c94136c90cec66a2e68370`.
+
 ## CPU baselines
 
 - [`2026-08-12-github-ubuntu-v1-standard.md`](2026-08-12-github-ubuntu-v1-standard.md) — first standard-profile v1 screen on shared GitHub runner `31623410165`. Every assessable predeclared workload-balance screen met its advance bound; no mandatory PoW gate passed.
