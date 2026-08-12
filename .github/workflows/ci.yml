@@ -71,6 +71,9 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             contrib/pow_research_cpp/powvm.cpp -o build/powvm_cpp
           python3 test/pow_research/run_cpp_vectors.py --binary build/powvm_cpp
+          python3 contrib/pow_research_cpp/benchmark_matrix.py \
+            --binary build/powvm_cpp --profile smoke --output build/pow-benchmark-smoke.json
+          python3 -m json.tool build/pow-benchmark-smoke.json >/dev/null
 
       - name: Configure focused node and test build
         shell: bash

@@ -1,0 +1,154 @@
+# Copyright (c) 2026 The Soveroot developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or https://opensource.org/license/mit/.
+"""Run a reproducible multi-seed C++ PoW research benchmark matrix."""
+
+from __future__ import annotations
+
+import argparse
+from dataclasses import asdict, dataclass
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import statistics
+import subprocess
+
+
+WARNING = (
+    "NON-CONSENSUS PROTOTYPE; these measurements do not establish ASIC resistance, "
+    "decentralization, energy efficiency, or production readiness"
+)
+HEADER = b"Soveroot reproducible C++ benchmark matrix v0"
+
+
+@dataclass(frozen=True)
+class Config:
+    name: str
+    dataset_bytes: int
+    scratchpad_bytes: int
+    program_instructions: int
+    passes: int
+
+
+def profile(name: str) -> tuple[list[Config], int, int]:
+    baseline = Config("baseline", 256 * 1024, 64 * 1024, 64, 4)
+    if name == "smoke":
+        return [Config("minimum", 64 * 1024, 8 * 1024, 16, 1), baseline], 2, 2
+    if name == "standard":
+        configs = [baseline]
+        configs += [Config(f"dataset-{kib}k", kib * 1024, baseline.scratchpad_bytes, 64, 4) for kib in (64, 1024, 4096)]
+        configs += [Config(f"scratch-{kib}k", baseline.dataset_bytes, kib * 1024, 64, 4) for kib in (8, 128, 512)]
+        configs += [Config(f"instructions-{count}", baseline.dataset_bytes, baseline.scratchpad_bytes, count, 4) for count in (16, 256)]
+        configs += [Config(f"passes-{count}", baseline.dataset_bytes, baseline.scratchpad_bytes, 64, count) for count in (1, 16)]
+        return configs, 8, 20
+    raise ValueError(f"unsupported profile: {name}")
+
+
+def seed_for(index: int) -> bytes:
+    return hashlib.sha3_384(b"Soveroot/PowResearch/BenchmarkSeed/v0\x00" + index.to_bytes(4, "little")).digest()
+
+
+def run_case(binary: Path, config: Config, seed_index: int, attempts: int) -> dict[str, object]:
+    completed = subprocess.run(
+        [
+            str(binary.resolve()),
+            "benchmark",
+            seed_for(seed_index).hex(),
+            HEADER.hex(),
+            str(seed_index << 32),
+            str(attempts),
+            str(config.dataset_bytes),
+            str(config.scratchpad_bytes),
+            str(config.program_instructions),
+            str(config.passes),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    result = json.loads(completed.stdout)
+    if result.get("format") != "soveroot-pow-research-cpp-benchmark-v0":
+        raise ValueError("unsupported C++ benchmark format")
+    result["seed_index"] = seed_index
+    result["seed_commitment"] = hashlib.sha3_384(seed_for(seed_index)).hexdigest()
+    return result
+
+
+def integer_summary(values: list[int]) -> dict[str, int]:
+    if not values:
+        raise ValueError("cannot summarize an empty sample")
+    return {
+        "min": min(values),
+        "median": int(statistics.median(values)),
+        "mean": int(statistics.fmean(values)),
+        "max": max(values),
+        "spread_ppm": 0 if min(values) == 0 else (max(values) - min(values)) * 1_000_000 // min(values),
+    }
+
+
+def build_matrix(binary: Path, profile_name: str, seeds: int | None = None, attempts: int | None = None) -> dict[str, object]:
+    configs, default_seeds, default_attempts = profile(profile_name)
+    seed_count = default_seeds if seeds is None else seeds
+    attempt_count = default_attempts if attempts is None else attempts
+    if not 1 <= seed_count <= 128:
+        raise ValueError("seeds must be in [1, 128]")
+    if not 1 <= attempt_count <= 10_000:
+        raise ValueError("attempts must be in [1, 10000]")
+
+    results = []
+    for config in configs:
+        cases = [run_case(binary, config, seed_index, attempt_count) for seed_index in range(seed_count)]
+        results.append({
+            "config": asdict(config),
+            "seed_count": seed_count,
+            "attempts_per_seed": attempt_count,
+            "prepare_ns_across_seeds": integer_summary([int(case["prepare_ns"]) for case in cases]),
+            "median_attempt_ns_across_seeds": integer_summary([int(case["attempt_ns"]["median"]) for case in cases]),
+            "cases": cases,
+        })
+
+    return {
+        "format": "soveroot-pow-research-matrix-v0",
+        "warning": WARNING,
+        "profile": profile_name,
+        "host": {
+            "platform": platform.platform(),
+            "machine": platform.machine(),
+            "processor": platform.processor(),
+            "logical_cpus": os.cpu_count(),
+            "python": platform.python_version(),
+        },
+        "method": {
+            "clock": "C++ std::chrono::steady_clock",
+            "seed_derivation": "SHA3-384(Soveroot/PowResearch/BenchmarkSeed/v0\\0 || uint32_le(index))",
+            "changes_per_config": "one parameter family relative to baseline",
+            "thermal_control": "not measured; record externally for published studies",
+        },
+        "results": results,
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--binary", required=True, type=Path)
+    parser.add_argument("--profile", choices=("smoke", "standard"), default="standard")
+    parser.add_argument("--seeds", type=int)
+    parser.add_argument("--attempts", type=int)
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+    try:
+        document = build_matrix(args.binary, args.profile, args.seeds, args.attempts)
+    except ValueError as error:
+        parser.error(str(error))
+    encoded = json.dumps(document, indent=2, sort_keys=True) + "\n"
+    if args.output:
+        args.output.write_text(encoded, encoding="utf-8")
+    else:
+        print(encoded, end="")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
