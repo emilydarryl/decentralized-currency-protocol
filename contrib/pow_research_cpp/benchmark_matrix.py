@@ -81,6 +81,16 @@ def run_case(binary: Path, config: Config, seed_index: int, attempts: int) -> di
     result = json.loads(completed.stdout)
     if result.get("format") != "soveroot-pow-research-cpp-benchmark-v0":
         raise ValueError("unsupported C++ benchmark format")
+    expected_phases = {"input_setup", "scratchpad_init", "vm_execute", "finalize"}
+    if set(result.get("phase_ns", {})) != expected_phases:
+        raise ValueError("C++ benchmark did not provide the required phase timings")
+    for phase in expected_phases:
+        if len(result["phase_ns"][phase]["samples"]) != attempts:
+            raise ValueError(f"C++ benchmark returned the wrong sample count for {phase}")
+    for index, total in enumerate(result["attempt_ns"]["samples"]):
+        phase_total = sum(result["phase_ns"][phase]["samples"][index] for phase in expected_phases)
+        if phase_total > total:
+            raise ValueError("C++ phase timings exceed the enclosing attempt timing")
     result["seed_index"] = seed_index
     result["seed_commitment"] = hashlib.sha3_384(seed_for(seed_index)).hexdigest()
     return result
@@ -116,6 +126,10 @@ def build_matrix(binary: Path, profile_name: str, seeds: int | None = None, atte
             "attempts_per_seed": attempt_count,
             "prepare_ns_across_seeds": integer_summary([int(case["prepare_ns"]) for case in cases]),
             "median_attempt_ns_across_seeds": integer_summary([int(case["attempt_ns"]["median"]) for case in cases]),
+            "median_phase_ns_across_seeds": {
+                phase: integer_summary([int(case["phase_ns"][phase]["median"]) for case in cases])
+                for phase in ("input_setup", "scratchpad_init", "vm_execute", "finalize")
+            },
             "cases": cases,
         })
 

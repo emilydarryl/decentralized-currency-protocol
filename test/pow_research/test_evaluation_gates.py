@@ -37,6 +37,12 @@ class EvaluationGatesTest(unittest.TestCase):
                 "seed_count": 2,
                 "prepare_ns_across_seeds": {"median": 1000000},
                 "median_attempt_ns_across_seeds": {"median": 2000000, "spread_ppm": 100000},
+                "median_phase_ns_across_seeds": {
+                    "input_setup": {"median": 100000},
+                    "scratchpad_init": {"median": 900000},
+                    "vm_execute": {"median": 100000},
+                    "finalize": {"median": 900000},
+                },
                 "cases": [{"working_set_bytes_estimate": 73728}],
             }],
         }
@@ -47,6 +53,8 @@ class EvaluationGatesTest(unittest.TestCase):
         self.assertIn("NO POW GATE PASSED", report)
         self.assertIn("used 2", report)
         self.assertIn("cannot evaluate energy efficiency", report)
+        self.assertIn("Median phase shares", report)
+        self.assertIn("45.0%", report)
 
 
 if __name__ == "__main__":

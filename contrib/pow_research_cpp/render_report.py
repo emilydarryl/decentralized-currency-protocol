@@ -23,6 +23,10 @@ def _ratio(numerator: int, denominator: int) -> str:
     return f"{numerator / denominator:.2f}x"
 
 
+def _percent(part: int, whole: int) -> str:
+    return f"{part * 100 / whole:.1f}%"
+
+
 def render(matrix_path: Path, gates_path: Path, label: str) -> str:
     raw = matrix_path.read_bytes()
     matrix = json.loads(raw)
@@ -67,10 +71,36 @@ def render(matrix_path: Path, gates_path: Path, label: str) -> str:
             f"{_milliseconds(result['median_attempt_ns_across_seeds']['median'])} | {spread:.2f}% |"
         )
 
+    phase_results = [result for result in matrix["results"] if "median_phase_ns_across_seeds" in result]
+    if phase_results:
+        lines += [
+            "",
+            "## Median phase shares",
+            "",
+            "Phase medians are summarized independently across seeds, so percentages may not total exactly 100%.",
+            "",
+            "| Configuration | Input setup | Scratchpad init | VM execution | Finalization |",
+            "|---|---:|---:|---:|---:|",
+        ]
+        for result in phase_results:
+            total = int(result["median_attempt_ns_across_seeds"]["median"])
+            phases = result["median_phase_ns_across_seeds"]
+            lines.append(
+                f"| {result['config']['name']} | {_percent(phases['input_setup']['median'], total)} | "
+                f"{_percent(phases['scratchpad_init']['median'], total)} | "
+                f"{_percent(phases['vm_execute']['median'], total)} | "
+                f"{_percent(phases['finalize']['median'], total)} |"
+            )
+
     indexed_results = {result["config"]["name"]: result for result in matrix["results"]}
     screening_lines = []
     required = {"dataset-64k", "dataset-4096k", "scratch-8k", "scratch-512k", "instructions-16", "instructions-256", "passes-1", "passes-16"}
     if required.issubset(indexed_results):
+        phase_conclusion = (
+            "The observational phase shares quantify which stages dominate; workload redesign should precede GPU, FPGA, or ASIC comparisons."
+            if phase_results
+            else "Phase-level instrumentation and workload redesign should precede GPU, FPGA, or ASIC comparisons."
+        )
         screening_lines = [
             "",
             "## Screening observations",
@@ -80,7 +110,7 @@ def render(matrix_path: Path, gates_path: Path, label: str) -> str:
             f"- Increasing the instruction count 16x changed median attempt time by {_ratio(_attempt_median(indexed_results, 'instructions-256'), _attempt_median(indexed_results, 'instructions-16'))}.",
             f"- Increasing passes 16x changed median attempt time by {_ratio(_attempt_median(indexed_results, 'passes-16'), _attempt_median(indexed_results, 'passes-1'))}.",
             "",
-            "These shared-runner results suggest that per-attempt scratchpad expansion and final hashing dominate the current prototype while dataset access and variable VM execution contribute too little. This is a screening inference, not a hardware gate result. Phase-level instrumentation and workload redesign should precede GPU, FPGA, or ASIC comparisons.",
+            "These shared-runner results suggest that per-attempt scratchpad expansion and final hashing dominate the current prototype while dataset access and variable VM execution contribute too little. This is a screening inference, not a hardware gate result. " + phase_conclusion,
         ]
 
     seed_gate = next(gate for gate in gates["gates"] if gate["id"] == "seed_variance")

@@ -21,6 +21,8 @@ This version is designed for correctness review. It is not an optimized miner or
 
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
+Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.
+
 The matrix measures software behavior on a particular host. It cannot by itself measure energy, memory bandwidth, GPU performance, FPGA/ASIC cost, pool concentration, or quantum advantage.
 
 The manual `PoW CPU research benchmark` GitHub workflow runs only when explicitly dispatched. It compiles the standalone executable, verifies the canonical vectors, produces raw JSON plus an informational Markdown report, and retains the artifact for 14 days. It deliberately does not run the full Bitcoin-derived node build or claim a gate result.
