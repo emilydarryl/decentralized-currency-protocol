@@ -1,0 +1,403 @@
+{
+  "cases": [
+    {
+      "digest": "2b63cbb94094d0db27b146536553a598f14d8ad73bd002283590090c1097b2f95f45e82b4cde329630c3092638bad0cc",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "3560ac1e009a2a828fc70a96368575bfca22755bd8a29f615746d71edd5bd08e57e8248bdf43596c9da66b560a86c6e1",
+      "nonce": 0,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 0,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 142015,
+            "materialized_read_hits": 93409,
+            "materialized_read_misses": 79163
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211468,
+            "materialized_read_hits": 47886,
+            "materialized_read_misses": 124686
+          }
+        },
+        "distinct_read_words": 32699,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24052,
+        "materialized_reads": 172572,
+        "maximum_live_values": 18828,
+        "reads": 196624,
+        "trace_commitment": "50540525226b52966b68c50f34898b5c92f09574049e5bf20a5e694cd746b90f92c37c46876e73b500236e0a20015ddb",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "d2173de353c45cce4024bfce34828efb05ab90c2d106285fb064b3eb1a25d8dc2ec54f9c95e29330b078da80ef27d446",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "96876cd831d7ae662fbb6a0ad9fc1474ad3aa50d25e9ea05c5dc6d4ec18e2f4eb4921268b8f811bd0db59e1e2f3e99e3",
+      "nonce": 4294967296,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 1,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141940,
+            "materialized_read_hits": 93325,
+            "materialized_read_misses": 79086
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211312,
+            "materialized_read_hits": 48008,
+            "materialized_read_misses": 124403
+          }
+        },
+        "distinct_read_words": 32688,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24213,
+        "materialized_reads": 172411,
+        "maximum_live_values": 18719,
+        "reads": 196624,
+        "trace_commitment": "665da83bafeda86de1b4f9b761c41337d7e83bc9099e5d8bb0bfa6e7025bda55b47f0225efb111e127c5aa3b9b202958",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "d4f2b8d39da753160c3f5ec174cc63a9b928d3f448e27116c3d33dd7208086fac952c542e4120e87f58db6fbc258c0bd",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "2e02d7df05e79924c8cdf58e04e327c85743c4b3ba644eefcc67a6c17f6b2a613158ee47a12bd7ae3f48f3d59873ae8d",
+      "nonce": 8589934592,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 2,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141887,
+            "materialized_read_hits": 93361,
+            "materialized_read_misses": 79087
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211343,
+            "materialized_read_hits": 47830,
+            "materialized_read_misses": 124618
+          }
+        },
+        "distinct_read_words": 32673,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24176,
+        "materialized_reads": 172448,
+        "maximum_live_values": 18663,
+        "reads": 196624,
+        "trace_commitment": "a7ee2e88de4baa09075314b1be64d61324bc28fdb1f699c05ac51b88fd9e498ba75ce7dba7da6daf9866b6b84424cea1",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "de3c4372548fb35bfb6c733d943b468aff853c191ae0c5e560491120b84c8b1d5c35a189734d2e2443994f4a42b5ba35",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "8b40fe6dfb93a237f318f687ecb704dcc5ff60ccaacd3b034993512d618d161d3403da2e301c0f4a33c3027b88b792f9",
+      "nonce": 12884901888,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 3,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 142281,
+            "materialized_read_hits": 93240,
+            "materialized_read_misses": 79213
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211607,
+            "materialized_read_hits": 47810,
+            "materialized_read_misses": 124643
+          }
+        },
+        "distinct_read_words": 32696,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24171,
+        "materialized_reads": 172453,
+        "maximum_live_values": 18681,
+        "reads": 196624,
+        "trace_commitment": "62c39abfd22908b9ccf5aab8e8ab50742c4a58ce233b38beda0ad90e6645edb6c4d8eae294d3a79971bd174ed0be97bd",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "22cd057a402f6551f051fc4bc81a0e82b7774969053c86efebbacf4c2784321efaf989135b0e84e0f0f138781d1eca68",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "131dbed4ad60d18dd085da1a3835c75fb8c0b7ece02b396766222e6d417550703b40524fdc64cba9d76642442b6207ae",
+      "nonce": 17179869184,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 4,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141645,
+            "materialized_read_hits": 93776,
+            "materialized_read_misses": 78812
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211364,
+            "materialized_read_hits": 48144,
+            "materialized_read_misses": 124444
+          }
+        },
+        "distinct_read_words": 32689,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24036,
+        "materialized_reads": 172588,
+        "maximum_live_values": 18621,
+        "reads": 196624,
+        "trace_commitment": "a8fdf29cf2e78a486e0f750287393b1acd8dd87f77b2cb705571b5300f27b4e39f87433e837245cb23f0e683d1a1337d",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "91bf4b0bca815391b0b2da5bd2eeaeb2510b57001fdc794456550fe6f78f68dec2b8173538555b0892f95f97d5c0c815",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "4b6e9fbaa1dc785d39ad4a9831cc834dec53bf984878c7b2938dccd21670ae52836c1a1488d370094b963a224d49196b",
+      "nonce": 21474836480,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 5,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141821,
+            "materialized_read_hits": 93645,
+            "materialized_read_misses": 78999
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211296,
+            "materialized_read_hits": 48086,
+            "materialized_read_misses": 124558
+          }
+        },
+        "distinct_read_words": 32685,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 23980,
+        "materialized_reads": 172644,
+        "maximum_live_values": 18663,
+        "reads": 196624,
+        "trace_commitment": "8867a545a3854349ffc39d0b6b981534579a30209dad8defb6a03c4933a4868f475b5c84706e7ff2f031abb2b44bbfda",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "082c9593b12dcf44068fe520d54fc58eda1533c0935789a9a9633e35d8833e5236d998121f01b3275958bcbe4448f41f",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "63ea3c594b8329a832c95c58dd7620faf3e62f99f56a06305885068d8f501be5fb2ab59007ea6b57b5035ede958c4410",
+      "nonce": 25769803776,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 6,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141418,
+            "materialized_read_hits": 93625,
+            "materialized_read_misses": 78798
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211191,
+            "materialized_read_hits": 48087,
+            "materialized_read_misses": 124336
+          }
+        },
+        "distinct_read_words": 32701,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24201,
+        "materialized_reads": 172423,
+        "maximum_live_values": 18670,
+        "reads": 196624,
+        "trace_commitment": "1f4de6d28617d80cc700e8c6038f4b7265454d966f5f15b4c116fa32d2ca2fc1d40e94abe3d1e03254ff07f9c107b44f",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    },
+    {
+      "digest": "6be21533a17bf114ea1d717f8d9ec0719b2462d30f4067825a91f26fabb047feb0b5773ac0de45906689d51bcfe83509",
+      "format": "soveroot-pow-v1-access-trace-v0",
+      "memory_commitment": "a8d19e2d81c9fb5c99506a42869a3585a1e6c1cbecbd6a8b51642e21f106c615116e3adcdb29326a05416ba9809b2d8e",
+      "nonce": 30064771072,
+      "params": {
+        "dataset_bytes": 2097152,
+        "passes": 3,
+        "scratchpad_bytes": 262144
+      },
+      "seed_index": 7,
+      "trace": {
+        "cache_simulations": {
+          "half_capacity_lru": {
+            "capacity_words": 16384,
+            "evictions": 141656,
+            "materialized_read_hits": 93814,
+            "materialized_read_misses": 78732
+          },
+          "quarter_capacity_lru": {
+            "capacity_words": 8192,
+            "evictions": 211465,
+            "materialized_read_hits": 48151,
+            "materialized_read_misses": 124395
+          }
+        },
+        "distinct_read_words": 32678,
+        "distinct_written_words": 32768,
+        "initial_zero_reads": 24078,
+        "materialized_reads": 172546,
+        "maximum_live_values": 18659,
+        "reads": 196624,
+        "trace_commitment": "9cd386475c66ecea6260694d7e55f6950c83c0fae54a28bc99743ea9c5c6f5425012af9baf8de310eb8b02cfa1617fb1",
+        "writes": 196608
+      },
+      "warning": "NON-CONSENSUS OBSERVATIONAL TRACE; this is not a bounded-memory attack or a gate result"
+    }
+  ],
+  "config": {
+    "dataset_bytes": 2097152,
+    "name": "baseline",
+    "passes": 3,
+    "scratchpad_bytes": 262144
+  },
+  "format": "soveroot-pow-v1-dependency-trace-matrix-v0",
+  "host": {
+    "cpu_model": "AMD EPYC 7763 64-Core Processor",
+    "logical_cpus": 4,
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "runner_image": "ubuntu24"
+  },
+  "profile": "standard",
+  "seed_count": 8,
+  "source_revision": "3cd8ce52c3bb4bc72eaac2136fe03bb7b508d6d9",
+  "summaries": {
+    "cache_simulations": {
+      "half_capacity_lru": {
+        "evictions": {
+          "max": 142281,
+          "mean": 141832,
+          "median": 141854,
+          "min": 141418,
+          "spread_ppm": 6102
+        },
+        "materialized_read_hits": {
+          "max": 93814,
+          "mean": 93524,
+          "median": 93517,
+          "min": 93240,
+          "spread_ppm": 6156
+        },
+        "materialized_read_misses": {
+          "max": 79213,
+          "mean": 78986,
+          "median": 79042,
+          "min": 78732,
+          "spread_ppm": 6109
+        }
+      },
+      "quarter_capacity_lru": {
+        "evictions": {
+          "max": 211607,
+          "mean": 211380,
+          "median": 211353,
+          "min": 211191,
+          "spread_ppm": 1969
+        },
+        "materialized_read_hits": {
+          "max": 48151,
+          "mean": 48000,
+          "median": 48047,
+          "min": 47810,
+          "spread_ppm": 7132
+        },
+        "materialized_read_misses": {
+          "max": 124686,
+          "mean": 124510,
+          "median": 124501,
+          "min": 124336,
+          "spread_ppm": 2814
+        }
+      }
+    },
+    "distinct_read_words": {
+      "max": 32701,
+      "mean": 32688,
+      "median": 32688,
+      "min": 32673,
+      "spread_ppm": 856
+    },
+    "distinct_written_words": {
+      "max": 32768,
+      "mean": 32768,
+      "median": 32768,
+      "min": 32768,
+      "spread_ppm": 0
+    },
+    "initial_zero_reads": {
+      "max": 24213,
+      "mean": 24113,
+      "median": 24124,
+      "min": 23980,
+      "spread_ppm": 9716
+    },
+    "materialized_reads": {
+      "max": 172644,
+      "mean": 172510,
+      "median": 172499,
+      "min": 172411,
+      "spread_ppm": 1351
+    },
+    "maximum_live_values": {
+      "max": 18828,
+      "mean": 18688,
+      "median": 18666,
+      "min": 18621,
+      "spread_ppm": 11116
+    }
+  },
+  "warning": "NON-CONSENSUS FULL-MEMORY TRACE; cache simulations do not produce reduced-memory proofs"
+}

@@ -1,0 +1,97 @@
+{
+  "format": "soveroot-pow-v1-batch-amortization-summary-v0",
+  "source_revision": "3cd8ce52c3bb4bc72eaac2136fe03bb7b508d6d9",
+  "profile": "standard",
+  "seed_count": 8,
+  "batch_sizes": [
+    1,
+    4,
+    16,
+    64,
+    256,
+    1024,
+    4096
+  ],
+  "exact_evaluations": 43688,
+  "host": {
+    "runner": "GitHub-hosted ubuntu-24.04",
+    "cpu": "AMD EPYC 7763 64-Core Processor",
+    "logical_cpu_limit": 4
+  },
+  "method": {
+    "execution": "single process, sequential attempts",
+    "inclusive_cost": "epoch preparation plus all evaluations, divided by batch size",
+    "evaluation_only_cost": "evaluation loop only, divided by batch size",
+    "baseline": "batch size one median for the same metric"
+  },
+  "raw_artifact": {
+    "workflow_run_id": 31633897277,
+    "run_url": "https://github.com/emilydarryl/decentralized-currency-protocol/actions/runs/31633897277",
+    "artifact_name": "pow-v1-dependency-batch-31633897277",
+    "filename": "pow-v1-batch-amortization.json",
+    "bytes": 5594524,
+    "sha3_384": "83a1b7a61d936359528a9b1da34d9ff1eb8da5989317ab8af38bb65688ec458fef3411126f31de8a26e2752b09dada90",
+    "retention_note": "GitHub Actions artifacts are retained according to repository and workflow retention settings; the digest permanently identifies the measured raw file."
+  },
+  "median_results": [
+    {
+      "batch_size": 1,
+      "inclusive_ns_per_attempt": 68734347,
+      "evaluation_only_ns_per_attempt": 5700549,
+      "inclusive_advantage_ppm": 1000000,
+      "evaluation_only_advantage_ppm": 1000000
+    },
+    {
+      "batch_size": 4,
+      "inclusive_ns_per_attempt": 21222931,
+      "evaluation_only_ns_per_attempt": 5525273,
+      "inclusive_advantage_ppm": 3237873,
+      "evaluation_only_advantage_ppm": 1040314
+    },
+    {
+      "batch_size": 16,
+      "inclusive_ns_per_attempt": 9409592,
+      "evaluation_only_ns_per_attempt": 5470936,
+      "inclusive_advantage_ppm": 7279574,
+      "evaluation_only_advantage_ppm": 1035465
+    },
+    {
+      "batch_size": 64,
+      "inclusive_ns_per_attempt": 6444015,
+      "evaluation_only_ns_per_attempt": 5462457,
+      "inclusive_advantage_ppm": 10676053,
+      "evaluation_only_advantage_ppm": 1045357
+    },
+    {
+      "batch_size": 256,
+      "inclusive_ns_per_attempt": 5713859,
+      "evaluation_only_ns_per_attempt": 5469608,
+      "inclusive_advantage_ppm": 12014457,
+      "evaluation_only_advantage_ppm": 1040962
+    },
+    {
+      "batch_size": 1024,
+      "inclusive_ns_per_attempt": 5524920,
+      "evaluation_only_ns_per_attempt": 5463813,
+      "inclusive_advantage_ppm": 12455451,
+      "evaluation_only_advantage_ppm": 1042001
+    },
+    {
+      "batch_size": 4096,
+      "inclusive_ns_per_attempt": 5492184,
+      "evaluation_only_ns_per_attempt": 5476881,
+      "inclusive_advantage_ppm": 12515033,
+      "evaluation_only_advantage_ppm": 1041306
+    }
+  ],
+  "interpretation": {
+    "inclusive": "Large batches amortize one-time epoch preparation, reaching a 12.52x median advantage at batch size 4,096.",
+    "evaluation_only": "The attempt loop itself improves only 1.04x at batch size 4,096, so the screen did not expose a large within-epoch evaluation advantage.",
+    "gate_status": "open"
+  },
+  "limitations": [
+    "This is a sequential CPU screen on one shared hosted-runner class, not a GPU, FPGA, ASIC, or multi-lane implementation.",
+    "The screen does not establish hardware occupancy, area efficiency, energy efficiency, or capital-cost advantage.",
+    "The compact file preserves medians and provenance; dispersion and every timing sample remain in the hashed raw workflow artifact."
+  ]
+}
