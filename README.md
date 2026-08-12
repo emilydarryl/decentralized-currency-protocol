@@ -1,10 +1,16 @@
-# Decentralized Currency Protocol
+# Soveroot
 
-Status: Working draft v0.1  
-Protocol name and ticker: Unassigned  
+Status: Working draft v0.1
+
+Protocol name: Soveroot
+
+Ticker: Unassigned
+
 Implementation status: Bitcoin Core v31.0 bootstrap; experimental and not safe for monetary use
 
 This directory turns the design discussion into an auditable protocol project. The objective is universal Bitcoin-like money for people, businesses, devices, and autonomous software. It prioritizes independent validation, post-quantum cryptography, private-by-default wallet behavior, decentralized block construction, and safe optional delegation.
+
+The public node daemon is `sovrd`, and the public RPC command-line client is `sovr-cli`. The name is a provisional engineering identity pending formal legal clearance.
 
 AI agents are users of the currency, not the protocol's identity, governors, or privileged participants. A person can own, receive, spend, mine, and validate without using any AI system.
 
@@ -17,6 +23,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
 - [inherited-assumptions.md](docs/implementation/inherited-assumptions.md) tracks every inherited network and consensus dependency that must be replaced or reviewed.
+- [branding-v1.md](docs/implementation/branding-v1.md) records the Soveroot public names and the identifiers deliberately deferred to a protocol migration.
 
 ## Design priorities
 
@@ -38,6 +45,7 @@ In descending order:
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
 - CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer.
+- The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; inherited CMake target names remain temporarily stable to simplify upstream maintenance.
 - Nakamoto-style proof-of-work remains the consensus mechanism.
 - Proof-of-work uses a permanent, deterministic algorithm family; human-selected periodic algorithm rotation is rejected.
 - The final proof-of-work construction is not yet selected and is a mainnet blocker.
