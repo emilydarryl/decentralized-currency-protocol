@@ -46,6 +46,13 @@ def main() -> int:
             raise AssertionError(f"{vector['name']}: memory commitment changed under tracing")
         if not result["trace"]["trace_commitment"]:
             raise AssertionError(f"{vector['name']}: trace commitment is missing")
+        simulations = result["trace"]["cache_simulations"]
+        for name in ("compact_half_budget", "conservative_half_budget"):
+            scenario = simulations[name]
+            if scenario["budget_bytes"] != params["scratchpad_bytes"] // 2:
+                raise AssertionError(f"{vector['name']}: {name} exceeds the half-memory budget")
+            if scenario["offline_optimal"]["materialized_read_misses"] > scenario["lru"]["materialized_read_misses"]:
+                raise AssertionError(f"{vector['name']}: offline optimum is worse than LRU")
         print(f"PASS trace {vector['name']}")
     print(f"All {len(vectors['vectors'])} C++ v1 trace vectors passed")
     return 0
