@@ -249,7 +249,8 @@ The following invariants are release-blocking:
 - memory-bandwidth-heavy candidate design;
 - independent optimized implementations;
 - advance program-seed schedule;
-- hardware and reversible-circuit analysis.
+- hardware and reversible-circuit analysis;
+- predeclared specialization targets and rejection gates from the PoW VM research specification.
 
 **Residual risk:** ASIC resistance cannot be guaranteed. Facilities, energy contracts, fabrication access, and capital remain sources of concentration.
 
@@ -538,7 +539,10 @@ The following invariants are release-blocking:
 - reproducible competing clients;
 - long review periods;
 - no automatic consensus update;
-- miner signaling is informational only.
+- miner signaling is informational only;
+- missed readiness thresholds expire without mandatory lock-in;
+- forced activation requires a separately named, explicitly consented fork proposal;
+- consensus proposals require independent implementations and conformance tests.
 
 **Residual risk:** Social and economic power cannot be eliminated by code. Users may voluntarily follow a captured implementation.
 

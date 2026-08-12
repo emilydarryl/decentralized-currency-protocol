@@ -240,6 +240,8 @@ The exact formula is not selected. An ASERT-like or similarly analyzable continu
 
 ## 7. Proof of work
 
+The candidate construction and its rejection gates are developed in [pow-vm-research.md](pow-vm-research.md). That research document does not activate or approve a consensus algorithm.
+
 ### 7.1 Requirements
 
 The proof-of-work construction MUST be:
@@ -677,6 +679,8 @@ Before mainnet, the project MUST maintain:
 - reproducible initial-sync benchmarks on declared reference hardware.
 
 ## 19. Phased implementation
+
+Every post-genesis consensus change MUST follow [upgrade-activation.md](upgrade-activation.md). Miner signals measure readiness and never replace deliberate validation-rule adoption by users.
 
 ### Phase 0: Research freeze
 
