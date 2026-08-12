@@ -29,6 +29,20 @@ python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
 
 Agreement on the v1 vectors establishes deterministic interoperability only. Phase timing and parameter sweeps must be added and evaluated against the predeclared v1 workload objectives before hardware-comparison work begins.
 
+The v1 executable now has an observational benchmark mode that separates input setup, zero-filled scratchpad allocation, mixing, and fixed-size finalization without changing output semantics. Run its bounded smoke matrix and renderer with:
+
+```bash
+python3 contrib/pow_research_cpp/benchmark_matrix_v1.py \
+  --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-matrix.json
+python3 contrib/pow_research_cpp/render_report_v1.py \
+  --matrix build/pow-v1-matrix.json \
+  --gates contrib/pow_research/gates_v0.json \
+  --screening contrib/pow_research_v1/screening_v0.json \
+  --label "local smoke" --output build/pow-v1-report.md
+```
+
+The manual `PoW v1 CPU research benchmark` workflow runs the standard profile and preserves raw samples plus the rendered informational report for 14 days.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.

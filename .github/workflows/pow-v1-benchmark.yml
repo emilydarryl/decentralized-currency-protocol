@@ -1,0 +1,83 @@
+name: PoW v1 CPU research benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Benchmark profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+      seeds:
+        description: Deterministic seed count (1-128)
+        required: true
+        default: "8"
+        type: string
+      attempts:
+        description: Nonce attempts per seed (1-10000)
+        required: true
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-matrix:
+    name: Informational v1 CPU matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+      ATTEMPTS: ${{ inputs.attempts }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Compile standalone v1 research executable
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+
+      - name: Verify canonical v1 differential vectors
+        shell: bash
+        run: python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
+
+      - name: Run informational v1 matrix
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/benchmark_matrix_v1.py \
+            --binary build/powvm_v1_cpp \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --attempts "$ATTEMPTS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build/pow-v1-cpu-matrix.json
+          python3 -m json.tool build/pow-v1-cpu-matrix.json >/dev/null
+
+      - name: Render informational v1 report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_report_v1.py \
+            --matrix build/pow-v1-cpu-matrix.json \
+            --gates contrib/pow_research/gates_v0.json \
+            --screening contrib/pow_research_v1/screening_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build/pow-v1-cpu-report.md
+
+      - name: Preserve raw v1 data and report
+        uses: actions/upload-artifact@v7
+        with:
+          name: pow-v1-cpu-${{ github.run_id }}
+          path: |
+            build/pow-v1-cpu-matrix.json
+            build/pow-v1-cpu-report.md
+          if-no-files-found: error
+          retention-days: 14

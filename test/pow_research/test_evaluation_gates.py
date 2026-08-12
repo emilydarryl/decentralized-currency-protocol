@@ -11,10 +11,12 @@ import tempfile
 import unittest
 
 from contrib.pow_research_cpp.render_report import render
+from contrib.pow_research_cpp.render_report_v1 import render as render_v1
 
 
 ROOT = Path(__file__).resolve().parents[2]
 GATES = ROOT / "contrib" / "pow_research" / "gates_v0.json"
+V1_SCREENING = ROOT / "contrib" / "pow_research_v1" / "screening_v0.json"
 
 
 class EvaluationGatesTest(unittest.TestCase):
@@ -55,6 +57,72 @@ class EvaluationGatesTest(unittest.TestCase):
         self.assertIn("cannot evaluate energy efficiency", report)
         self.assertIn("Median phase shares", report)
         self.assertIn("45.0%", report)
+
+    def test_v1_screening_policy_matches_predeclared_bounds(self) -> None:
+        document = json.loads(V1_SCREENING.read_text(encoding="utf-8"))
+        self.assertEqual(document["format"], "soveroot-pow-v1-screening-objectives-v0")
+        screens = document["screens"]
+        self.assertEqual(screens["baseline_mix_share_percent"], {
+            "advance_min": 60,
+            "redesign_below": 50,
+        })
+        self.assertEqual(screens["passes_16x_attempt_ratio"], {
+            "advance_min": 8,
+            "redesign_below": 4,
+        })
+        self.assertTrue(screens["dataset_cache_tier_ratio"]["controlled_physical_hardware_required"])
+
+    def test_v1_report_classifies_only_predeclared_software_screens(self) -> None:
+        def result(name: str, attempt: int, phases: tuple[int, int, int, int]) -> dict[str, object]:
+            return {
+                "config": {
+                    "name": name,
+                    "dataset_bytes": 2 * 1024 * 1024,
+                    "scratchpad_bytes": 256 * 1024,
+                    "passes": 3,
+                },
+                "seed_count": 8,
+                "prepare_ns_across_seeds": {"median": 1_000_000},
+                "median_attempt_ns_across_seeds": {"median": attempt, "spread_ppm": 10_000},
+                "median_phase_ns_across_seeds": {
+                    "input_setup": {"median": phases[0]},
+                    "scratchpad_init": {"median": phases[1]},
+                    "mix_execute": {"median": phases[2]},
+                    "finalize": {"median": phases[3]},
+                },
+                "cases": [{"working_set_bytes_estimate": 2_359_296}],
+            }
+
+        matrix = {
+            "format": "soveroot-pow-research-matrix-v1",
+            "profile": "standard",
+            "source_revision": "v1abc",
+            "host": {
+                "platform": "test",
+                "machine": "test",
+                "cpu_model": "test",
+                "logical_cpus": 2,
+            },
+            "results": [
+                result("baseline", 1_000, (50, 100, 800, 50)),
+                result("passes-1", 100, (5, 10, 80, 5)),
+                result("passes-16", 900, (5, 10, 880, 5)),
+                result("scratch-8k", 100, (5, 10, 80, 5)),
+                result("scratch-512k", 2_000, (10, 20, 1_960, 10)),
+                result("dataset-64k", 100, (5, 10, 80, 5)),
+                result("dataset-4096k", 120, (5, 10, 100, 5)),
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            matrix_path = Path(directory) / "matrix-v1.json"
+            matrix_path.write_text(json.dumps(matrix), encoding="utf-8")
+            report = render_v1(matrix_path, GATES, V1_SCREENING, "v1 unit test")
+        self.assertIn("NO POW GATE PASSED", report)
+        self.assertIn("Baseline mixing share | 80.0% | **ADVANCE**", report)
+        self.assertIn("16x pass-count response | 9.00x | **ADVANCE**", report)
+        self.assertIn("64x scratchpad response | 20.00x | **ADVANCE**", report)
+        self.assertIn("UNASSESSED ON SHARED RUNNER", report)
+        self.assertIn("ADVANCE SOFTWARE SCREEN ONLY", report)
 
 
 if __name__ == "__main__":

@@ -7,10 +7,12 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <chrono>
 #include <cstdint>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -61,6 +63,13 @@ struct ExecutionResult {
     Bytes schedule_digest;
     Bytes dataset_digest;
     Bytes memory_commitment;
+};
+
+struct ExecutionTiming {
+    std::int64_t input_setup_ns;
+    std::int64_t scratchpad_init_ns;
+    std::int64_t mix_execute_ns;
+    std::int64_t finalize_ns;
 };
 
 constexpr std::array<std::uint64_t, 24> KECCAK_ROUND_CONSTANTS{
@@ -304,12 +313,18 @@ std::uint64_t ExecuteOperation(
     }
 }
 
-ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::uint64_t nonce)
+ExecutionResult Evaluate(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    ExecutionTiming* timing = nullptr)
 {
+    using Clock = std::chrono::steady_clock;
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) throw std::invalid_argument("header size is outside the v1 research envelope");
     if (context.dataset.size() != context.params.dataset_bytes) throw std::invalid_argument("context dataset length is invalid");
 
+    const auto input_started = Clock::now();
     const Bytes params_bytes = EncodeParams(context.params);
     Bytes nonce_bytes;
     AppendLE64(nonce_bytes, nonce);
@@ -326,8 +341,10 @@ ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::
         registers[i] = ReadLE64(initial_state.data() + i * 8);
     }
     std::uint64_t accumulator = ReadLE64(initial_state.data() + REGISTER_COUNT * 8);
+    const auto scratchpad_started = Clock::now();
     Bytes scratchpad(context.params.scratchpad_bytes, 0);
     const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
+    const auto mix_started = Clock::now();
 
     for (std::size_t pass{0}; pass < context.params.passes; ++pass) {
         for (std::size_t word{0}; word < scratchpad_words; ++word) {
@@ -371,6 +388,7 @@ ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::
         }
     }
 
+    const auto finalize_started = Clock::now();
     std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
     std::uint64_t selector = accumulator ^ registers[0] ^ registers[4];
     for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
@@ -407,13 +425,25 @@ ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::
     Append(result_input, encoded_registers);
     Append(result_input, encoded_accumulator);
     Append(result_input, memory_commitment);
-    return {
+    ExecutionResult result{
         Sha3_384(result_input),
         registers,
         context.schedule_digest,
         context.dataset_digest,
         memory_commitment,
     };
+    const auto finished = Clock::now();
+    if (timing != nullptr) {
+        timing->input_setup_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(scratchpad_started - input_started).count();
+        timing->scratchpad_init_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(mix_started - scratchpad_started).count();
+        timing->mix_execute_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(finalize_started - mix_started).count();
+        timing->finalize_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(finished - finalize_started).count();
+    }
+    return result;
 }
 
 Bytes ParseHex(std::string_view text)
@@ -462,14 +492,156 @@ void PrintResult(const ExecutionResult& result)
     std::cout << '\n';
 }
 
+std::string CompilerDescription()
+{
+#if defined(__clang__)
+    return "clang-" __clang_version__;
+#elif defined(__GNUC__)
+    return "gcc-" __VERSION__;
+#elif defined(_MSC_VER)
+    return "msvc-" + std::to_string(_MSC_VER);
+#else
+    return "unknown";
+#endif
+}
+
+struct TimingSummary {
+    std::int64_t minimum;
+    std::int64_t median;
+    std::int64_t mean;
+    std::int64_t maximum;
+};
+
+TimingSummary Summarize(const std::vector<std::int64_t>& samples)
+{
+    if (samples.empty()) throw std::invalid_argument("cannot summarize empty timings");
+    std::vector<std::int64_t> sorted = samples;
+    std::sort(sorted.begin(), sorted.end());
+    const std::int64_t median = sorted.size() % 2 == 0
+        ? (sorted[sorted.size() / 2 - 1] + sorted[sorted.size() / 2]) / 2
+        : sorted[sorted.size() / 2];
+    return {
+        sorted.front(),
+        median,
+        std::accumulate(samples.begin(), samples.end(), std::int64_t{0}) /
+            static_cast<std::int64_t>(samples.size()),
+        sorted.back(),
+    };
+}
+
+void PrintTimingJson(std::string_view name, const std::vector<std::int64_t>& samples, bool trailing_comma)
+{
+    const TimingSummary summary = Summarize(samples);
+    std::cout << "    \"" << name << "\": {\"min\": " << summary.minimum
+              << ", \"median\": " << summary.median << ", \"mean\": " << summary.mean
+              << ", \"max\": " << summary.maximum << ", \"samples\": [";
+    for (std::size_t i{0}; i < samples.size(); ++i) {
+        if (i != 0) std::cout << ',';
+        std::cout << samples[i];
+    }
+    std::cout << "]}" << (trailing_comma ? "," : "") << '\n';
+}
+
+void PrintAttemptTimingJson(const std::vector<std::int64_t>& samples)
+{
+    const TimingSummary summary = Summarize(samples);
+    std::cout << "  \"attempt_ns\": {\"min\": " << summary.minimum
+              << ", \"median\": " << summary.median << ", \"mean\": " << summary.mean
+              << ", \"max\": " << summary.maximum << ", \"samples\": [";
+    for (std::size_t i{0}; i < samples.size(); ++i) {
+        if (i != 0) std::cout << ',';
+        std::cout << samples[i];
+    }
+    std::cout << "]},\n";
+}
+
+void PrintBenchmark(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t first_nonce,
+    std::size_t attempts,
+    const Params& params)
+{
+    if (attempts < 1 || attempts > 10000) throw std::invalid_argument("attempts must be in [1, 10000]");
+    if (attempts - 1 > std::numeric_limits<std::uint64_t>::max() - first_nonce) {
+        throw std::invalid_argument("nonce range exceeds uint64");
+    }
+
+    using Clock = std::chrono::steady_clock;
+    const auto prepare_started = Clock::now();
+    const EpochContext context = PrepareEpoch(seed, params);
+    const auto prepare_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - prepare_started).count();
+
+    std::vector<std::int64_t> samples;
+    std::vector<std::int64_t> input_setup_samples;
+    std::vector<std::int64_t> scratchpad_init_samples;
+    std::vector<std::int64_t> mix_execute_samples;
+    std::vector<std::int64_t> finalize_samples;
+    samples.reserve(attempts);
+    input_setup_samples.reserve(attempts);
+    scratchpad_init_samples.reserve(attempts);
+    mix_execute_samples.reserve(attempts);
+    finalize_samples.reserve(attempts);
+    std::uint64_t digest_xor{0};
+    for (std::size_t attempt{0}; attempt < attempts; ++attempt) {
+        ExecutionTiming timing{};
+        const auto started = Clock::now();
+        const ExecutionResult result = Evaluate(context, header, first_nonce + attempt, &timing);
+        samples.push_back(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count());
+        input_setup_samples.push_back(timing.input_setup_ns);
+        scratchpad_init_samples.push_back(timing.scratchpad_init_ns);
+        mix_execute_samples.push_back(timing.mix_execute_ns);
+        finalize_samples.push_back(timing.finalize_ns);
+        digest_xor ^= ReadLE64(result.digest.data());
+    }
+    const std::size_t working_set =
+        params.dataset_bytes + params.scratchpad_bytes +
+        SCHEDULE_LENGTH * 9 + REGISTER_COUNT * 8;
+
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-research-cpp-benchmark-v1\",\n"
+              << "  \"warning\": \"NON-CONSENSUS V1 CANDIDATE; timings do not establish mining economics or specialization resistance\",\n"
+              << "  \"compiler\": \"" << CompilerDescription() << "\",\n"
+              << "  \"steady_clock\": true,\n"
+              << "  \"attempts\": " << attempts << ",\n"
+              << "  \"first_nonce\": " << first_nonce << ",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"working_set_bytes_estimate\": " << working_set << ",\n"
+              << "  \"prepare_ns\": " << prepare_ns << ",\n";
+    PrintAttemptTimingJson(samples);
+    std::cout << "  \"phase_ns\": {\n";
+    PrintTimingJson("input_setup", input_setup_samples, true);
+    PrintTimingJson("scratchpad_init", scratchpad_init_samples, true);
+    PrintTimingJson("mix_execute", mix_execute_samples, true);
+    PrintTimingJson("finalize", finalize_samples, false);
+    std::cout << "  },\n"
+              << "  \"digest_xor_64\": \"" << std::hex << std::setfill('0') << std::setw(16)
+              << digest_xor << "\"\n"
+              << "}\n";
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 9 && std::string_view{argv[1]} == "benchmark") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t first_nonce = std::stoull(argv[4]);
+            const std::size_t attempts = ParseSize(argv[5]);
+            const Params params{ParseSize(argv[6]), ParseSize(argv[7]), ParseSize(argv[8])};
+            PrintBenchmark(seed, header, first_nonce, attempts, params);
+            return 0;
+        }
         if (argc != 7) {
             std::cerr << "NON-CONSENSUS Soveroot PoW v1 research implementation\n"
-                      << "usage: powvm_v1_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n";
+                      << "usage: powvm_v1_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n";
             return 2;
         }
         const Bytes seed = ParseHex(argv[1]);
