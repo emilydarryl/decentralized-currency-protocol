@@ -4,6 +4,8 @@ Version: 0.1 research draft
 
 Status: Candidate direction only; not approved for mainnet or consensus implementation
 
+The initial non-consensus measurement harness lives in [`contrib/pow_research`](../contrib/pow_research/README.md). It provides a clear interpreter and reproducible vectors for research; it does not select the VM, constants, seed schedule, or mainnet proof of work.
+
 ## 1. Objective
 
 Soveroot is investigating a permanent, chain-specific proof-of-work virtual machine with deterministic workload variation and substantial memory-bandwidth demand.

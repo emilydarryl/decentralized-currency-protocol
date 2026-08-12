@@ -1,0 +1,78 @@
+{
+  "format": "soveroot-pow-research-v0",
+  "params": {
+    "dataset_bytes": 65536,
+    "passes": 2,
+    "program_instructions": 32,
+    "scratchpad_bytes": 8192
+  },
+  "vectors": [
+    {
+      "header": "536f7665726f6f7420726573656172636820766563746f722030",
+      "name": "zero-seed-zero-nonce",
+      "nonce": 0,
+      "result": {
+        "dataset_digest": "28893c0023cde3ab077e0a5d332515da5792d05c85fbbdb575b13ab0fdc25274f7f780fae66eb06f16b53c738bb6fdf5",
+        "digest": "9814d50c03a6c5d1d6414831cf1d2f77b396f90e48f30b2d4ec0002725e24bdd0ff77272b50c3251beaa2d34e93e1065",
+        "program_digest": "55a3b2a8b806af67923469c1bda8b7dbdeb52fd0758ff383affeae470b44a462a62329549f226605a6f42a2dccd771bc",
+        "registers": [
+          "df268baaa286db1f",
+          "3d7b86fce0849d93",
+          "882af12d7c6e0e5b",
+          "61ab2661e5adec9f",
+          "ed20406cb964873d",
+          "250f0ee847904044",
+          "754f2b8892620aef",
+          "7ce93b18e49c787c"
+        ],
+        "scratchpad_digest": "8e1d5d5e13bf01687c89228e4954ebaa562a4faf0a9da4ac38d8541f52b98868cb7fbedc9c49c19aea2759fef18dc7ad"
+      },
+      "seed": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "header": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+      "name": "incrementing-seed",
+      "nonce": 81985529216486895,
+      "result": {
+        "dataset_digest": "fcc2c8987d545c9a8a514a531791c914069263e6292cdd3bba66f99431aaea07f231bb017bb67c275e7fb652c79a831b",
+        "digest": "8dc41b1a70e3af4fa3972ad5e8df0b11b3647dc82dacbacad93180c6da0d1f30fdcebaa775a8bb482ec90c054bfe1ae9",
+        "program_digest": "fb4bb3a93d02c18f2428d893eb293c1f92be6afdfc3bc4c299ed090e585ce37720d6f9798b26d96864324c6f689d5ad0",
+        "registers": [
+          "98c3e2164c1dad9e",
+          "4494d27d7a61867d",
+          "99b1c120f6ea31cd",
+          "2644726a17ae8c8d",
+          "881138069671a635",
+          "dd8152a6669f47b0",
+          "c533bf3856a7476c",
+          "9d09968216df39b9"
+        ],
+        "scratchpad_digest": "a27c85e631f30c56da036ccece4db61baa38dc69808f116d0faf3e14c7c053be3f0720bfbe88fd997e1f3b1e574d7bec"
+      },
+      "seed": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"
+    },
+    {
+      "header": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+      "name": "high-bit-pattern",
+      "nonce": 18446744073709551615,
+      "result": {
+        "dataset_digest": "eeacf06f60f469b9ab587f5a5d0c90d7dd6f2a4752e44e33c83881aad2c77a5e03a33f70d5c5b420cc8dea11f007a10c",
+        "digest": "85c73586cb709977c2d069fc58e2da51ca3c98d3e9d609ea707217af3da19f0d9ac6fc875691ab151d3065875fe6929b",
+        "program_digest": "b041fd9c55e30570817ed1ebd8823ad1dcbdf9668966eeab62330560ca06e87b5e1eb868ed93ba61639955175441d6c9",
+        "registers": [
+          "a0ddea2a96850da5",
+          "4ab502cd3fc47581",
+          "13a38439ccc7e5ff",
+          "2190cb586ee12012",
+          "6f3d5d6f41973215",
+          "4b7b7a014c52c44f",
+          "aafad9dfc3d36d1a",
+          "e4db2b0a53e96da0"
+        ],
+        "scratchpad_digest": "6ee526343113592a59979886abbd1161cab1e6481831ca9089568559147250222accfa35f857f7752fbe5b798d342c01"
+      },
+      "seed": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"
+    }
+  ],
+  "warning": "NON-CONSENSUS RESEARCH VECTORS; constants and outputs may change"
+}

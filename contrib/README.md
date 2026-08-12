@@ -5,6 +5,9 @@ Repository Tools
 Specific tools for developers working on this repository.
 Additional tools, including the `github-merge.py` script, are available in the [maintainer-tools](https://github.com/bitcoin-core/bitcoin-maintainer-tools) repository.
 
+### [Soveroot PoW research](/contrib/pow_research) ###
+Non-consensus deterministic interpreter, test vectors, benchmarks, and parameter sweeps for evaluating candidate proof-of-work VM properties.
+
 ### [Verify-Commits](/contrib/verify-commits) ###
 Tool to verify that every merge commit was signed by a developer using the `github-merge.py` script.
 
