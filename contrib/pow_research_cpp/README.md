@@ -43,6 +43,22 @@ python3 contrib/pow_research_cpp/render_report_v1.py \
 
 The manual `PoW v1 CPU research benchmark` workflow runs the standard profile and preserves raw samples plus the rendered informational report for 14 days.
 
+The separate half-memory attack harness compares the normal backend with an exact-output backend that retains even scratchpad words in process and spills odd words to a temporary file:
+
+```bash
+python3 test/pow_research/run_cpp_half_memory_vectors_v1.py --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/half_memory_attack_v1.py \
+  --binary build/powvm_v1_cpp --profile smoke \
+  --output build/pow-v1-half-memory-matrix.json
+python3 contrib/pow_research_cpp/render_half_memory_report_v1.py \
+  --matrix build/pow-v1-half-memory-matrix.json \
+  --gates contrib/pow_research/gates_v0.json \
+  --method contrib/pow_research_v1/half_memory_attack_v0.json \
+  --label "local smoke" --output build/pow-v1-half-memory-report.md
+```
+
+This backend retains exactly half the logical scratchpad byte array and must reproduce every canonical output. It uses external storage, does not bound the operating system page cache, does not measure physical peak memory, and is not optimized. It is therefore an attack-development baseline, not a result of the mandatory time-memory-tradeoff gate. The manual `PoW v1 half-memory attack benchmark` workflow preserves its paired raw samples and report.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.

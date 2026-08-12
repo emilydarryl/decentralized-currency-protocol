@@ -1,0 +1,85 @@
+name: PoW v1 half-memory attack benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Attack profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+      seeds:
+        description: Deterministic seed count (1-128)
+        required: true
+        default: "8"
+        type: string
+      attempts:
+        description: Nonce attempts per seed (1-100)
+        required: true
+        default: "3"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  half-memory-spill:
+    name: Informational exact-output half-spill attack
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+      ATTEMPTS: ${{ inputs.attempts }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Compile standalone v1 research executable
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+
+      - name: Verify normal and half-spill canonical vectors
+        shell: bash
+        run: |
+          python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_half_memory_vectors_v1.py --binary build/powvm_v1_cpp
+
+      - name: Run paired exact-output attack matrix
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/half_memory_attack_v1.py \
+            --binary build/powvm_v1_cpp \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --attempts "$ATTEMPTS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build/pow-v1-half-memory-matrix.json
+          python3 -m json.tool build/pow-v1-half-memory-matrix.json >/dev/null
+
+      - name: Render informational attack report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_half_memory_report_v1.py \
+            --matrix build/pow-v1-half-memory-matrix.json \
+            --gates contrib/pow_research/gates_v0.json \
+            --method contrib/pow_research_v1/half_memory_attack_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build/pow-v1-half-memory-report.md
+
+      - name: Preserve raw matrix and report
+        uses: actions/upload-artifact@v7
+        with:
+          name: pow-v1-half-memory-${{ github.run_id }}
+          path: |
+            build/pow-v1-half-memory-matrix.json
+            build/pow-v1-half-memory-report.md
+          if-no-files-found: error
+          retention-days: 14

@@ -25,6 +25,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [pow-evaluation-gates.md](docs/pow-evaluation-gates.md) freezes quantitative pass, redesign, and rejection thresholds before benchmark evidence is accepted.
 - [pow-v1-workload-objectives.md](docs/pow-v1-workload-objectives.md) records the measured v0 imbalance and freezes the minimum workload-balance signals for a v1 research candidate.
 - [pow-v1-candidate-spec.md](docs/pow-v1-candidate-spec.md) defines the isolated byte-level v1 research workload for independent implementations and screening.
+- [pow-v1-half-memory-attack.md](docs/pow-v1-half-memory-attack.md) defines the exact-output half-scratchpad spill adversary and the reasons its measurements cannot yet decide the time-memory gate.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.

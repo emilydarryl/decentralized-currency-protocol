@@ -9,6 +9,8 @@
 #include <bit>
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -70,6 +72,15 @@ struct ExecutionTiming {
     std::int64_t scratchpad_init_ns;
     std::int64_t mix_execute_ns;
     std::int64_t finalize_ns;
+};
+
+struct SpillStats {
+    std::uint64_t retained_reads{0};
+    std::uint64_t retained_writes{0};
+    std::uint64_t spill_reads{0};
+    std::uint64_t spill_writes{0};
+    std::size_t logical_retained_bytes{0};
+    std::size_t spill_file_bytes{0};
 };
 
 constexpr std::array<std::uint64_t, 24> KECCAK_ROUND_CONSTANTS{
@@ -282,6 +293,117 @@ void WriteMemory(Bytes& memory, std::uint64_t selector, std::uint64_t value)
     WriteLE64(memory.data() + word * 8, value);
 }
 
+class FullScratchpad {
+public:
+    explicit FullScratchpad(std::size_t bytes) : m_memory(bytes, 0) {}
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        return ReadMemory(m_memory, selector);
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        WriteMemory(m_memory, selector, value);
+    }
+
+    void ExportStats(SpillStats*) const {}
+
+private:
+    Bytes m_memory;
+};
+
+class StaticHalfSpillScratchpad {
+public:
+    StaticHalfSpillScratchpad(
+        std::size_t bytes,
+        const std::filesystem::path& spill_directory,
+        std::uint64_t nonce)
+        : m_word_count(bytes / 8), m_retained(bytes / 2, 0)
+    {
+        if (bytes % 16 != 0) throw std::invalid_argument("half-spill scratchpad must contain an even number of words");
+        if (!std::filesystem::is_directory(spill_directory)) {
+            throw std::invalid_argument("half-spill directory does not exist");
+        }
+        m_stats.logical_retained_bytes = m_retained.size();
+        m_stats.spill_file_bytes = bytes / 2;
+        m_path = spill_directory /
+            ("soveroot-pow-v1-half-spill-" + std::to_string(nonce) + "-" +
+             std::to_string(s_file_counter++) + ".bin");
+        m_file.rdbuf()->pubsetbuf(nullptr, 0);
+        m_file.open(m_path, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc);
+        if (!m_file) throw std::runtime_error("unable to create half-spill backing file");
+        m_file.seekp(static_cast<std::streamoff>(m_stats.spill_file_bytes - 1));
+        m_file.put('\0');
+        m_file.flush();
+        if (!m_file) throw std::runtime_error("unable to initialize half-spill backing file");
+    }
+
+    StaticHalfSpillScratchpad(const StaticHalfSpillScratchpad&) = delete;
+    StaticHalfSpillScratchpad& operator=(const StaticHalfSpillScratchpad&) = delete;
+
+    ~StaticHalfSpillScratchpad()
+    {
+        m_file.close();
+        std::error_code error;
+        std::filesystem::remove(m_path, error);
+    }
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        if ((word & 1) == 0) {
+            ++m_stats.retained_reads;
+            return ReadLE64(m_retained.data() + (word / 2) * 8);
+        }
+
+        ++m_stats.spill_reads;
+        std::array<std::uint8_t, 8> encoded{};
+        SeekRead(word / 2);
+        m_file.read(reinterpret_cast<char*>(encoded.data()), encoded.size());
+        if (!m_file) throw std::runtime_error("unable to read half-spill backing file");
+        return ReadLE64(encoded.data());
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        if ((word & 1) == 0) {
+            ++m_stats.retained_writes;
+            WriteLE64(m_retained.data() + (word / 2) * 8, value);
+            return;
+        }
+
+        ++m_stats.spill_writes;
+        std::array<std::uint8_t, 8> encoded{};
+        WriteLE64(encoded.data(), value);
+        m_file.clear();
+        m_file.seekp(static_cast<std::streamoff>((word / 2) * 8));
+        m_file.write(reinterpret_cast<const char*>(encoded.data()), encoded.size());
+        if (!m_file) throw std::runtime_error("unable to write half-spill backing file");
+    }
+
+    void ExportStats(SpillStats* output) const
+    {
+        if (output != nullptr) *output = m_stats;
+    }
+
+private:
+    void SeekRead(std::size_t spill_word)
+    {
+        m_file.clear();
+        m_file.seekg(static_cast<std::streamoff>(spill_word * 8));
+        if (!m_file) throw std::runtime_error("unable to seek half-spill backing file");
+    }
+
+    inline static std::uint64_t s_file_counter{0};
+    std::size_t m_word_count;
+    Bytes m_retained;
+    std::filesystem::path m_path;
+    std::fstream m_file;
+    SpillStats m_stats;
+};
+
 std::uint64_t ExecuteOperation(
     std::uint8_t opcode,
     std::uint64_t x,
@@ -313,11 +435,14 @@ std::uint64_t ExecuteOperation(
     }
 }
 
-ExecutionResult Evaluate(
+template <typename Scratchpad, typename... ScratchpadArgs>
+ExecutionResult EvaluateWithScratchpad(
     const EpochContext& context,
     const Bytes& header,
     std::uint64_t nonce,
-    ExecutionTiming* timing = nullptr)
+    ExecutionTiming* timing,
+    SpillStats* spill_stats,
+    ScratchpadArgs&&... scratchpad_args)
 {
     using Clock = std::chrono::steady_clock;
     Validate(context.seed, context.params);
@@ -342,7 +467,9 @@ ExecutionResult Evaluate(
     }
     std::uint64_t accumulator = ReadLE64(initial_state.data() + REGISTER_COUNT * 8);
     const auto scratchpad_started = Clock::now();
-    Bytes scratchpad(context.params.scratchpad_bytes, 0);
+    Scratchpad scratchpad(
+        context.params.scratchpad_bytes,
+        std::forward<ScratchpadArgs>(scratchpad_args)...);
     const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
     const auto mix_started = Clock::now();
 
@@ -357,7 +484,7 @@ ExecutionResult Evaluate(
 
             const std::uint64_t first_selector =
                 x ^ std::rotl(y, static_cast<int>(iteration & 63)) ^ accumulator ^ entry.immediate;
-            const std::uint64_t first_scratch = ReadMemory(scratchpad, first_selector);
+            const std::uint64_t first_scratch = scratchpad.Read(first_selector);
             const std::uint64_t dataset_selector =
                 first_scratch ^ z ^
                 std::rotl(accumulator, static_cast<int>((lane + pass) & 63)) ^
@@ -366,7 +493,7 @@ ExecutionResult Evaluate(
             const std::uint64_t second_selector =
                 dataset_word ^ registers[(lane + 5) & (REGISTER_COUNT - 1)] ^
                 std::rotl(first_scratch + accumulator, static_cast<int>(entry.immediate & 63));
-            const std::uint64_t second_scratch = ReadMemory(scratchpad, second_selector);
+            const std::uint64_t second_scratch = scratchpad.Read(second_selector);
 
             const std::uint64_t mixed = ExecuteOperation(
                 entry.opcode, x, y, first_scratch, second_scratch, dataset_word, entry.immediate);
@@ -378,8 +505,8 @@ ExecutionResult Evaluate(
             const std::uint64_t sequential_value = mixed ^ accumulator ^ second_scratch;
             const std::uint64_t dependent_value =
                 second_scratch ^ std::rotl(mixed + accumulator, static_cast<int>(dataset_word & 63));
-            WriteMemory(scratchpad, word, sequential_value);
-            WriteMemory(scratchpad, second_selector, dependent_value);
+            scratchpad.Write(word, sequential_value);
+            scratchpad.Write(second_selector, dependent_value);
 
             registers[lane] = mixed + accumulator + first_scratch;
             const std::size_t neighbor = (lane + 2) & (REGISTER_COUNT - 1);
@@ -395,7 +522,7 @@ ExecutionResult Evaluate(
         selector =
             std::rotl(selector ^ registers[i & (REGISTER_COUNT - 1)], static_cast<int>((i + 1) & 63)) +
             0x9E3779B97F4A7C15ULL + i;
-        samples[i] = ReadMemory(scratchpad, selector);
+        samples[i] = scratchpad.Read(selector);
         selector ^= samples[i];
     }
 
@@ -443,7 +570,30 @@ ExecutionResult Evaluate(
         timing->finalize_ns =
             std::chrono::duration_cast<std::chrono::nanoseconds>(finished - finalize_started).count();
     }
+    scratchpad.ExportStats(spill_stats);
     return result;
+}
+
+ExecutionResult Evaluate(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    ExecutionTiming* timing = nullptr)
+{
+    return EvaluateWithScratchpad<FullScratchpad>(
+        context, header, nonce, timing, nullptr);
+}
+
+ExecutionResult EvaluateHalfSpill(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const std::filesystem::path& spill_directory,
+    ExecutionTiming* timing = nullptr,
+    SpillStats* spill_stats = nullptr)
+{
+    return EvaluateWithScratchpad<StaticHalfSpillScratchpad>(
+        context, header, nonce, timing, spill_stats, spill_directory, nonce);
 }
 
 Bytes ParseHex(std::string_view text)
@@ -560,7 +710,8 @@ void PrintBenchmark(
     const Bytes& header,
     std::uint64_t first_nonce,
     std::size_t attempts,
-    const Params& params)
+    const Params& params,
+    const std::filesystem::path* spill_directory = nullptr)
 {
     if (attempts < 1 || attempts > 10000) throw std::invalid_argument("attempts must be in [1, 10000]");
     if (attempts - 1 > std::numeric_limits<std::uint64_t>::max() - first_nonce) {
@@ -584,10 +735,22 @@ void PrintBenchmark(
     mix_execute_samples.reserve(attempts);
     finalize_samples.reserve(attempts);
     std::uint64_t digest_xor{0};
+    Bytes digest_sequence;
+    digest_sequence.reserve(attempts * 48);
+    SpillStats aggregate_spill_stats{};
     for (std::size_t attempt{0}; attempt < attempts; ++attempt) {
         ExecutionTiming timing{};
+        SpillStats attempt_spill_stats{};
         const auto started = Clock::now();
-        const ExecutionResult result = Evaluate(context, header, first_nonce + attempt, &timing);
+        const ExecutionResult result = spill_directory == nullptr
+            ? Evaluate(context, header, first_nonce + attempt, &timing)
+            : EvaluateHalfSpill(
+                  context,
+                  header,
+                  first_nonce + attempt,
+                  *spill_directory,
+                  &timing,
+                  &attempt_spill_stats);
         samples.push_back(
             std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count());
         input_setup_samples.push_back(timing.input_setup_ns);
@@ -595,16 +758,31 @@ void PrintBenchmark(
         mix_execute_samples.push_back(timing.mix_execute_ns);
         finalize_samples.push_back(timing.finalize_ns);
         digest_xor ^= ReadLE64(result.digest.data());
+        Append(digest_sequence, result.digest);
+        aggregate_spill_stats.retained_reads += attempt_spill_stats.retained_reads;
+        aggregate_spill_stats.retained_writes += attempt_spill_stats.retained_writes;
+        aggregate_spill_stats.spill_reads += attempt_spill_stats.spill_reads;
+        aggregate_spill_stats.spill_writes += attempt_spill_stats.spill_writes;
+        aggregate_spill_stats.logical_retained_bytes = attempt_spill_stats.logical_retained_bytes;
+        aggregate_spill_stats.spill_file_bytes = attempt_spill_stats.spill_file_bytes;
     }
     const std::size_t working_set =
-        params.dataset_bytes + params.scratchpad_bytes +
+        params.dataset_bytes +
+        (spill_directory == nullptr ? params.scratchpad_bytes : params.scratchpad_bytes / 2) +
         SCHEDULE_LENGTH * 9 + REGISTER_COUNT * 8;
 
     std::cout << "{\n"
-              << "  \"format\": \"soveroot-pow-research-cpp-benchmark-v1\",\n"
-              << "  \"warning\": \"NON-CONSENSUS V1 CANDIDATE; timings do not establish mining economics or specialization resistance\",\n"
+              << "  \"format\": \""
+              << (spill_directory == nullptr
+                      ? "soveroot-pow-research-cpp-benchmark-v1"
+                      : "soveroot-pow-research-cpp-half-spill-benchmark-v1")
+              << "\",\n"
+              << "  \"warning\": \"NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance\",\n"
               << "  \"compiler\": \"" << CompilerDescription() << "\",\n"
               << "  \"steady_clock\": true,\n"
+              << "  \"scratchpad_backend\": \""
+              << (spill_directory == nullptr ? "full-in-process" : "static-even-words-half-spill")
+              << "\",\n"
               << "  \"attempts\": " << attempts << ",\n"
               << "  \"first_nonce\": " << first_nonce << ",\n"
               << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
@@ -613,6 +791,16 @@ void PrintBenchmark(
               << "  \"working_set_bytes_estimate\": " << working_set << ",\n"
               << "  \"prepare_ns\": " << prepare_ns << ",\n";
     PrintAttemptTimingJson(samples);
+    if (spill_directory != nullptr) {
+        std::cout << "  \"spill_stats\": {\"logical_retained_bytes\": "
+                  << aggregate_spill_stats.logical_retained_bytes
+                  << ", \"spill_file_bytes\": " << aggregate_spill_stats.spill_file_bytes
+                  << ", \"retained_reads\": " << aggregate_spill_stats.retained_reads
+                  << ", \"retained_writes\": " << aggregate_spill_stats.retained_writes
+                  << ", \"spill_reads\": " << aggregate_spill_stats.spill_reads
+                  << ", \"spill_writes\": " << aggregate_spill_stats.spill_writes
+                  << ", \"os_page_cache_bytes\": \"unmeasured\"},\n";
+    }
     std::cout << "  \"phase_ns\": {\n";
     PrintTimingJson("input_setup", input_setup_samples, true);
     PrintTimingJson("scratchpad_init", scratchpad_init_samples, true);
@@ -620,7 +808,9 @@ void PrintBenchmark(
     PrintTimingJson("finalize", finalize_samples, false);
     std::cout << "  },\n"
               << "  \"digest_xor_64\": \"" << std::hex << std::setfill('0') << std::setw(16)
-              << digest_xor << "\"\n"
+              << digest_xor << "\",\n"
+              << "  \"digest_sequence_commitment\": \""
+              << Hex(Sha3_384(digest_sequence)) << "\"\n"
               << "}\n";
 }
 
@@ -629,6 +819,26 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 10 && std::string_view{argv[1]} == "benchmark-half-spill") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t first_nonce = std::stoull(argv[4]);
+            const std::size_t attempts = ParseSize(argv[5]);
+            const Params params{ParseSize(argv[6]), ParseSize(argv[7]), ParseSize(argv[8])};
+            const std::filesystem::path spill_directory{argv[9]};
+            PrintBenchmark(seed, header, first_nonce, attempts, params, &spill_directory);
+            return 0;
+        }
+        if (argc == 9 && std::string_view{argv[1]} == "half-spill") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            const std::filesystem::path spill_directory{argv[8]};
+            PrintResult(EvaluateHalfSpill(
+                PrepareEpoch(seed, params), header, nonce, spill_directory));
+            return 0;
+        }
         if (argc == 9 && std::string_view{argv[1]} == "benchmark") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -641,7 +851,9 @@ int main(int argc, char* argv[])
         if (argc != 7) {
             std::cerr << "NON-CONSENSUS Soveroot PoW v1 research implementation\n"
                       << "usage: powvm_v1_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
-                      << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n";
+                      << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
+                      << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n";
             return 2;
         }
         const Bytes seed = ParseHex(argv[1]);
