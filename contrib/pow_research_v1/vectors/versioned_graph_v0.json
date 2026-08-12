@@ -1,0 +1,32 @@
+{
+  "format": "soveroot-pow-v1-versioned-graph-vectors-v0",
+  "params": {
+    "dataset_bytes": 65536,
+    "scratchpad_bytes": 8192,
+    "passes": 2
+  },
+  "vectors": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "seed": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "header": "536f7665726f6f7420763120726573656172636820766563746f722030",
+      "nonce": 0,
+      "graph_commitment": "f10bdfdc53c968818c51db1ba9ea150835b25c0b40b0ac458980e55f13aba6955a02ef9bce4b4c9f17a13def796b2c15"
+    },
+    {
+      "name": "incrementing-seed",
+      "seed": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f",
+      "header": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+      "nonce": 81985529216486895,
+      "graph_commitment": "cbd1b62414d849a6b9b234468ee111a6c584bbd6540776c685a40f02bf2f32a19b8da22b6d887b9b96cf6a5679f55116"
+    },
+    {
+      "name": "high-bit-pattern",
+      "seed": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5",
+      "header": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+      "nonce": 18446744073709551615,
+      "graph_commitment": "cd1b9a187ed72dd0cbb357a0aa002b00e276a1b4593cee8e96bf395eb47de05280e5571b6c528d8c708673924fc0beba"
+    }
+  ],
+  "warning": "NON-CONSENSUS GRAPH VECTORS; commitments cover diagnostic edges, not a production proof"
+}

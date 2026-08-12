@@ -48,6 +48,8 @@ Executable code and the read-only epoch dataset are reported but are not charged
 - Define packed and conservative byte layouts and test their size assumptions.
 - Verify that the graph alone is never presented as a valid attack result.
 
+Implementation status: **complete as a deterministic diagnostic**. The Python and C++ extractors, canonical encoding, fixed commitments, and logical byte layouts are documented in [the versioned scratch-dependency graph note](pow-v1-versioned-graph.md). This does not complete or partially pass the time-memory gate.
+
 ### Stage B: offline pebbling lower bound
 
 - Search schedules under the 50% byte ceiling.

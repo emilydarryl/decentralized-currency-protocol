@@ -95,8 +95,9 @@
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_exact_bounded_pebbling",
+    "id": "pow_v1_offline_pebbling_lower_bound",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
-    "required_outcome": "Canonical outputs with explicit byte accounting, no external spill, and no full transient replay scratchpad."
+    "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
+    "required_outcome": "Derive and evaluate offline pebbling schedules with planner resources and future knowledge disclosed separately from executable attack state."
   }
 }

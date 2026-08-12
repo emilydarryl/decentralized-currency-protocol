@@ -43,6 +43,7 @@ constexpr char DOMAIN_REGISTERS[] = "Soveroot/PowResearch/Registers/v1\0";
 constexpr char DOMAIN_COMMITMENT[] = "Soveroot/PowResearch/Commitment/v1\0";
 constexpr char DOMAIN_RESULT[] = "Soveroot/PowResearch/Result/v1\0";
 constexpr char DOMAIN_ACCESS_TRACE[] = "Soveroot/PowResearch/AccessTrace/v1\0";
+constexpr char DOMAIN_VERSIONED_GRAPH[] = "Soveroot/PowResearch/VersionedGraph/v1\0";
 
 struct Params {
     std::size_t dataset_bytes;
@@ -138,6 +139,31 @@ struct TraceSummary {
     BudgetCacheScenario conservative_half_budget{};
 };
 
+struct GraphLayoutEstimate {
+    std::size_t read_edge_bytes;
+    std::size_t write_version_bytes;
+    std::size_t version_table_entry_bytes;
+    std::size_t graph_records_bytes;
+    std::size_t version_table_bytes;
+    std::size_t logical_model_bytes;
+};
+
+struct VersionedGraphSummary {
+    std::size_t mix_iterations{0};
+    std::uint64_t read_edges{0};
+    std::uint64_t write_versions{0};
+    std::uint64_t initial_zero_edges{0};
+    std::uint64_t materialized_edges{0};
+    std::uint64_t overwrite_edges{0};
+    std::size_t canonical_header_bytes{0};
+    std::size_t canonical_read_edge_bytes{0};
+    std::size_t canonical_write_version_bytes{0};
+    std::size_t canonical_encoded_bytes{0};
+    Bytes graph_commitment;
+    GraphLayoutEstimate packed{};
+    GraphLayoutEstimate conservative{};
+};
+
 class TraceRecorder {
 public:
     explicit TraceRecorder(std::size_t word_count) : m_word_count(word_count)
@@ -149,6 +175,7 @@ public:
     void Write(std::size_t word) { m_events.push_back({word, true}); }
 
     TraceSummary Summarize() const;
+    VersionedGraphSummary SummarizeVersionedGraph() const;
 
 private:
     CacheTraceStats SimulateCache(std::size_t capacity_words) const;
@@ -543,6 +570,115 @@ TraceSummary TraceRecorder::Summarize() const
     };
     summary.compact_half_budget = budget_scenario(16);
     summary.conservative_half_budget = budget_scenario(24);
+    return summary;
+}
+
+VersionedGraphSummary TraceRecorder::SummarizeVersionedGraph() const
+{
+    constexpr std::size_t FINAL_READS{FINAL_SAMPLE_WORDS};
+    constexpr std::size_t EVENTS_PER_ITERATION{4};
+    constexpr std::size_t CANONICAL_READ_EDGE_BYTES{1 + 1 + 8 + 1 + 8 + 8};
+    constexpr std::size_t CANONICAL_WRITE_VERSION_BYTES{1 + 8 + 8 + 1 + 8 + 8};
+    constexpr std::size_t PACKED_READ_EDGE_BYTES{16};
+    constexpr std::size_t PACKED_WRITE_VERSION_BYTES{24};
+    constexpr std::size_t PACKED_VERSION_TABLE_ENTRY_BYTES{4};
+    constexpr std::size_t CONSERVATIVE_READ_EDGE_BYTES{40};
+    constexpr std::size_t CONSERVATIVE_WRITE_VERSION_BYTES{40};
+    constexpr std::size_t CONSERVATIVE_VERSION_TABLE_ENTRY_BYTES{8};
+
+    if (m_events.size() < FINAL_READS ||
+        (m_events.size() - FINAL_READS) % EVENTS_PER_ITERATION != 0) {
+        throw std::logic_error("trace does not match the v1 iteration/finalization shape");
+    }
+
+    VersionedGraphSummary summary{};
+    summary.mix_iterations = (m_events.size() - FINAL_READS) / EVENTS_PER_ITERATION;
+    std::vector<std::uint64_t> current_version(m_word_count, 0);
+    Bytes encoded = DomainBytes(DOMAIN_VERSIONED_GRAPH);
+    AppendLE64(encoded, m_word_count);
+    AppendLE64(encoded, summary.mix_iterations);
+    AppendLE64(encoded, FINAL_READS);
+    summary.canonical_header_bytes = encoded.size();
+
+    auto record_read = [&](const TraceEvent& event, std::uint8_t consumer_kind,
+                           std::uint64_t consumer, std::uint8_t slot) {
+        if (event.is_write) throw std::logic_error("expected a read trace event");
+        const std::uint64_t source_version = current_version[event.word];
+        encoded.push_back(0);
+        encoded.push_back(consumer_kind);
+        AppendLE64(encoded, consumer);
+        encoded.push_back(slot);
+        AppendLE64(encoded, event.word);
+        AppendLE64(encoded, source_version);
+        ++summary.read_edges;
+        if (source_version == 0) {
+            ++summary.initial_zero_edges;
+        } else {
+            ++summary.materialized_edges;
+        }
+    };
+    auto record_write = [&](const TraceEvent& event, std::uint64_t iteration, std::uint8_t slot) {
+        if (!event.is_write) throw std::logic_error("expected a write trace event");
+        const std::uint64_t previous_version = current_version[event.word];
+        const std::uint64_t version = ++summary.write_versions;
+        encoded.push_back(1);
+        AppendLE64(encoded, version);
+        AppendLE64(encoded, iteration);
+        encoded.push_back(slot);
+        AppendLE64(encoded, event.word);
+        AppendLE64(encoded, previous_version);
+        current_version[event.word] = version;
+        if (previous_version != 0) ++summary.overwrite_edges;
+    };
+
+    for (std::size_t iteration{0}; iteration < summary.mix_iterations; ++iteration) {
+        const std::size_t offset = iteration * EVENTS_PER_ITERATION;
+        record_read(m_events[offset], 0, iteration, 0);
+        record_read(m_events[offset + 1], 0, iteration, 1);
+        record_write(m_events[offset + 2], iteration, 0);
+        record_write(m_events[offset + 3], iteration, 1);
+    }
+    const std::size_t final_offset = summary.mix_iterations * EVENTS_PER_ITERATION;
+    for (std::size_t sample{0}; sample < FINAL_READS; ++sample) {
+        record_read(m_events[final_offset + sample], 1, sample, 0);
+    }
+
+    summary.canonical_read_edge_bytes = CANONICAL_READ_EDGE_BYTES;
+    summary.canonical_write_version_bytes = CANONICAL_WRITE_VERSION_BYTES;
+    summary.canonical_encoded_bytes = encoded.size();
+    const std::size_t expected_encoded_bytes =
+        summary.canonical_header_bytes +
+        summary.read_edges * CANONICAL_READ_EDGE_BYTES +
+        summary.write_versions * CANONICAL_WRITE_VERSION_BYTES;
+    if (summary.canonical_encoded_bytes != expected_encoded_bytes) {
+        throw std::logic_error("versioned graph byte accounting mismatch");
+    }
+    summary.graph_commitment = Sha3_384(encoded);
+
+    auto estimate_layout = [&](std::size_t read_edge_bytes,
+                               std::size_t write_version_bytes,
+                               std::size_t version_table_entry_bytes) {
+        const std::size_t graph_records_bytes =
+            summary.read_edges * read_edge_bytes +
+            summary.write_versions * write_version_bytes;
+        const std::size_t version_table_bytes = m_word_count * version_table_entry_bytes;
+        return GraphLayoutEstimate{
+            read_edge_bytes,
+            write_version_bytes,
+            version_table_entry_bytes,
+            graph_records_bytes,
+            version_table_bytes,
+            graph_records_bytes + version_table_bytes,
+        };
+    };
+    summary.packed = estimate_layout(
+        PACKED_READ_EDGE_BYTES,
+        PACKED_WRITE_VERSION_BYTES,
+        PACKED_VERSION_TABLE_ENTRY_BYTES);
+    summary.conservative = estimate_layout(
+        CONSERVATIVE_READ_EDGE_BYTES,
+        CONSERVATIVE_WRITE_VERSION_BYTES,
+        CONSERVATIVE_VERSION_TABLE_ENTRY_BYTES);
     return summary;
 }
 
@@ -1101,6 +1237,57 @@ void PrintTrace(
               << "}\n";
 }
 
+void PrintVersionedGraph(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const EpochContext context = PrepareEpoch(seed, params);
+    TraceRecorder recorder(params.scratchpad_bytes / 8);
+    const ExecutionResult result = EvaluateWithScratchpad<FullScratchpad>(
+        context, header, nonce, nullptr, nullptr, nullptr, &recorder);
+    const VersionedGraphSummary graph = recorder.SummarizeVersionedGraph();
+    auto print_layout = [](std::string_view name, const GraphLayoutEstimate& layout, bool comma) {
+        std::cout << "      \"" << name << "\": {"
+                  << "\"read_edge_bytes\": " << layout.read_edge_bytes
+                  << ", \"write_version_bytes\": " << layout.write_version_bytes
+                  << ", \"version_table_entry_bytes\": " << layout.version_table_entry_bytes
+                  << ", \"graph_records_bytes\": " << layout.graph_records_bytes
+                  << ", \"version_table_bytes\": " << layout.version_table_bytes
+                  << ", \"logical_model_bytes\": " << layout.logical_model_bytes << "}"
+                  << (comma ? "," : "") << '\n';
+    };
+
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-versioned-graph-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS FULL-MEMORY OFFLINE GRAPH; this is not an executable reduced-memory attack or a gate result\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"digest\": \"" << Hex(result.digest) << "\",\n"
+              << "  \"memory_commitment\": \"" << Hex(result.memory_commitment) << "\",\n"
+              << "  \"graph\": {\n"
+              << "    \"graph_commitment\": \"" << Hex(graph.graph_commitment) << "\",\n"
+              << "    \"mix_iterations\": " << graph.mix_iterations << ",\n"
+              << "    \"read_edges\": " << graph.read_edges << ",\n"
+              << "    \"write_versions\": " << graph.write_versions << ",\n"
+              << "    \"initial_zero_edges\": " << graph.initial_zero_edges << ",\n"
+              << "    \"materialized_edges\": " << graph.materialized_edges << ",\n"
+              << "    \"overwrite_edges\": " << graph.overwrite_edges << ",\n"
+              << "    \"canonical_encoding\": {\"header_bytes\": " << graph.canonical_header_bytes
+              << ", \"read_edge_bytes\": " << graph.canonical_read_edge_bytes
+              << ", \"write_version_bytes\": " << graph.canonical_write_version_bytes
+              << ", \"encoded_bytes\": " << graph.canonical_encoded_bytes << "},\n"
+              << "    \"logical_layouts\": {\n";
+    print_layout("packed", graph.packed, true);
+    print_layout("conservative", graph.conservative, false);
+    std::cout << "    }\n"
+              << "  }\n"
+              << "}\n";
+}
+
 std::string CompilerDescription()
 {
 #if defined(__clang__)
@@ -1320,6 +1507,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "graph") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintVersionedGraph(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "trace") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -1379,6 +1574,7 @@ int main(int argc, char* argv[])
                       << "usage: powvm_v1_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp trace SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp graph SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

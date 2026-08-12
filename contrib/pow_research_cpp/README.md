@@ -71,6 +71,16 @@ python3 contrib/pow_research_cpp/batch_amortization_v1.py \
 
 These are diagnostics for designing a no-spill recomputation attack and controlled facility testing. A full-memory trace, cache simulation, or sequential shared-runner batch cannot decide either mandatory gate.
 
+The `graph` mode upgrades word-address traces into exact read-from identities. Every read names the last write generation for its word, and every write names the generation it replaces. Python and C++ commitments are checked against fixed vectors:
+
+```bash
+python3 test/pow_research/run_cpp_versioned_graph_vectors_v1.py --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/versioned_graph_v1.py \
+  --profile standard --output build/pow-v1-versioned-graph.json
+```
+
+The graph uses the full ordinary scratchpad and is much larger than the attack budget. It is deterministic input for offline planning, not a valid reduced-memory proof or gate result.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.

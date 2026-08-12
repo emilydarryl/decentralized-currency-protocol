@@ -1,0 +1,47 @@
+{
+  "format": "soveroot-pow-v1-versioned-graph-method-v0",
+  "version": "0.1",
+  "status": "PREDECLARED NON-CONSENSUS FULL-MEMORY DIAGNOSTIC",
+  "graph_scope": "exact scratchpad read-from and overwrite ancestry; canonical machine-state dependencies remain implicit in iteration order",
+  "consumer_kinds": {
+    "0": "mix iteration",
+    "1": "final sample"
+  },
+  "source_version": {
+    "0": "the initial zero value of the addressed scratchpad word",
+    "positive": "the one-based global write generation that last wrote the addressed word"
+  },
+  "canonical_encoding": {
+    "byte_order": "little-endian",
+    "domain": "Soveroot/PowResearch/VersionedGraph/v1 followed by a zero byte",
+    "header": "domain, word_count u64, mix_iterations u64, final_sample_words u64",
+    "read_edge": "tag 0 u8, consumer_kind u8, consumer_ordinal u64, slot u8, word u64, source_version u64",
+    "read_edge_bytes": 27,
+    "write_version": "tag 1 u8, version u64, producer_iteration u64, slot u8, word u64, prior_version u64",
+    "write_version_bytes": 34,
+    "commitment": "SHA3-384 of the complete canonical encoding"
+  },
+  "logical_layouts": {
+    "packed": {
+      "read_edge_bytes": 16,
+      "write_version_bytes": 24,
+      "version_table_entry_bytes": 4,
+      "interpretation": "optimistic aligned lower-bound representation under the current research envelope"
+    },
+    "conservative": {
+      "read_edge_bytes": 40,
+      "write_version_bytes": 40,
+      "version_table_entry_bytes": 8,
+      "interpretation": "all semantic fields charged as 64-bit values"
+    }
+  },
+  "limitations": [
+    "the canonical evaluator retains the complete scratchpad",
+    "the graph is derived after following value-dependent addresses",
+    "the graph commitment does not make future edges available to an online miner",
+    "logical byte layouts do not measure allocator overhead or process resident memory",
+    "the graph does not recompute a missing value or produce a reduced-memory proof",
+    "no proof-of-work evaluation gate is assessed"
+  ],
+  "next_use": "input to offline pebbling lower-bound research and schedule design; never executable attack evidence by itself"
+}
