@@ -87,8 +87,8 @@ jobs:
           test -x build/bin/sovr-cli
           test ! -e build/bin/bitcoind
           test ! -e build/bin/bitcoin-cli
-          build/bin/sovrd -version
-          build/bin/sovr-cli -version
+          build/bin/sovrd -chain=labnet -version
+          build/bin/sovr-cli -chain=labnet -version
 
       - name: Run project isolation unit tests
         shell: bash
