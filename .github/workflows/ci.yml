@@ -47,6 +47,10 @@ jobs:
             git diff --check HEAD^
           fi
 
+      - name: Run non-consensus PoW research tests
+        shell: bash
+        run: python3 -m unittest discover -s test/pow_research -p 'test_*.py'
+
       - name: Install minimal build dependencies
         shell: bash
         run: |
