@@ -1,0 +1,102 @@
+{
+  "format": "soveroot-research-status-v0",
+  "as_of": "2026-08-12",
+  "evidence_cutoff_revision": "584cc5f8b94534827f88b8fa7d689189fa25d2c0",
+  "network_status": "research_and_isolated_labnet_only",
+  "consensus_status": "no_candidate_approved_for_production",
+  "pow_candidate": "v1_non_consensus_research_candidate",
+  "pow_gate_summary": {
+    "passed": 0,
+    "open": 10,
+    "rule": "Every mandatory gate must pass independently. Preliminary screens and shared-runner measurements cannot pass a gate."
+  },
+  "pow_gates": [
+    {
+      "id": "determinism",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "One million matching vectors across two independent implementations and three CPU architectures are not complete."
+    },
+    {
+      "id": "seed_variance",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "The preserved screen used eight shared-runner seeds, not 1024 unbiased seeds per device."
+    },
+    {
+      "id": "verifier_budget",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "The complete controlled matrix on three declared low-cost systems is absent."
+    },
+    {
+      "id": "time_memory_tradeoff",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "No exact attacker has demonstrated total measured attack memory at or below half the declared scratch memory, and two independent models are absent."
+    },
+    {
+      "id": "facility_amortization",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "Batches through 4096 were screened, but the advantage after ordinary hardware occupancy is not measured on controlled hardware."
+    },
+    {
+      "id": "gpu_over_cpu",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "Optimized implementations across three CPU classes and two GPU ecosystems are absent."
+    },
+    {
+      "id": "fpga_over_gpu",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "An independently reviewed FPGA implementation or estimate is absent."
+    },
+    {
+      "id": "asic_over_gpu",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "Two independently reviewed ASIC cost models are absent."
+    },
+    {
+      "id": "quantum_concentration",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "Two independent reversible-circuit estimates and an approved economic first-mover model are absent."
+    },
+    {
+      "id": "template_autonomy",
+      "state": "OPEN",
+      "assessment": "NOT_ASSESSED",
+      "gap": "The profile is specified but two interoperable mining implementations have not demonstrated it."
+    }
+  ],
+  "latest_evidence": [
+    {
+      "id": "pow_v1_half_memory_spill",
+      "pull_request": 18,
+      "conclusion": "Informational only; exact output used external storage and unbounded OS caching, so the time-memory gate remains open."
+    },
+    {
+      "id": "pow_v1_dependency_batch",
+      "pull_request": 20,
+      "conclusion": "Dependency and batch diagnostics found substantial reuse and setup amortization, but did not produce exact proofs after cache misses."
+    },
+    {
+      "id": "pow_v1_recomputation_pilot",
+      "pull_request": 22,
+      "conclusion": "Exact no-spill outputs retained 0.06 percent of ordinary throughput but used 150 percent peak scratch allocation."
+    },
+    {
+      "id": "pow_v1_budgeted_cache",
+      "pull_request": 24,
+      "conclusion": "Metadata-aware caches leave material misses even for an unattainable oracle, but miss counts are not executable recomputation proofs."
+    }
+  ],
+  "next_milestone": {
+    "id": "pow_v1_exact_bounded_pebbling",
+    "document": "docs/pow-v1-bounded-pebbling-plan.md",
+    "required_outcome": "Canonical outputs with explicit byte accounting, no external spill, and no full transient replay scratchpad."
+  }
+}

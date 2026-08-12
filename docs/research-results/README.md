@@ -2,6 +2,8 @@
 
 This directory preserves raw, versioned measurements and their human-readable reports. Results are evidence about a particular implementation, source revision, machine, compiler, and method. They are not consensus parameters or claims of production readiness.
 
+The project-wide interpretation, decision history, and current gate dashboard are maintained in the [Soveroot decision and research ledger](../research-ledger.md). The machine-readable gate state is [`contrib/pow_research/research_status_v0.json`](../../contrib/pow_research/research_status_v0.json).
+
 ## Adversarial screens
 
 - [`2026-08-12-github-ubuntu-v1-budgeted-cache.md`](2026-08-12-github-ubuntu-v1-budgeted-cache.md) — metadata-aware half-memory cache lower bound on shared GitHub runner `31643942109`. With a conservative 24-byte representation, the cache held 16.67% of scratch words; LRU missed 81.32% of materialized reads and an unattainable offline-optimal oracle still missed 33.64%. Cache misses do not generate exact proofs, so the mandatory time-memory gate remains open.
