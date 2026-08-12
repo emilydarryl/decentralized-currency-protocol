@@ -1,0 +1,108 @@
+{
+  "format": "soveroot-pow-evaluation-gates-v0",
+  "policy_version": "0.1",
+  "status": "predeclared research policy; not consensus",
+  "units": {
+    "advantage": "ratio versus the named comparison platform; lower is better",
+    "energy": "accepted work per joule",
+    "capital": "accepted work per acquisition dollar at documented retail or independently audited production cost",
+    "spread": "ratio across per-seed median execution times on the same device"
+  },
+  "gates": [
+    {
+      "id": "determinism",
+      "mandatory": true,
+      "minimum_evidence": {
+        "architectures": 3,
+        "independent_implementations": 2,
+        "vectors": 1000000
+      },
+      "pass": {"disagreements": 0},
+      "reject_current_encoding": {"disagreements_min": 1}
+    },
+    {
+      "id": "seed_variance",
+      "mandatory": true,
+      "minimum_evidence": {"unbiased_seeds_per_device": 1024},
+      "pass": {"p95_to_p5_max": 1.25, "max_to_min_max": 1.5},
+      "redesign": {"p95_to_p5_max": 1.5, "max_to_min_max": 2.0},
+      "reject": {"p95_to_p5_above": 1.5, "max_to_min_above": 2.0}
+    },
+    {
+      "id": "verifier_budget",
+      "mandatory": true,
+      "minimum_evidence": {"low_cost_systems": 3, "headers_per_system": 10000},
+      "pass": {
+        "incremental_peak_memory_bytes_max": 536870912,
+        "epoch_prepare_p99_ms_max": 10000,
+        "header_verify_p99_ms_max": 250,
+        "sustained_competing_headers_per_second_min": 4
+      },
+      "reject": {
+        "incremental_peak_memory_bytes_above": 1073741824,
+        "epoch_prepare_p99_ms_above": 30000,
+        "header_verify_p99_ms_above": 1000
+      }
+    },
+    {
+      "id": "time_memory_tradeoff",
+      "mandatory": true,
+      "minimum_evidence": {"independent_models": 2},
+      "pass": {"throughput_fraction_at_half_memory_max": 0.4},
+      "redesign": {"throughput_fraction_at_half_memory_max": 0.65},
+      "reject": {"throughput_fraction_at_half_memory_above": 0.65}
+    },
+    {
+      "id": "facility_amortization",
+      "mandatory": true,
+      "minimum_evidence": {"batch_sizes_through": 4096},
+      "pass": {"per_attempt_advantage_after_occupancy_max": 1.25},
+      "redesign": {"per_attempt_advantage_after_occupancy_max": 1.75},
+      "reject": {"per_attempt_advantage_after_occupancy_above": 1.75}
+    },
+    {
+      "id": "gpu_over_cpu",
+      "mandatory": true,
+      "minimum_evidence": {"cpu_classes": 3, "gpu_ecosystems": 2},
+      "pass": {"capital_advantage_max": 8.0, "energy_advantage_max": 5.0},
+      "redesign": {"capital_advantage_max": 16.0, "energy_advantage_max": 10.0},
+      "reject": {"capital_advantage_above": 16.0, "energy_advantage_above": 10.0}
+    },
+    {
+      "id": "fpga_over_gpu",
+      "mandatory": true,
+      "minimum_evidence": {"independently_reviewed_estimates": 1},
+      "pass": {"capital_advantage_max": 4.0, "energy_advantage_max": 5.0},
+      "redesign": {"capital_advantage_max": 8.0, "energy_advantage_max": 10.0},
+      "reject": {"capital_advantage_above": 8.0, "energy_advantage_above": 10.0}
+    },
+    {
+      "id": "asic_over_gpu",
+      "mandatory": true,
+      "minimum_evidence": {"independently_reviewed_cost_models": 2},
+      "pass": {"capital_advantage_max": 8.0, "energy_advantage_max": 10.0},
+      "redesign": {"capital_advantage_max": 20.0, "energy_advantage_max": 25.0},
+      "reject": {"capital_advantage_above": 20.0, "energy_advantage_above": 25.0}
+    },
+    {
+      "id": "quantum_concentration",
+      "mandatory": true,
+      "minimum_evidence": {"independent_reversible_circuit_estimates": 2},
+      "pass": {"temporary_first_mover_effect": "bounded by an explicitly approved economic threat model"},
+      "reject": {"unmodeled_material_advantage": true}
+    },
+    {
+      "id": "template_autonomy",
+      "mandatory": true,
+      "minimum_evidence": {"interoperable_implementations": 2},
+      "pass": {
+        "miner_created_templates": true,
+        "direct_block_publication": true,
+        "noncustodial_payout_path": true,
+        "coordinator_fallback": true
+      },
+      "reject": {"mandatory_coordinator_template_control": true}
+    }
+  ],
+  "decision_rule": "Every mandatory gate must pass independently. Redesign results cannot be averaged against passes. Any reject result blocks labnet activation of this candidate. Threshold changes require a new policy version and cannot retroactively approve existing measurements."
+}

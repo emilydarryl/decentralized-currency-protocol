@@ -50,6 +50,19 @@ def seed_for(index: int) -> bytes:
     return hashlib.sha3_384(b"Soveroot/PowResearch/BenchmarkSeed/v0\x00" + index.to_bytes(4, "little")).digest()
 
 
+def cpu_model() -> str:
+    reported = platform.processor()
+    if reported:
+        return reported
+    try:
+        for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
+            if line.lower().startswith("model name"):
+                return line.partition(":")[2].strip()
+    except OSError:
+        pass
+    return "unavailable"
+
+
 def run_case(binary: Path, config: Config, seed_index: int, attempts: int) -> dict[str, object]:
     completed = subprocess.run(
         [
@@ -88,7 +101,7 @@ def integer_summary(values: list[int]) -> dict[str, int]:
     }
 
 
-def build_matrix(binary: Path, profile_name: str, seeds: int | None = None, attempts: int | None = None) -> dict[str, object]:
+def build_matrix(binary: Path, profile_name: str, seeds: int | None = None, attempts: int | None = None, source_revision: str = "unrecorded") -> dict[str, object]:
     configs, default_seeds, default_attempts = profile(profile_name)
     seed_count = default_seeds if seeds is None else seeds
     attempt_count = default_attempts if attempts is None else attempts
@@ -113,12 +126,15 @@ def build_matrix(binary: Path, profile_name: str, seeds: int | None = None, atte
         "format": "soveroot-pow-research-matrix-v0",
         "warning": WARNING,
         "profile": profile_name,
+        "source_revision": source_revision,
         "host": {
             "platform": platform.platform(),
             "machine": platform.machine(),
             "processor": platform.processor(),
+            "cpu_model": cpu_model(),
             "logical_cpus": os.cpu_count(),
             "python": platform.python_version(),
+            "runner_image": os.environ.get("ImageOS", "unrecorded"),
         },
         "method": {
             "clock": "C++ std::chrono::steady_clock",
@@ -137,9 +153,10 @@ def main() -> int:
     parser.add_argument("--seeds", type=int)
     parser.add_argument("--attempts", type=int)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--source-revision", default=os.environ.get("GITHUB_SHA", "unrecorded"))
     args = parser.parse_args()
     try:
-        document = build_matrix(args.binary, args.profile, args.seeds, args.attempts)
+        document = build_matrix(args.binary, args.profile, args.seeds, args.attempts, args.source_revision)
     except ValueError as error:
         parser.error(str(error))
     encoded = json.dumps(document, indent=2, sort_keys=True) + "\n"

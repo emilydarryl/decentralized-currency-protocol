@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import unittest
 
-from contrib.pow_research_cpp.benchmark_matrix import integer_summary, profile, seed_for
+from contrib.pow_research_cpp.benchmark_matrix import build_matrix, integer_summary, profile, seed_for
 
 
 class BenchmarkMatrixTest(unittest.TestCase):
@@ -39,6 +39,10 @@ class BenchmarkMatrixTest(unittest.TestCase):
     def test_unknown_profile_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "unsupported profile"):
             profile("unknown")
+
+    def test_build_matrix_rejects_unbounded_samples_before_execution(self) -> None:
+        with self.assertRaisesRegex(ValueError, "seeds must"):
+            build_matrix(None, "smoke", seeds=129)  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
