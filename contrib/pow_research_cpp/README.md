@@ -19,6 +19,16 @@ The implementation includes its own SHA3-384 and SHAKE-256 sponge rather than ca
 
 This version is designed for correctness review. It is not an optimized miner or a meaningful CPU/GPU/ASIC benchmark.
 
+The separate `powvm_v1.cpp` executable independently implements the byte-level v1 candidate specification. It does not call, import, or link the Python candidate or the v0 C++ VM. Build and compare it with:
+
+```bash
+c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+  contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
+```
+
+Agreement on the v1 vectors establishes deterministic interoperability only. Phase timing and parameter sweeps must be added and evaluated against the predeclared v1 workload objectives before hardware-comparison work begins.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.

@@ -24,7 +24,7 @@ This is a redesign signal, not a formal gate result. The runner was shared, only
 ## v1 construction requirements
 
 1. **Per-attempt work.** Nonce-specific work MUST dominate an attempt. Epoch preparation MAY be shared, but the candidate MUST NOT treat a large reusable dataset as evidence of per-attempt memory hardness.
-2. **Dependent memory access.** Every mixing iteration MUST include a dataset read and a scratchpad read or write whose address depends on state produced by an earlier iteration. The schedule MUST NOT be reducible to one precomputed address stream shared across nonces.
+2. **Dependent memory access.** The first mixing iteration MUST depend on nonce-derived initial state. Every later iteration MUST include a dataset read and a scratchpad read or write whose address depends on state produced by an earlier iteration. The schedule MUST NOT be reducible to one precomputed address stream shared across nonces.
 3. **Declared memory use.** The standard schedule MUST perform, on average, at least two scratchpad reads and one scratchpad write per declared scratchpad word per pass. Retaining less memory must require recomputation that is evaluated under the existing time-memory-tradeoff gate.
 4. **Bounded execution.** Seeds MAY select operations and addresses but MUST NOT select loop counts, rejection-sampling duration, memory size, or other unbounded work. Every valid header under one parameter set MUST execute the same number of mixing iterations.
 5. **Fixed-size finalization.** Finalization MUST hash only fixed-size state totaling at most 4 KiB. It MUST NOT rescan or hash the full scratchpad or dataset.

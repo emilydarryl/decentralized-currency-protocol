@@ -1,0 +1,22 @@
+# Soveroot PoW v1 Research Candidate
+
+This package implements the v1 workload described by [pow-v1-candidate-spec.md](../../docs/pow-v1-candidate-spec.md). It is isolated from v0 and from all node consensus and mining code.
+
+> **NON-CONSENSUS:** This candidate is an experiment. Passing its vectors establishes deterministic agreement only; it does not establish memory hardness, specialization resistance, quantum resistance, profitability, or decentralization.
+
+The design makes five deliberate changes from v0:
+
+- fixed work proportional to scratchpad words and pass count;
+- a balanced, seed-derived operation schedule with no variable instruction-count parameter;
+- one dependent dataset read, two dependent scratchpad reads, and two writes per mixing iteration;
+- zero-initialized scratch allocation instead of cryptographic expansion; and
+- fixed-size finalization instead of hashing the entire scratchpad.
+
+Run the Python tests and regenerate vectors from the repository root:
+
+```bash
+python3 -m unittest discover -s test/pow_research -p 'test_*.py'
+python3 -m contrib.pow_research_v1.generate_vectors
+```
+
+The fixed-size memory commitment is not proof that retaining the declared scratchpad is optimal. That claim requires the time-memory-tradeoff experiments frozen in [pow-evaluation-gates.md](../../docs/pow-evaluation-gates.md).

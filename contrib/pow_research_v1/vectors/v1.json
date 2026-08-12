@@ -1,0 +1,77 @@
+{
+  "format": "soveroot-pow-research-v1",
+  "params": {
+    "dataset_bytes": 65536,
+    "passes": 2,
+    "scratchpad_bytes": 8192
+  },
+  "vectors": [
+    {
+      "header": "536f7665726f6f7420763120726573656172636820766563746f722030",
+      "name": "zero-seed-zero-nonce",
+      "nonce": 0,
+      "result": {
+        "dataset_digest": "a604cc11977a93285dd54944c52a6d76a34ba37a4875a3a38e6b189495df297a5e34695e2502bfa2874fde10cbdbf2b9",
+        "digest": "6318fada400c508b56a3ab0295d8a9a18cab5fe706700183977fcb74989ea7670d45b67e52cad6bd4cfc6e124f6efd99",
+        "memory_commitment": "f73590a5bf80dd4c0cad58b03994bfdfc4d0c10c3c8d161df9ad1fad7789b0eea6a7cf96a5da381e918b97209cf50fb4",
+        "registers": [
+          "f8ae26c801852350",
+          "746ac29f94f1de5b",
+          "a82a17af5759da2a",
+          "fa317d990e6338fc",
+          "db0d5a9dc2dd67a9",
+          "9a34e50d75fc3eb8",
+          "6798ad8f04189ff3",
+          "8e39cf8702a81b68"
+        ],
+        "schedule_digest": "f333b13f7580dc15b87fd23ae5262e959fd255111e698faededc6029ae1420c4aa04a8ae4e8b9d23cd554415c08024ac"
+      },
+      "seed": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    },
+    {
+      "header": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f404142434445464748494a4b4c4d4e4f",
+      "name": "incrementing-seed",
+      "nonce": 81985529216486895,
+      "result": {
+        "dataset_digest": "abf66614e69d9eb2ed89ba6e5d3ab929dc8dafe8db885b001d5ab7cba3fd773bbdeb17ddd76839f027247a0e42f80078",
+        "digest": "9a6583505b9dfb858cb67a8dbdb03f335e9e189fe49156e3d116077ebe5fd9cb648f9687a347eaca7a04150e42ef0246",
+        "memory_commitment": "a67a114ff41a178b27dbab18873891673fc384ba5b48f62b4c32a4532a10b331173b95169ed71f957bdf9b9ad7c499d5",
+        "registers": [
+          "f3e75cc134538f30",
+          "c0e71dfd529e9b2d",
+          "9e074fe7c9a1da35",
+          "721f0e050da00b43",
+          "e6b4fc06eb3ba91a",
+          "a3527b0d3e644de0",
+          "3ce0e6a52a58bc60",
+          "6722edf46f7b8a6d"
+        ],
+        "schedule_digest": "88558467e54b2d20bdddd0520765325be3da160a486a55299f06fff877d9867aab2d0884fa8dbf03037a29a23f6923b2"
+      },
+      "seed": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"
+    },
+    {
+      "header": "ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00ff00",
+      "name": "high-bit-pattern",
+      "nonce": 18446744073709551615,
+      "result": {
+        "dataset_digest": "b180295d515caa966aacff2cf3284dcc9986461f5ac468f678802d4d72adde738693a368ef3695ed5e17602025c9cff5",
+        "digest": "37469bc5d4b659d87e0e6fc441cbd308381c8e2803cf6f54d934a0e06f5721404c02648130f32f8fc55409ae7f76153c",
+        "memory_commitment": "ed12b998a3ab8c20af8c80e40eb9d6535aaeab857405c61b804de9ff0c4f29e5c583e8234e963bf23c960b557a03556c",
+        "registers": [
+          "a287955b7b154bc1",
+          "b92d3588617a627b",
+          "d370c5c9ea5b6925",
+          "74c2fc7159a20b9d",
+          "53c377c774431aae",
+          "991653a82612314c",
+          "58acbd82c75dc5b6",
+          "7d44f4d3efd3ce64"
+        ],
+        "schedule_digest": "cef109f99a18aba878c615a1e5db90770d7f93426e5d5ebf1bb3128ba8f82b490106bd40b934699475dd20feb0f8ba80"
+      },
+      "seed": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5"
+    }
+  ],
+  "warning": "NON-CONSENSUS RESEARCH VECTORS; constants and outputs may change"
+}
