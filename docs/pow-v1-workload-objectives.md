@@ -6,6 +6,8 @@ Status: Predeclared research screening policy; not consensus and not evidence of
 
 These objectives freeze the reason for redesigning the v0 research VM and the minimum signals expected from a v1 candidate before its implementation is benchmarked. They supplement, but do not replace, the mandatory gates in [`pow-evaluation-gates.md`](pow-evaluation-gates.md).
 
+The machine-readable copy used by the report renderer is [`contrib/pow_research_v1/screening_v0.json`](../contrib/pow_research_v1/screening_v0.json).
+
 ## Evidence requiring redesign
 
 The instrumented standard-profile run on GitHub's shared Ubuntu runner measured the v0 baseline as follows:
