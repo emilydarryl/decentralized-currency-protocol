@@ -38,4 +38,4 @@ python3 -m contrib.pow_research.sweep --dataset-kib 64 1024 --scratchpad-kib 8 1
 - Treat a fast or slow seed as a potential program-generation flaw and preserve it for analysis.
 - Any change to semantics requires regenerating the vector file and explaining the incompatibility.
 
-The next research implementation should be an independent language implementation consuming the same vectors, not an optimized binding around this interpreter.
+The independent C++ implementation in [`../pow_research_cpp/`](../pow_research_cpp/) consumes the same vectors without binding to this interpreter. Both implementations remain research-only.

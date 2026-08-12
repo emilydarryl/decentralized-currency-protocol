@@ -4,7 +4,7 @@ Version: 0.1 research draft
 
 Status: Candidate direction only; not approved for mainnet or consensus implementation
 
-The initial non-consensus measurement harness lives in [`contrib/pow_research`](../contrib/pow_research/README.md). It provides a clear interpreter and reproducible vectors for research; it does not select the VM, constants, seed schedule, or mainnet proof of work.
+The initial non-consensus measurement harness lives in [`contrib/pow_research`](../contrib/pow_research/README.md), with an independent differential implementation in [`contrib/pow_research_cpp`](../contrib/pow_research_cpp/README.md). They provide a clear interpreter and cross-language reproducible vectors for research; they do not select the VM, constants, seed schedule, or mainnet proof of work.
 
 ## 1. Objective
 
