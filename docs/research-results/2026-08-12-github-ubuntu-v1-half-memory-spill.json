@@ -1,0 +1,1376 @@
+{
+  "all_exact_outputs_match": true,
+  "attempts_per_seed": 3,
+  "cases": [
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 109824987,
+          "mean": 108636463,
+          "median": 109134115,
+          "min": 106950289,
+          "samples": [
+            109134115,
+            109824987,
+            106950289
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "c02ae9b66a5b047574c4d774ac090a143378d3407bdf67d13d5b3239b67da85f51c10465dbc520a622f6e5388dfb6823",
+        "digest_xor_64": "b52f3908b6e07743",
+        "first_nonce": 0,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 22208,
+            "mean": 19519,
+            "median": 18300,
+            "min": 18049,
+            "samples": [
+              18300,
+              18049,
+              22208
+            ]
+          },
+          "input_setup": {
+            "max": 32967,
+            "mean": 15503,
+            "median": 6839,
+            "min": 6703,
+            "samples": [
+              32967,
+              6839,
+              6703
+            ]
+          },
+          "mix_execute": {
+            "max": 109698843,
+            "mean": 108456406,
+            "median": 108869024,
+            "min": 106801353,
+            "samples": [
+              108869024,
+              109698843,
+              106801353
+            ]
+          },
+          "scratchpad_init": {
+            "max": 144518,
+            "mean": 83488,
+            "median": 62539,
+            "min": 43407,
+            "samples": [
+              144518,
+              43407,
+              62539
+            ]
+          }
+        },
+        "prepare_ns": 49786611,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294775,
+          "retained_writes": 294894,
+          "spill_file_bytes": 131072,
+          "spill_reads": 295097,
+          "spill_writes": 294930
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 5335577,
+          "mean": 4627555,
+          "median": 4330506,
+          "min": 4216582,
+          "samples": [
+            5335577,
+            4330506,
+            4216582
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "c02ae9b66a5b047574c4d774ac090a143378d3407bdf67d13d5b3239b67da85f51c10465dbc520a622f6e5388dfb6823",
+        "digest_xor_64": "b52f3908b6e07743",
+        "first_nonce": 0,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 17385,
+            "mean": 14915,
+            "median": 14052,
+            "min": 13310,
+            "samples": [
+              17385,
+              14052,
+              13310
+            ]
+          },
+          "input_setup": {
+            "max": 7469,
+            "mean": 7250,
+            "median": 7206,
+            "min": 7077,
+            "samples": [
+              7469,
+              7077,
+              7206
+            ]
+          },
+          "mix_execute": {
+            "max": 5208021,
+            "mean": 4567103,
+            "median": 4303001,
+            "min": 4190288,
+            "samples": [
+              5208021,
+              4303001,
+              4190288
+            ]
+          },
+          "scratchpad_init": {
+            "max": 101802,
+            "mean": 37532,
+            "median": 5471,
+            "min": 5323,
+            "samples": [
+              101802,
+              5471,
+              5323
+            ]
+          }
+        },
+        "prepare_ns": 50281305,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 0,
+      "slowdown_ppm": 25201238,
+      "throughput_fraction_ppm": 39680
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 111012103,
+          "mean": 109149385,
+          "median": 108915063,
+          "min": 107520990,
+          "samples": [
+            107520990,
+            111012103,
+            108915063
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "baaba98d18803c461010aebd9d5928ea3c406d1e3bca6e895a1cc7aaecd4f779aac858fa5a9afd2c784cf2f5d78e6a86",
+        "digest_xor_64": "a2c6521baef8d0fe",
+        "first_nonce": 4294967296,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 22670,
+            "mean": 19856,
+            "median": 18783,
+            "min": 18117,
+            "samples": [
+              22670,
+              18117,
+              18783
+            ]
+          },
+          "input_setup": {
+            "max": 7458,
+            "mean": 7006,
+            "median": 7001,
+            "min": 6559,
+            "samples": [
+              7458,
+              7001,
+              6559
+            ]
+          },
+          "mix_execute": {
+            "max": 110845134,
+            "mean": 108942592,
+            "median": 108753746,
+            "min": 107228896,
+            "samples": [
+              107228896,
+              110845134,
+              108753746
+            ]
+          },
+          "scratchpad_init": {
+            "max": 171415,
+            "mean": 104589,
+            "median": 73479,
+            "min": 68875,
+            "samples": [
+              171415,
+              73479,
+              68875
+            ]
+          }
+        },
+        "prepare_ns": 50838180,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 295466,
+          "retained_writes": 295043,
+          "spill_file_bytes": 131072,
+          "spill_reads": 294406,
+          "spill_writes": 294781
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4470720,
+          "mean": 4291163,
+          "median": 4253154,
+          "min": 4149616,
+          "samples": [
+            4470720,
+            4149616,
+            4253154
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "baaba98d18803c461010aebd9d5928ea3c406d1e3bca6e895a1cc7aaecd4f779aac858fa5a9afd2c784cf2f5d78e6a86",
+        "digest_xor_64": "a2c6521baef8d0fe",
+        "first_nonce": 4294967296,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 16676,
+            "mean": 14679,
+            "median": 13887,
+            "min": 13476,
+            "samples": [
+              16676,
+              13887,
+              13476
+            ]
+          },
+          "input_setup": {
+            "max": 7276,
+            "mean": 7246,
+            "median": 7259,
+            "min": 7204,
+            "samples": [
+              7259,
+              7276,
+              7204
+            ]
+          },
+          "mix_execute": {
+            "max": 4356470,
+            "mean": 4235266,
+            "median": 4226749,
+            "min": 4122581,
+            "samples": [
+              4356470,
+              4122581,
+              4226749
+            ]
+          },
+          "scratchpad_init": {
+            "max": 89365,
+            "mean": 33369,
+            "median": 5444,
+            "min": 5298,
+            "samples": [
+              89365,
+              5444,
+              5298
+            ]
+          }
+        },
+        "prepare_ns": 49773309,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 1,
+      "slowdown_ppm": 25608069,
+      "throughput_fraction_ppm": 39050
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 108291324,
+          "mean": 108205791,
+          "median": 108224003,
+          "min": 108102048,
+          "samples": [
+            108291324,
+            108102048,
+            108224003
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "7b964ad6bfd5e085e1d6c2d57553808e0c9579ba0053caaf99476cd636644228fcf8f73906684b0eb72d1de09fe31acc",
+        "digest_xor_64": "c884dc8ef9d61a2c",
+        "first_nonce": 8589934592,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 22537,
+            "mean": 20893,
+            "median": 20142,
+            "min": 20001,
+            "samples": [
+              22537,
+              20142,
+              20001
+            ]
+          },
+          "input_setup": {
+            "max": 7285,
+            "mean": 6912,
+            "median": 6734,
+            "min": 6718,
+            "samples": [
+              7285,
+              6718,
+              6734
+            ]
+          },
+          "mix_execute": {
+            "max": 108083350,
+            "mean": 108022107,
+            "median": 108024621,
+            "min": 107958352,
+            "samples": [
+              108024621,
+              107958352,
+              108083350
+            ]
+          },
+          "scratchpad_init": {
+            "max": 156687,
+            "mean": 89801,
+            "median": 59742,
+            "min": 52974,
+            "samples": [
+              156687,
+              59742,
+              52974
+            ]
+          }
+        },
+        "prepare_ns": 49897103,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294714,
+          "retained_writes": 295116,
+          "spill_file_bytes": 131072,
+          "spill_reads": 295158,
+          "spill_writes": 294708
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 5361742,
+          "mean": 4585345,
+          "median": 4243711,
+          "min": 4150583,
+          "samples": [
+            5361742,
+            4150583,
+            4243711
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "7b964ad6bfd5e085e1d6c2d57553808e0c9579ba0053caaf99476cd636644228fcf8f73906684b0eb72d1de09fe31acc",
+        "digest_xor_64": "c884dc8ef9d61a2c",
+        "first_nonce": 8589934592,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 17976,
+            "mean": 15205,
+            "median": 14501,
+            "min": 13139,
+            "samples": [
+              17976,
+              13139,
+              14501
+            ]
+          },
+          "input_setup": {
+            "max": 7136,
+            "mean": 7085,
+            "median": 7082,
+            "min": 7037,
+            "samples": [
+              7037,
+              7136,
+              7082
+            ]
+          },
+          "mix_execute": {
+            "max": 5232593,
+            "mean": 4524350,
+            "median": 4216329,
+            "min": 4124128,
+            "samples": [
+              5232593,
+              4124128,
+              4216329
+            ]
+          },
+          "scratchpad_init": {
+            "max": 103347,
+            "mean": 38030,
+            "median": 5454,
+            "min": 5289,
+            "samples": [
+              103347,
+              5454,
+              5289
+            ]
+          }
+        },
+        "prepare_ns": 50137675,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 2,
+      "slowdown_ppm": 25502208,
+      "throughput_fraction_ppm": 39212
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 108813978,
+          "mean": 107915336,
+          "median": 107577726,
+          "min": 107354305,
+          "samples": [
+            108813978,
+            107577726,
+            107354305
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "4873dd9f3f106704fe3af42f5ac32d08c9a1b32551c41d3cf0052c06f28c98236658f551ce8089520a76d7280276f01e",
+        "digest_xor_64": "013d1e724d862a52",
+        "first_nonce": 12884901888,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 20393,
+            "mean": 19754,
+            "median": 19743,
+            "min": 19127,
+            "samples": [
+              19127,
+              20393,
+              19743
+            ]
+          },
+          "input_setup": {
+            "max": 7649,
+            "mean": 7041,
+            "median": 7052,
+            "min": 6424,
+            "samples": [
+              7649,
+              7052,
+              6424
+            ]
+          },
+          "mix_execute": {
+            "max": 108549511,
+            "mean": 107741136,
+            "median": 107447923,
+            "min": 107225976,
+            "samples": [
+              108549511,
+              107447923,
+              107225976
+            ]
+          },
+          "scratchpad_init": {
+            "max": 166190,
+            "mean": 87708,
+            "median": 48556,
+            "min": 48379,
+            "samples": [
+              166190,
+              48379,
+              48556
+            ]
+          }
+        },
+        "prepare_ns": 49672806,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 295055,
+          "retained_writes": 294834,
+          "spill_file_bytes": 131072,
+          "spill_reads": 294817,
+          "spill_writes": 294990
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4418791,
+          "mean": 4213182,
+          "median": 4115586,
+          "min": 4105171,
+          "samples": [
+            4418791,
+            4105171,
+            4115586
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "4873dd9f3f106704fe3af42f5ac32d08c9a1b32551c41d3cf0052c06f28c98236658f551ce8089520a76d7280276f01e",
+        "digest_xor_64": "013d1e724d862a52",
+        "first_nonce": 12884901888,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 21407,
+            "mean": 17220,
+            "median": 16531,
+            "min": 13722,
+            "samples": [
+              16531,
+              13722,
+              21407
+            ]
+          },
+          "input_setup": {
+            "max": 7246,
+            "mean": 7076,
+            "median": 7087,
+            "min": 6897,
+            "samples": [
+              7246,
+              6897,
+              7087
+            ]
+          },
+          "mix_execute": {
+            "max": 4301820,
+            "mean": 4153854,
+            "median": 4081455,
+            "min": 4078289,
+            "samples": [
+              4301820,
+              4078289,
+              4081455
+            ]
+          },
+          "scratchpad_init": {
+            "max": 92345,
+            "mean": 34379,
+            "median": 5462,
+            "min": 5332,
+            "samples": [
+              92345,
+              5462,
+              5332
+            ]
+          }
+        },
+        "prepare_ns": 49930027,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 3,
+      "slowdown_ppm": 26139102,
+      "throughput_fraction_ppm": 38256
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 108412021,
+          "mean": 107935005,
+          "median": 107759606,
+          "min": 107633388,
+          "samples": [
+            108412021,
+            107633388,
+            107759606
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "f8a016da98ce7fd945f6eedd1d7a77ff131a22a09e13a0a77b13e2f536d6f0b64b127953bc706e225654071d1dce72f1",
+        "digest_xor_64": "f28e63ccdb338bdd",
+        "first_nonce": 17179869184,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 19389,
+            "mean": 19176,
+            "median": 19074,
+            "min": 19065,
+            "samples": [
+              19389,
+              19074,
+              19065
+            ]
+          },
+          "input_setup": {
+            "max": 7645,
+            "mean": 6961,
+            "median": 6794,
+            "min": 6446,
+            "samples": [
+              7645,
+              6794,
+              6446
+            ]
+          },
+          "mix_execute": {
+            "max": 108138084,
+            "mean": 107757314,
+            "median": 107633118,
+            "min": 107500740,
+            "samples": [
+              108138084,
+              107500740,
+              107633118
+            ]
+          },
+          "scratchpad_init": {
+            "max": 161656,
+            "mean": 87340,
+            "median": 51760,
+            "min": 48606,
+            "samples": [
+              161656,
+              51760,
+              48606
+            ]
+          }
+        },
+        "prepare_ns": 49368458,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294659,
+          "retained_writes": 294646,
+          "spill_file_bytes": 131072,
+          "spill_reads": 295213,
+          "spill_writes": 295178
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4479726,
+          "mean": 4255850,
+          "median": 4170362,
+          "min": 4117464,
+          "samples": [
+            4479726,
+            4170362,
+            4117464
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "f8a016da98ce7fd945f6eedd1d7a77ff131a22a09e13a0a77b13e2f536d6f0b64b127953bc706e225654071d1dce72f1",
+        "digest_xor_64": "f28e63ccdb338bdd",
+        "first_nonce": 17179869184,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 16990,
+            "mean": 14670,
+            "median": 13702,
+            "min": 13320,
+            "samples": [
+              16990,
+              13702,
+              13320
+            ]
+          },
+          "input_setup": {
+            "max": 7488,
+            "mean": 7048,
+            "median": 7200,
+            "min": 6457,
+            "samples": [
+              7488,
+              6457,
+              7200
+            ]
+          },
+          "mix_execute": {
+            "max": 4353906,
+            "mean": 4196389,
+            "median": 4143962,
+            "min": 4091301,
+            "samples": [
+              4353906,
+              4143962,
+              4091301
+            ]
+          },
+          "scratchpad_init": {
+            "max": 100367,
+            "mean": 37039,
+            "median": 5444,
+            "min": 5306,
+            "samples": [
+              100367,
+              5444,
+              5306
+            ]
+          }
+        },
+        "prepare_ns": 49456551,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 4,
+      "slowdown_ppm": 25839389,
+      "throughput_fraction_ppm": 38700
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 108116679,
+          "mean": 107705362,
+          "median": 107867174,
+          "min": 107132233,
+          "samples": [
+            108116679,
+            107867174,
+            107132233
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "cfe13f06c1e5ed1527f2f6d1380c797df5544aa8c75f48e6dc1a7a799abeb6ff243cd43b9858d1ab2149d015033691eb",
+        "digest_xor_64": "7b928df47b64d48d",
+        "first_nonce": 21474836480,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 17754,
+            "mean": 17689,
+            "median": 17705,
+            "min": 17608,
+            "samples": [
+              17705,
+              17608,
+              17754
+            ]
+          },
+          "input_setup": {
+            "max": 7325,
+            "mean": 6911,
+            "median": 6734,
+            "min": 6675,
+            "samples": [
+              7325,
+              6675,
+              6734
+            ]
+          },
+          "mix_execute": {
+            "max": 107856820,
+            "mean": 107537441,
+            "median": 107749703,
+            "min": 107005802,
+            "samples": [
+              107856820,
+              107749703,
+              107005802
+            ]
+          },
+          "scratchpad_init": {
+            "max": 163213,
+            "mean": 84112,
+            "median": 45879,
+            "min": 43246,
+            "samples": [
+              163213,
+              45879,
+              43246
+            ]
+          }
+        },
+        "prepare_ns": 50842115,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294662,
+          "retained_writes": 294649,
+          "spill_file_bytes": 131072,
+          "spill_reads": 295210,
+          "spill_writes": 295175
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4455538,
+          "mean": 4293581,
+          "median": 4285207,
+          "min": 4139998,
+          "samples": [
+            4455538,
+            4285207,
+            4139998
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "cfe13f06c1e5ed1527f2f6d1380c797df5544aa8c75f48e6dc1a7a799abeb6ff243cd43b9858d1ab2149d015033691eb",
+        "digest_xor_64": "7b928df47b64d48d",
+        "first_nonce": 21474836480,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 16718,
+            "mean": 14683,
+            "median": 13998,
+            "min": 13334,
+            "samples": [
+              16718,
+              13998,
+              13334
+            ]
+          },
+          "input_setup": {
+            "max": 7247,
+            "mean": 7165,
+            "median": 7158,
+            "min": 7091,
+            "samples": [
+              7091,
+              7247,
+              7158
+            ]
+          },
+          "mix_execute": {
+            "max": 4343675,
+            "mean": 4238539,
+            "median": 4258089,
+            "min": 4113855,
+            "samples": [
+              4343675,
+              4258089,
+              4113855
+            ]
+          },
+          "scratchpad_init": {
+            "max": 87298,
+            "mean": 32650,
+            "median": 5388,
+            "min": 5264,
+            "samples": [
+              87298,
+              5388,
+              5264
+            ]
+          }
+        },
+        "prepare_ns": 49713724,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 5,
+      "slowdown_ppm": 25171986,
+      "throughput_fraction_ppm": 39726
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 107666365,
+          "mean": 107341449,
+          "median": 107349448,
+          "min": 107008535,
+          "samples": [
+            107666365,
+            107349448,
+            107008535
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "c442e2d32313218ac7461c67ca0dc027a49bd530e9a1e8cfe99eb09a2b64f8b585f494ea22dc5f7923c1b3f32c7e277f",
+        "digest_xor_64": "32477ff5da7a59df",
+        "first_nonce": 25769803776,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 19026,
+            "mean": 17628,
+            "median": 17122,
+            "min": 16736,
+            "samples": [
+              19026,
+              16736,
+              17122
+            ]
+          },
+          "input_setup": {
+            "max": 7189,
+            "mean": 6844,
+            "median": 6715,
+            "min": 6629,
+            "samples": [
+              7189,
+              6629,
+              6715
+            ]
+          },
+          "mix_execute": {
+            "max": 107449711,
+            "mean": 107200882,
+            "median": 107244612,
+            "min": 106908325,
+            "samples": [
+              107449711,
+              107244612,
+              106908325
+            ]
+          },
+          "scratchpad_init": {
+            "max": 133379,
+            "mean": 69637,
+            "median": 38272,
+            "min": 37261,
+            "samples": [
+              133379,
+              38272,
+              37261
+            ]
+          }
+        },
+        "prepare_ns": 49485449,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294936,
+          "retained_writes": 295102,
+          "spill_file_bytes": 131072,
+          "spill_reads": 294936,
+          "spill_writes": 294722
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4461757,
+          "mean": 4278042,
+          "median": 4192287,
+          "min": 4180084,
+          "samples": [
+            4461757,
+            4180084,
+            4192287
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "c442e2d32313218ac7461c67ca0dc027a49bd530e9a1e8cfe99eb09a2b64f8b585f494ea22dc5f7923c1b3f32c7e277f",
+        "digest_xor_64": "32477ff5da7a59df",
+        "first_nonce": 25769803776,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 16079,
+            "mean": 14344,
+            "median": 13599,
+            "min": 13356,
+            "samples": [
+              16079,
+              13599,
+              13356
+            ]
+          },
+          "input_setup": {
+            "max": 7426,
+            "mean": 7357,
+            "median": 7424,
+            "min": 7221,
+            "samples": [
+              7426,
+              7424,
+              7221
+            ]
+          },
+          "mix_execute": {
+            "max": 4358186,
+            "mean": 4225798,
+            "median": 4166028,
+            "min": 4153182,
+            "samples": [
+              4358186,
+              4153182,
+              4166028
+            ]
+          },
+          "scratchpad_init": {
+            "max": 79342,
+            "mean": 30025,
+            "median": 5405,
+            "min": 5330,
+            "samples": [
+              79342,
+              5405,
+              5330
+            ]
+          }
+        },
+        "prepare_ns": 49597395,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 6,
+      "slowdown_ppm": 25606416,
+      "throughput_fraction_ppm": 39052
+    },
+    {
+      "exact_output_match": true,
+      "half_spill": {
+        "attempt_ns": {
+          "max": 108278677,
+          "mean": 107991383,
+          "median": 108113393,
+          "min": 107582079,
+          "samples": [
+            108113393,
+            108278677,
+            107582079
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "0342047c693399aa54df59225b345b51ef26f9c4558596328a3e7bf6521ed0e983cbf645d3ef3439b69e19d5456bfce8",
+        "digest_xor_64": "7e2781cb10779bb1",
+        "first_nonce": 30064771072,
+        "format": "soveroot-pow-research-cpp-half-spill-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 18904,
+            "mean": 18639,
+            "median": 18878,
+            "min": 18135,
+            "samples": [
+              18135,
+              18878,
+              18904
+            ]
+          },
+          "input_setup": {
+            "max": 7343,
+            "mean": 6838,
+            "median": 6711,
+            "min": 6461,
+            "samples": [
+              7343,
+              6711,
+              6461
+            ]
+          },
+          "mix_execute": {
+            "max": 108160126,
+            "mean": 107849157,
+            "median": 107910290,
+            "min": 107477056,
+            "samples": [
+              107910290,
+              108160126,
+              107477056
+            ]
+          },
+          "scratchpad_init": {
+            "max": 125031,
+            "mean": 70723,
+            "median": 49729,
+            "min": 37411,
+            "samples": [
+              125031,
+              49729,
+              37411
+            ]
+          }
+        },
+        "prepare_ns": 49505905,
+        "scratchpad_backend": "static-even-words-half-spill",
+        "spill_stats": {
+          "logical_retained_bytes": 131072,
+          "os_page_cache_bytes": "unmeasured",
+          "retained_reads": 294890,
+          "retained_writes": 295084,
+          "spill_file_bytes": 131072,
+          "spill_reads": 294982,
+          "spill_writes": 294740
+        },
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2228864
+      },
+      "normal": {
+        "attempt_ns": {
+          "max": 4454099,
+          "mean": 4264035,
+          "median": 4212278,
+          "min": 4125729,
+          "samples": [
+            4454099,
+            4212278,
+            4125729
+          ]
+        },
+        "attempts": 3,
+        "compiler": "gcc-13.3.0",
+        "digest_sequence_commitment": "0342047c693399aa54df59225b345b51ef26f9c4558596328a3e7bf6521ed0e983cbf645d3ef3439b69e19d5456bfce8",
+        "digest_xor_64": "7e2781cb10779bb1",
+        "first_nonce": 30064771072,
+        "format": "soveroot-pow-research-cpp-benchmark-v1",
+        "params": {
+          "dataset_bytes": 2097152,
+          "passes": 3,
+          "scratchpad_bytes": 262144
+        },
+        "phase_ns": {
+          "finalize": {
+            "max": 23118,
+            "mean": 20945,
+            "median": 20028,
+            "min": 19689,
+            "samples": [
+              23118,
+              20028,
+              19689
+            ]
+          },
+          "input_setup": {
+            "max": 10850,
+            "mean": 9529,
+            "median": 8971,
+            "min": 8766,
+            "samples": [
+              10850,
+              8766,
+              8971
+            ]
+          },
+          "mix_execute": {
+            "max": 4338415,
+            "mean": 4201416,
+            "median": 4175885,
+            "min": 4089948,
+            "samples": [
+              4338415,
+              4175885,
+              4089948
+            ]
+          },
+          "scratchpad_init": {
+            "max": 79988,
+            "mean": 30827,
+            "median": 6463,
+            "min": 6030,
+            "samples": [
+              79988,
+              6463,
+              6030
+            ]
+          }
+        },
+        "prepare_ns": 49973585,
+        "scratchpad_backend": "full-in-process",
+        "steady_clock": true,
+        "warning": "NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance",
+        "working_set_bytes_estimate": 2359936
+      },
+      "seed_index": 7,
+      "slowdown_ppm": 25666253,
+      "throughput_fraction_ppm": 38961
+    }
+  ],
+  "config": {
+    "dataset_bytes": 2097152,
+    "name": "baseline",
+    "passes": 3,
+    "scratchpad_bytes": 262144
+  },
+  "format": "soveroot-pow-v1-half-memory-attack-matrix-v0",
+  "half_spill_median_attempt_ns_across_seeds": {
+    "max": 109134115,
+    "mean": 108117566,
+    "median": 107990283,
+    "min": 107349448
+  },
+  "host": {
+    "cpu_model": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "logical_cpus": 4,
+    "machine": "x86_64",
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "processor": "x86_64",
+    "python": "3.12.3",
+    "runner_image": "ubuntu24"
+  },
+  "method": {
+    "attacker_optimization": "correctness baseline; not optimized",
+    "backend_order": "alternated by seed index",
+    "external_storage": "temporary random-access file recreated for every attempt",
+    "gate_eligibility": "informational only",
+    "logical_retained_fraction": "1/2",
+    "os_page_cache": "unmeasured and uncontrolled",
+    "output_check": "SHA3-384 digest-sequence commitment plus 64-bit digest xor",
+    "physical_peak_memory": "unmeasured",
+    "retained_words": "even logical scratchpad word indexes",
+    "spilled_words": "odd logical scratchpad word indexes"
+  },
+  "normal_median_attempt_ns_across_seeds": {
+    "max": 4330506,
+    "mean": 4225386,
+    "median": 4227994,
+    "min": 4115586
+  },
+  "profile": "standard",
+  "seed_count": 8,
+  "source_revision": "07c730b242868c4850c62a4fa24b2c6ddef8e7b3",
+  "throughput_fraction_ppm_across_seeds": {
+    "max": 39726,
+    "mean": 39079,
+    "median": 39051,
+    "min": 38256
+  },
+  "warning": "NON-CONSENSUS ATTACK EXPERIMENT; external storage and unmeasured OS caching make this result ineligible to pass or reject the time-memory-tradeoff gate"
+}
