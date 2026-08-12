@@ -1,0 +1,31 @@
+{
+  "attack_model": {
+    "attacker_optimization": "correctness baseline; not optimized",
+    "backend_order": "normal first on even seed indexes; half-spill first on odd seed indexes",
+    "external_storage": "temporary random-access file recreated for every attempt",
+    "logical_retained_fraction": "1/2",
+    "output_requirement": "all paired digest-sequence commitments and digest xors must match",
+    "retained_words": "even logical scratchpad word indexes",
+    "spilled_words": "odd logical scratchpad word indexes"
+  },
+  "default_standard_experiment": {
+    "attempts_per_seed": 3,
+    "dataset_bytes": 2097152,
+    "passes": 3,
+    "scratchpad_bytes": 262144,
+    "seeds": 8
+  },
+  "format": "soveroot-pow-v1-half-memory-attack-v0",
+  "gate_mapping": {
+    "gate_id": "time_memory_tradeoff",
+    "status": "INFORMATIONAL_ONLY",
+    "why_not_decisive": [
+      "OS page-cache memory is not measured or bounded",
+      "physical peak memory is not measured",
+      "external storage is used instead of recomputation",
+      "the attacker is a correctness baseline rather than an optimized implementation"
+    ]
+  },
+  "status": "PREDECLARED NON-CONSENSUS ATTACK METHOD",
+  "version": "0.1"
+}
