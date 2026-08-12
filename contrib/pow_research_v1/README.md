@@ -22,3 +22,5 @@ python3 -m contrib.pow_research_v1.generate_vectors
 The fixed-size memory commitment is not proof that retaining the declared scratchpad is optimal. That claim requires the time-memory-tradeoff experiments frozen in [pow-evaluation-gates.md](../../docs/pow-evaluation-gates.md).
 
 The machine-readable copy of the predeclared v1 workload screens is [`screening_v0.json`](screening_v0.json). It is consumed by the standalone v1 report renderer; changing it requires the same versioned justification as changing the human-readable objectives.
+
+Adversarial methods are versioned separately. The no-spill exact-output replay baseline is documented in [`recomputation_baseline_v0.json`](recomputation_baseline_v0.json) and [the corresponding method note](../../docs/pow-v1-recomputation-baseline.md). Its 150% peak scratch allocation makes it explicitly ineligible for the half-memory gate.

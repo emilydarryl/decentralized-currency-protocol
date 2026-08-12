@@ -1,0 +1,42 @@
+{
+  "attack_model": {
+    "retained_words": "even logical scratchpad word indexes",
+    "discarded_words": "odd logical scratchpad word indexes",
+    "logical_retained_fraction": "1/2",
+    "missing_read_strategy": "replay the ordinary full-memory evaluator from iteration zero to the read point",
+    "external_storage": "none",
+    "output_requirement": "all paired digest-sequence commitments and digest xors must match",
+    "replay_workspace": "one full declared scratchpad allocated transiently for each missing read",
+    "peak_scratch_fraction": "3/2",
+    "attacker_optimization": "exact-output correctness and work-accounting baseline; intentionally not memory-bounded"
+  },
+  "default_experiments": {
+    "smoke": {
+      "dataset_bytes": 65536,
+      "scratchpad_bytes": 8192,
+      "passes": 1,
+      "seeds": 2,
+      "attempts_per_seed": 1
+    },
+    "pilot": {
+      "dataset_bytes": 262144,
+      "scratchpad_bytes": 32768,
+      "passes": 1,
+      "seeds": 4,
+      "attempts_per_seed": 1
+    }
+  },
+  "format": "soveroot-pow-v1-recomputation-baseline-v0",
+  "gate_mapping": {
+    "gate_id": "time_memory_tradeoff",
+    "status": "INFORMATIONAL_ONLY",
+    "why_not_decisive": [
+      "peak scratch allocation is 150% of the declared scratchpad rather than 50%",
+      "resident memory and allocator overhead are not measured",
+      "replay starts from iteration zero rather than using optimized bounded checkpoints",
+      "shared runners do not control memory bandwidth, power, temperature, or competing load"
+    ]
+  },
+  "status": "PREDECLARED NON-CONSENSUS RECOMPUTATION BASELINE",
+  "version": "0.1"
+}

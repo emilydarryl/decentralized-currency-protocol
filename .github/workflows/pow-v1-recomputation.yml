@@ -1,0 +1,85 @@
+name: PoW v1 no-spill recomputation baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Replay profile
+        required: true
+        default: pilot
+        type: choice
+        options:
+          - smoke
+          - pilot
+      seeds:
+        description: Deterministic seed count (1-16)
+        required: true
+        default: "4"
+        type: string
+      attempts:
+        description: Nonce attempts per seed (1-4)
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  recomputation-baseline:
+    name: Exact-output no-spill replay baseline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+      ATTEMPTS: ${{ inputs.attempts }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Compile standalone v1 research executable
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+
+      - name: Verify ordinary and recomputation vectors
+        shell: bash
+        run: |
+          python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_recomputation_vectors_v1.py --binary build/powvm_v1_cpp
+
+      - name: Run paired recomputation baseline
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/recomputation_baseline_v1.py \
+            --binary build/powvm_v1_cpp \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --attempts "$ATTEMPTS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build/pow-v1-recomputation-matrix.json
+          python3 -m json.tool build/pow-v1-recomputation-matrix.json >/dev/null
+
+      - name: Render informational report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_recomputation_report_v1.py \
+            --matrix build/pow-v1-recomputation-matrix.json \
+            --gates contrib/pow_research/gates_v0.json \
+            --method contrib/pow_research_v1/recomputation_baseline_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build/pow-v1-recomputation-report.md
+
+      - name: Preserve raw matrix and report
+        uses: actions/upload-artifact@v7
+        with:
+          name: pow-v1-recomputation-${{ github.run_id }}
+          path: |
+            build/pow-v1-recomputation-matrix.json
+            build/pow-v1-recomputation-report.md
+          if-no-files-found: error
+          retention-days: 14

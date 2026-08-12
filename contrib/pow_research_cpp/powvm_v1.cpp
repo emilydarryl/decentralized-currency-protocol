@@ -86,6 +86,22 @@ struct SpillStats {
     std::size_t spill_file_bytes{0};
 };
 
+struct RecomputationStats {
+    std::uint64_t retained_reads{0};
+    std::uint64_t retained_writes{0};
+    std::uint64_t recomputed_reads{0};
+    std::uint64_t discarded_writes{0};
+    std::uint64_t replayed_iterations{0};
+    std::size_t logical_retained_bytes{0};
+    std::size_t replay_workspace_bytes{0};
+    std::size_t peak_scratch_bytes{0};
+};
+
+struct MachineState {
+    std::array<std::uint64_t, REGISTER_COUNT> registers{};
+    std::uint64_t accumulator{0};
+};
+
 struct TraceEvent {
     std::size_t word;
     bool is_write;
@@ -458,6 +474,7 @@ public:
     }
 
     void ExportStats(SpillStats*) const {}
+    void ExportRecomputationStats(RecomputationStats*) const {}
 
 private:
     std::size_t Word(std::uint64_t selector) const
@@ -544,6 +561,8 @@ public:
         if (output != nullptr) *output = m_stats;
     }
 
+    void ExportRecomputationStats(RecomputationStats*) const {}
+
 private:
     void SeekRead(std::size_t spill_word)
     {
@@ -591,6 +610,161 @@ std::uint64_t ExecuteOperation(
     }
 }
 
+MachineState InitializeMachineState(
+    const EpochContext& context,
+    std::span<const std::uint8_t> header_digest,
+    std::span<const std::uint8_t> nonce_bytes,
+    std::span<const std::uint8_t> params_bytes)
+{
+    Bytes initial_input = DomainBytes(DOMAIN_REGISTERS);
+    Append(initial_input, context.seed);
+    Append(initial_input, header_digest);
+    Append(initial_input, nonce_bytes);
+    Append(initial_input, params_bytes);
+    const Bytes initial_state = Shake256(initial_input, REGISTER_COUNT * 8 + 8);
+
+    MachineState state{};
+    for (std::size_t i{0}; i < REGISTER_COUNT; ++i) {
+        state.registers[i] = ReadLE64(initial_state.data() + i * 8);
+    }
+    state.accumulator = ReadLE64(initial_state.data() + REGISTER_COUNT * 8);
+    return state;
+}
+
+template <typename Scratchpad>
+void ExecuteMixIteration(
+    const EpochContext& context,
+    Scratchpad& scratchpad,
+    MachineState& state,
+    std::uint64_t iteration)
+{
+    const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
+    const std::size_t pass = static_cast<std::size_t>(iteration) / scratchpad_words;
+    const std::size_t word = static_cast<std::size_t>(iteration) & (scratchpad_words - 1);
+    const std::size_t lane = static_cast<std::size_t>(iteration) & (REGISTER_COUNT - 1);
+    const ScheduleEntry& entry = context.schedule[static_cast<std::size_t>(iteration) & (SCHEDULE_LENGTH - 1)];
+    const std::uint64_t x = state.registers[lane];
+    const std::uint64_t y = state.registers[(lane + 1) & (REGISTER_COUNT - 1)];
+    const std::uint64_t z = state.registers[(lane + 3) & (REGISTER_COUNT - 1)];
+
+    const std::uint64_t first_selector =
+        x ^ std::rotl(y, static_cast<int>(iteration & 63)) ^ state.accumulator ^ entry.immediate;
+    const std::uint64_t first_scratch = scratchpad.Read(first_selector);
+    const std::uint64_t dataset_selector =
+        first_scratch ^ z ^
+        std::rotl(state.accumulator, static_cast<int>((lane + pass) & 63)) ^
+        iteration;
+    const std::uint64_t dataset_word = ReadMemory(context.dataset, dataset_selector);
+    const std::uint64_t second_selector =
+        dataset_word ^ state.registers[(lane + 5) & (REGISTER_COUNT - 1)] ^
+        std::rotl(first_scratch + state.accumulator, static_cast<int>(entry.immediate & 63));
+    const std::uint64_t second_scratch = scratchpad.Read(second_selector);
+
+    const std::uint64_t mixed = ExecuteOperation(
+        entry.opcode, x, y, first_scratch, second_scratch, dataset_word, entry.immediate);
+    state.accumulator =
+        std::rotl(
+            state.accumulator ^ mixed ^ dataset_word,
+            static_cast<int>((first_scratch ^ second_scratch ^ entry.immediate) & 63)) +
+        first_scratch + entry.immediate + iteration;
+    const std::uint64_t sequential_value = mixed ^ state.accumulator ^ second_scratch;
+    const std::uint64_t dependent_value =
+        second_scratch ^ std::rotl(mixed + state.accumulator, static_cast<int>(dataset_word & 63));
+    scratchpad.Write(word, sequential_value);
+    scratchpad.Write(second_selector, dependent_value);
+
+    state.registers[lane] = mixed + state.accumulator + first_scratch;
+    const std::size_t neighbor = (lane + 2) & (REGISTER_COUNT - 1);
+    state.registers[neighbor] ^=
+        std::rotl(dataset_word + first_scratch, static_cast<int>(second_scratch & 63));
+}
+
+std::uint64_t ReplayScratchWord(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    std::uint64_t completed_iterations,
+    std::uint64_t selector)
+{
+    const Bytes params_bytes = EncodeParams(context.params);
+    Bytes nonce_bytes;
+    AppendLE64(nonce_bytes, nonce);
+    const Bytes header_digest = Sha3_384(header);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    FullScratchpad replay(context.params.scratchpad_bytes);
+    for (std::uint64_t iteration{0}; iteration < completed_iterations; ++iteration) {
+        ExecuteMixIteration(context, replay, state, iteration);
+    }
+    return replay.Read(selector);
+}
+
+class StaticHalfRecomputeScratchpad {
+public:
+    StaticHalfRecomputeScratchpad(
+        std::size_t bytes,
+        const EpochContext& context,
+        const Bytes& header,
+        std::uint64_t nonce)
+        : m_word_count(bytes / 8),
+          m_total_iterations(context.params.passes * m_word_count),
+          m_retained(bytes / 2, 0),
+          m_context(context),
+          m_header(header),
+          m_nonce(nonce)
+    {
+        if (bytes % 16 != 0) {
+            throw std::invalid_argument("half-recompute scratchpad must contain an even number of words");
+        }
+        m_stats.logical_retained_bytes = m_retained.size();
+        m_stats.replay_workspace_bytes = bytes;
+        m_stats.peak_scratch_bytes = bytes + m_retained.size();
+    }
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        const std::uint64_t completed_iterations =
+            std::min<std::uint64_t>(m_reads / 2, m_total_iterations);
+        ++m_reads;
+        if ((word & 1) == 0) {
+            ++m_stats.retained_reads;
+            return ReadLE64(m_retained.data() + (word / 2) * 8);
+        }
+
+        ++m_stats.recomputed_reads;
+        m_stats.replayed_iterations += completed_iterations;
+        return ReplayScratchWord(m_context, m_header, m_nonce, completed_iterations, word);
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        if ((word & 1) == 0) {
+            ++m_stats.retained_writes;
+            WriteLE64(m_retained.data() + (word / 2) * 8, value);
+        } else {
+            ++m_stats.discarded_writes;
+        }
+    }
+
+    void ExportStats(SpillStats*) const {}
+
+    void ExportRecomputationStats(RecomputationStats* output) const
+    {
+        if (output != nullptr) *output = m_stats;
+    }
+
+private:
+    std::size_t m_word_count;
+    std::uint64_t m_total_iterations;
+    std::uint64_t m_reads{0};
+    Bytes m_retained;
+    const EpochContext& m_context;
+    const Bytes& m_header;
+    std::uint64_t m_nonce;
+    RecomputationStats m_stats;
+};
+
 template <typename Scratchpad, typename... ScratchpadArgs>
 ExecutionResult EvaluateWithScratchpad(
     const EpochContext& context,
@@ -598,6 +772,7 @@ ExecutionResult EvaluateWithScratchpad(
     std::uint64_t nonce,
     ExecutionTiming* timing,
     SpillStats* spill_stats,
+    RecomputationStats* recomputation_stats,
     ScratchpadArgs&&... scratchpad_args)
 {
     using Clock = std::chrono::steady_clock;
@@ -610,18 +785,7 @@ ExecutionResult EvaluateWithScratchpad(
     Bytes nonce_bytes;
     AppendLE64(nonce_bytes, nonce);
     const Bytes header_digest = Sha3_384(header);
-    Bytes initial_input = DomainBytes(DOMAIN_REGISTERS);
-    Append(initial_input, context.seed);
-    Append(initial_input, header_digest);
-    Append(initial_input, nonce_bytes);
-    Append(initial_input, params_bytes);
-    const Bytes initial_state = Shake256(initial_input, REGISTER_COUNT * 8 + 8);
-
-    std::array<std::uint64_t, REGISTER_COUNT> registers{};
-    for (std::size_t i{0}; i < REGISTER_COUNT; ++i) {
-        registers[i] = ReadLE64(initial_state.data() + i * 8);
-    }
-    std::uint64_t accumulator = ReadLE64(initial_state.data() + REGISTER_COUNT * 8);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
     const auto scratchpad_started = Clock::now();
     Scratchpad scratchpad(
         context.params.scratchpad_bytes,
@@ -632,51 +796,16 @@ ExecutionResult EvaluateWithScratchpad(
     for (std::size_t pass{0}; pass < context.params.passes; ++pass) {
         for (std::size_t word{0}; word < scratchpad_words; ++word) {
             const std::uint64_t iteration = pass * scratchpad_words + word;
-            const std::size_t lane = static_cast<std::size_t>(iteration) & (REGISTER_COUNT - 1);
-            const ScheduleEntry& entry = context.schedule[static_cast<std::size_t>(iteration) & (SCHEDULE_LENGTH - 1)];
-            const std::uint64_t x = registers[lane];
-            const std::uint64_t y = registers[(lane + 1) & (REGISTER_COUNT - 1)];
-            const std::uint64_t z = registers[(lane + 3) & (REGISTER_COUNT - 1)];
-
-            const std::uint64_t first_selector =
-                x ^ std::rotl(y, static_cast<int>(iteration & 63)) ^ accumulator ^ entry.immediate;
-            const std::uint64_t first_scratch = scratchpad.Read(first_selector);
-            const std::uint64_t dataset_selector =
-                first_scratch ^ z ^
-                std::rotl(accumulator, static_cast<int>((lane + pass) & 63)) ^
-                iteration;
-            const std::uint64_t dataset_word = ReadMemory(context.dataset, dataset_selector);
-            const std::uint64_t second_selector =
-                dataset_word ^ registers[(lane + 5) & (REGISTER_COUNT - 1)] ^
-                std::rotl(first_scratch + accumulator, static_cast<int>(entry.immediate & 63));
-            const std::uint64_t second_scratch = scratchpad.Read(second_selector);
-
-            const std::uint64_t mixed = ExecuteOperation(
-                entry.opcode, x, y, first_scratch, second_scratch, dataset_word, entry.immediate);
-            accumulator =
-                std::rotl(
-                    accumulator ^ mixed ^ dataset_word,
-                    static_cast<int>((first_scratch ^ second_scratch ^ entry.immediate) & 63)) +
-                first_scratch + entry.immediate + iteration;
-            const std::uint64_t sequential_value = mixed ^ accumulator ^ second_scratch;
-            const std::uint64_t dependent_value =
-                second_scratch ^ std::rotl(mixed + accumulator, static_cast<int>(dataset_word & 63));
-            scratchpad.Write(word, sequential_value);
-            scratchpad.Write(second_selector, dependent_value);
-
-            registers[lane] = mixed + accumulator + first_scratch;
-            const std::size_t neighbor = (lane + 2) & (REGISTER_COUNT - 1);
-            registers[neighbor] ^=
-                std::rotl(dataset_word + first_scratch, static_cast<int>(second_scratch & 63));
+            ExecuteMixIteration(context, scratchpad, state, iteration);
         }
     }
 
     const auto finalize_started = Clock::now();
     std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
-    std::uint64_t selector = accumulator ^ registers[0] ^ registers[4];
+    std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
     for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
         selector =
-            std::rotl(selector ^ registers[i & (REGISTER_COUNT - 1)], static_cast<int>((i + 1) & 63)) +
+            std::rotl(selector ^ state.registers[i & (REGISTER_COUNT - 1)], static_cast<int>((i + 1) & 63)) +
             0x9E3779B97F4A7C15ULL + i;
         samples[i] = scratchpad.Read(selector);
         selector ^= samples[i];
@@ -684,9 +813,9 @@ ExecutionResult EvaluateWithScratchpad(
 
     Bytes encoded_registers;
     encoded_registers.reserve(REGISTER_COUNT * 8);
-    for (const std::uint64_t value : registers) AppendLE64(encoded_registers, value);
+    for (const std::uint64_t value : state.registers) AppendLE64(encoded_registers, value);
     Bytes encoded_accumulator;
-    AppendLE64(encoded_accumulator, accumulator);
+    AppendLE64(encoded_accumulator, state.accumulator);
     Bytes encoded_samples;
     encoded_samples.reserve(FINAL_SAMPLE_WORDS * 8);
     for (const std::uint64_t value : samples) AppendLE64(encoded_samples, value);
@@ -710,7 +839,7 @@ ExecutionResult EvaluateWithScratchpad(
     Append(result_input, memory_commitment);
     ExecutionResult result{
         Sha3_384(result_input),
-        registers,
+        state.registers,
         context.schedule_digest,
         context.dataset_digest,
         memory_commitment,
@@ -727,6 +856,7 @@ ExecutionResult EvaluateWithScratchpad(
             std::chrono::duration_cast<std::chrono::nanoseconds>(finished - finalize_started).count();
     }
     scratchpad.ExportStats(spill_stats);
+    scratchpad.ExportRecomputationStats(recomputation_stats);
     return result;
 }
 
@@ -737,7 +867,7 @@ ExecutionResult Evaluate(
     ExecutionTiming* timing = nullptr)
 {
     return EvaluateWithScratchpad<FullScratchpad>(
-        context, header, nonce, timing, nullptr);
+        context, header, nonce, timing, nullptr, nullptr);
 }
 
 ExecutionResult EvaluateHalfSpill(
@@ -749,7 +879,26 @@ ExecutionResult EvaluateHalfSpill(
     SpillStats* spill_stats = nullptr)
 {
     return EvaluateWithScratchpad<StaticHalfSpillScratchpad>(
-        context, header, nonce, timing, spill_stats, spill_directory, nonce);
+        context, header, nonce, timing, spill_stats, nullptr, spill_directory, nonce);
+}
+
+ExecutionResult EvaluateHalfRecompute(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    ExecutionTiming* timing = nullptr,
+    RecomputationStats* recomputation_stats = nullptr)
+{
+    return EvaluateWithScratchpad<StaticHalfRecomputeScratchpad>(
+        context,
+        header,
+        nonce,
+        timing,
+        nullptr,
+        recomputation_stats,
+        context,
+        header,
+        nonce);
 }
 
 Bytes ParseHex(std::string_view text)
@@ -807,7 +956,7 @@ void PrintTrace(
     const EpochContext context = PrepareEpoch(seed, params);
     TraceRecorder recorder(params.scratchpad_bytes / 8);
     const ExecutionResult result = EvaluateWithScratchpad<FullScratchpad>(
-        context, header, nonce, nullptr, nullptr, &recorder);
+        context, header, nonce, nullptr, nullptr, nullptr, &recorder);
     const TraceSummary trace = recorder.Summarize();
     auto print_cache = [](std::string_view name, const CacheTraceStats& cache, bool comma) {
         std::cout << "    \"" << name << "\": {\"capacity_words\": " << cache.capacity_words
@@ -912,11 +1061,15 @@ void PrintBenchmark(
     std::uint64_t first_nonce,
     std::size_t attempts,
     const Params& params,
-    const std::filesystem::path* spill_directory = nullptr)
+    const std::filesystem::path* spill_directory = nullptr,
+    bool recompute_half = false)
 {
     if (attempts < 1 || attempts > 10000) throw std::invalid_argument("attempts must be in [1, 10000]");
     if (attempts - 1 > std::numeric_limits<std::uint64_t>::max() - first_nonce) {
         throw std::invalid_argument("nonce range exceeds uint64");
+    }
+    if (spill_directory != nullptr && recompute_half) {
+        throw std::invalid_argument("spill and recomputation backends are mutually exclusive");
     }
 
     using Clock = std::chrono::steady_clock;
@@ -939,19 +1092,31 @@ void PrintBenchmark(
     Bytes digest_sequence;
     digest_sequence.reserve(attempts * 48);
     SpillStats aggregate_spill_stats{};
+    RecomputationStats aggregate_recomputation_stats{};
     for (std::size_t attempt{0}; attempt < attempts; ++attempt) {
         ExecutionTiming timing{};
         SpillStats attempt_spill_stats{};
+        RecomputationStats attempt_recomputation_stats{};
         const auto started = Clock::now();
-        const ExecutionResult result = spill_directory == nullptr
-            ? Evaluate(context, header, first_nonce + attempt, &timing)
-            : EvaluateHalfSpill(
-                  context,
-                  header,
-                  first_nonce + attempt,
-                  *spill_directory,
-                  &timing,
-                  &attempt_spill_stats);
+        ExecutionResult result{};
+        if (recompute_half) {
+            result = EvaluateHalfRecompute(
+                context,
+                header,
+                first_nonce + attempt,
+                &timing,
+                &attempt_recomputation_stats);
+        } else if (spill_directory != nullptr) {
+            result = EvaluateHalfSpill(
+                context,
+                header,
+                first_nonce + attempt,
+                *spill_directory,
+                &timing,
+                &attempt_spill_stats);
+        } else {
+            result = Evaluate(context, header, first_nonce + attempt, &timing);
+        }
         samples.push_back(
             std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count());
         input_setup_samples.push_back(timing.input_setup_ns);
@@ -966,23 +1131,37 @@ void PrintBenchmark(
         aggregate_spill_stats.spill_writes += attempt_spill_stats.spill_writes;
         aggregate_spill_stats.logical_retained_bytes = attempt_spill_stats.logical_retained_bytes;
         aggregate_spill_stats.spill_file_bytes = attempt_spill_stats.spill_file_bytes;
+        aggregate_recomputation_stats.retained_reads += attempt_recomputation_stats.retained_reads;
+        aggregate_recomputation_stats.retained_writes += attempt_recomputation_stats.retained_writes;
+        aggregate_recomputation_stats.recomputed_reads += attempt_recomputation_stats.recomputed_reads;
+        aggregate_recomputation_stats.discarded_writes += attempt_recomputation_stats.discarded_writes;
+        aggregate_recomputation_stats.replayed_iterations += attempt_recomputation_stats.replayed_iterations;
+        aggregate_recomputation_stats.logical_retained_bytes = attempt_recomputation_stats.logical_retained_bytes;
+        aggregate_recomputation_stats.replay_workspace_bytes = attempt_recomputation_stats.replay_workspace_bytes;
+        aggregate_recomputation_stats.peak_scratch_bytes = attempt_recomputation_stats.peak_scratch_bytes;
     }
     const std::size_t working_set =
         params.dataset_bytes +
-        (spill_directory == nullptr ? params.scratchpad_bytes : params.scratchpad_bytes / 2) +
+        (recompute_half
+                ? params.scratchpad_bytes + params.scratchpad_bytes / 2
+                : (spill_directory == nullptr ? params.scratchpad_bytes : params.scratchpad_bytes / 2)) +
         SCHEDULE_LENGTH * 9 + REGISTER_COUNT * 8;
 
     std::cout << "{\n"
               << "  \"format\": \""
-              << (spill_directory == nullptr
-                      ? "soveroot-pow-research-cpp-benchmark-v1"
-                      : "soveroot-pow-research-cpp-half-spill-benchmark-v1")
+              << (recompute_half
+                      ? "soveroot-pow-research-cpp-half-recompute-benchmark-v1"
+                      : (spill_directory == nullptr
+                              ? "soveroot-pow-research-cpp-benchmark-v1"
+                              : "soveroot-pow-research-cpp-half-spill-benchmark-v1"))
               << "\",\n"
               << "  \"warning\": \"NON-CONSENSUS V1 CANDIDATE; timings do not establish memory hardness, mining economics, or specialization resistance\",\n"
               << "  \"compiler\": \"" << CompilerDescription() << "\",\n"
               << "  \"steady_clock\": true,\n"
               << "  \"scratchpad_backend\": \""
-              << (spill_directory == nullptr ? "full-in-process" : "static-even-words-half-spill")
+              << (recompute_half
+                      ? "static-even-words-half-retained-full-replay"
+                      : (spill_directory == nullptr ? "full-in-process" : "static-even-words-half-spill"))
               << "\",\n"
               << "  \"attempts\": " << attempts << ",\n"
               << "  \"first_nonce\": " << first_nonce << ",\n"
@@ -1001,6 +1180,18 @@ void PrintBenchmark(
                   << ", \"spill_reads\": " << aggregate_spill_stats.spill_reads
                   << ", \"spill_writes\": " << aggregate_spill_stats.spill_writes
                   << ", \"os_page_cache_bytes\": \"unmeasured\"},\n";
+    }
+    if (recompute_half) {
+        std::cout << "  \"recomputation_stats\": {\"logical_retained_bytes\": "
+                  << aggregate_recomputation_stats.logical_retained_bytes
+                  << ", \"replay_workspace_bytes\": " << aggregate_recomputation_stats.replay_workspace_bytes
+                  << ", \"peak_scratch_bytes\": " << aggregate_recomputation_stats.peak_scratch_bytes
+                  << ", \"retained_reads\": " << aggregate_recomputation_stats.retained_reads
+                  << ", \"retained_writes\": " << aggregate_recomputation_stats.retained_writes
+                  << ", \"recomputed_reads\": " << aggregate_recomputation_stats.recomputed_reads
+                  << ", \"discarded_writes\": " << aggregate_recomputation_stats.discarded_writes
+                  << ", \"replayed_iterations\": " << aggregate_recomputation_stats.replayed_iterations
+                  << ", \"external_storage_bytes\": 0},\n";
     }
     std::cout << "  \"phase_ns\": {\n";
     PrintTimingJson("input_setup", input_setup_samples, true);
@@ -1048,6 +1239,23 @@ int main(int argc, char* argv[])
                 PrepareEpoch(seed, params), header, nonce, spill_directory));
             return 0;
         }
+        if (argc == 9 && std::string_view{argv[1]} == "benchmark-half-recompute") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t first_nonce = std::stoull(argv[4]);
+            const std::size_t attempts = ParseSize(argv[5]);
+            const Params params{ParseSize(argv[6]), ParseSize(argv[7]), ParseSize(argv[8])};
+            PrintBenchmark(seed, header, first_nonce, attempts, params, nullptr, true);
+            return 0;
+        }
+        if (argc == 8 && std::string_view{argv[1]} == "half-recompute") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintResult(EvaluateHalfRecompute(PrepareEpoch(seed, params), header, nonce));
+            return 0;
+        }
         if (argc == 9 && std::string_view{argv[1]} == "benchmark") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -1063,7 +1271,9 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp trace SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
-                      << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n";
+                      << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
+                      << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp benchmark-half-recompute SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n";
             return 2;
         }
         const Bytes seed = ParseHex(argv[1]);
