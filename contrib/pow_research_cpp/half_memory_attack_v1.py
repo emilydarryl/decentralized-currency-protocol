@@ -15,7 +15,10 @@ import statistics
 import subprocess
 import tempfile
 
-from contrib.pow_research_cpp.benchmark_matrix_v1 import HEADER, cpu_model, seed_for
+try:
+    from .benchmark_matrix_v1 import HEADER, cpu_model, seed_for
+except ImportError:  # Direct script execution places this directory on sys.path.
+    from benchmark_matrix_v1 import HEADER, cpu_model, seed_for
 
 
 WARNING = (
