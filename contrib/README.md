@@ -11,6 +11,9 @@ Non-consensus deterministic interpreter, test vectors, benchmarks, and parameter
 ### [Soveroot C++ PoW research](/contrib/pow_research_cpp) ###
 Independent differential implementation, reproducible CPU benchmark matrix, and informational report tooling. None of these tools participate in consensus.
 
+### [Soveroot PoW v1 research](/contrib/pow_research_v1) ###
+Isolated Python implementation and vectors for the fixed-work v1 candidate; not linked into consensus or mining.
+
 ### [Verify-Commits](/contrib/verify-commits) ###
 Tool to verify that every merge commit was signed by a developer using the `github-merge.py` script.
 

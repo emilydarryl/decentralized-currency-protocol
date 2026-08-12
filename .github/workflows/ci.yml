@@ -71,6 +71,9 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             contrib/pow_research_cpp/powvm.cpp -o build/powvm_cpp
           python3 test/pow_research/run_cpp_vectors.py --binary build/powvm_cpp
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
           python3 contrib/pow_research_cpp/benchmark_matrix.py \
             --binary build/powvm_cpp --profile smoke --output build/pow-benchmark-smoke.json
           python3 -c "import json; d=json.load(open('build/pow-benchmark-smoke.json')); assert all(set(r['median_phase_ns_across_seeds']) == {'input_setup','scratchpad_init','vm_execute','finalize'} for r in d['results'])"
