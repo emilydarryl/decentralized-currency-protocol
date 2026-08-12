@@ -194,3 +194,5 @@ The candidate direction is rejected or redesigned if any of the following occurs
 Until all phases pass, labnet retains its inherited test-only proof of work and no document may represent Soveroot's final PoW as selected.
 
 The reproducible C++ benchmark matrix begins phase 3 by recording raw timings and seed variance for CPU software. It is evidence infrastructure, not completion of the commodity-hardware, GPU, energy, FPGA, ASIC, or quantum evaluation gates above.
+
+Quantitative pass, redesign, and rejection thresholds are frozen separately in [`pow-evaluation-gates.md`](pow-evaluation-gates.md) before the first baseline report is accepted.

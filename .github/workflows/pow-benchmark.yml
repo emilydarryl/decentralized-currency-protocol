@@ -1,0 +1,82 @@
+name: PoW CPU research benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Benchmark profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+      seeds:
+        description: Deterministic seed count (1-128)
+        required: true
+        default: "8"
+        type: string
+      attempts:
+        description: Nonce attempts per seed (1-10000)
+        required: true
+        default: "20"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-matrix:
+    name: Informational CPU matrix
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+      ATTEMPTS: ${{ inputs.attempts }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Compile standalone research executable
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm.cpp -o build/powvm_cpp
+
+      - name: Verify canonical differential vectors
+        shell: bash
+        run: python3 test/pow_research/run_cpp_vectors.py --binary build/powvm_cpp
+
+      - name: Run informational matrix
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/benchmark_matrix.py \
+            --binary build/powvm_cpp \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --attempts "$ATTEMPTS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build/pow-cpu-matrix.json
+          python3 -m json.tool build/pow-cpu-matrix.json >/dev/null
+
+      - name: Render informational report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_report.py \
+            --matrix build/pow-cpu-matrix.json \
+            --gates contrib/pow_research/gates_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build/pow-cpu-report.md
+
+      - name: Preserve raw data and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: pow-cpu-${{ github.run_id }}
+          path: |
+            build/pow-cpu-matrix.json
+            build/pow-cpu-report.md
+          if-no-files-found: error
+          retention-days: 14
