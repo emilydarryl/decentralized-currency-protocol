@@ -23,6 +23,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.
 - [pow-vm-research.md](docs/pow-vm-research.md) defines the research envelope, benchmark gates, and rejection criteria for the candidate proof-of-work VM.
 - [pow-evaluation-gates.md](docs/pow-evaluation-gates.md) freezes quantitative pass, redesign, and rejection thresholds before benchmark evidence is accepted.
+- [pow-v1-workload-objectives.md](docs/pow-v1-workload-objectives.md) records the measured v0 imbalance and freezes the minimum workload-balance signals for a v1 research candidate.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
