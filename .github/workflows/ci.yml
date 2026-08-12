@@ -76,6 +76,7 @@ jobs:
           python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_half_memory_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_trace_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_versioned_graph_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_recomputation_vectors_v1.py --binary build/powvm_v1_cpp
           python3 contrib/pow_research_cpp/benchmark_matrix_v1.py \
             --binary build/powvm_v1_cpp --profile smoke --output build/pow-v1-benchmark-smoke.json

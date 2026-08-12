@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 import hashlib
 import struct
-from typing import Final
+from typing import Final, Protocol
 
 
 MASK64: Final = (1 << 64) - 1
@@ -97,6 +97,14 @@ class ExecutionMetrics:
     mix_scratchpad_writes: int = 0
     final_sample_reads: int = 0
     finalization_input_bytes: int = 0
+
+
+class ScratchAccessObserver(Protocol):
+    """Receive exact word-level events without participating in evaluation."""
+
+    def read(self, consumer_kind: int, consumer: int, slot: int, word: int) -> None: ...
+
+    def write(self, iteration: int, slot: int, word: int) -> None: ...
 
 
 def _validate_memory_size(name: str, value: int, minimum: int, maximum: int) -> None:
@@ -209,6 +217,7 @@ def evaluate(
     nonce: int,
     *,
     metrics: ExecutionMetrics | None = None,
+    scratch_observer: ScratchAccessObserver | None = None,
 ) -> ExecutionResult:
     """Evaluate one nonce using fixed work proportional to scratchpad words and passes."""
 
@@ -243,6 +252,8 @@ def evaluate(
             z = registers[(lane + 3) & (REGISTER_COUNT - 1)]
 
             first_selector = x ^ _rol64(y, iteration) ^ accumulator ^ entry.immediate
+            if scratch_observer is not None:
+                scratch_observer.read(0, iteration, 0, first_selector & (scratchpad_words - 1))
             first_scratch = _read_u64(scratchpad, first_selector)
             dataset_selector = (
                 first_scratch
@@ -256,6 +267,8 @@ def evaluate(
                 ^ registers[(lane + 5) & (REGISTER_COUNT - 1)]
                 ^ _rol64(_u64(first_scratch + accumulator), entry.immediate)
             )
+            if scratch_observer is not None:
+                scratch_observer.read(0, iteration, 1, second_selector & (scratchpad_words - 1))
             second_scratch = _read_u64(scratchpad, second_selector)
 
             mixed = _execute_operation(
@@ -278,7 +291,11 @@ def evaluate(
             )
             sequential_value = mixed ^ accumulator ^ second_scratch
             dependent_value = second_scratch ^ _rol64(_u64(mixed + accumulator), dataset_word)
+            if scratch_observer is not None:
+                scratch_observer.write(iteration, 0, word_index)
             _write_u64(scratchpad, word_index, sequential_value)
+            if scratch_observer is not None:
+                scratch_observer.write(iteration, 1, second_selector & (scratchpad_words - 1))
             _write_u64(scratchpad, second_selector, dependent_value)
 
             registers[lane] = _u64(mixed + accumulator + first_scratch)
@@ -301,6 +318,8 @@ def evaluate(
             + 0x9E3779B97F4A7C15
             + sample_index
         )
+        if scratch_observer is not None:
+            scratch_observer.read(1, sample_index, 0, selector & (scratchpad_words - 1))
         sampled = _read_u64(scratchpad, selector)
         sampled_words.append(sampled)
         selector = _u64(selector ^ sampled)

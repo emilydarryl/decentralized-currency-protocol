@@ -68,9 +68,11 @@ Every gate must pass independently. A favorable cache statistic, slow naive atta
 
 ## Immediate next experiment
 
-The next milestone is an exact, no-spill, bounded-pebbling attacker described in [the v1 bounded-pebbling plan](pow-v1-bounded-pebbling-plan.md). It must reproduce canonical outputs while accounting for retained values, identifiers, versions, checkpoints, register state, work queues, stack, allocator overhead, and peak resident memory within an explicit budget.
+Stage A of the [v1 bounded-pebbling plan](pow-v1-bounded-pebbling-plan.md) now has an exact, independently implemented [versioned scratch-dependency graph](pow-v1-versioned-graph.md), fixed smoke and standard commitments, and packed and conservative byte models. The graph is an offline diagnostic approximately 61 times larger than the standard half-scratch budget even under its optimistic layout, so it cannot be retained by an eligible attacker.
 
-An offline trace or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
+The immediate next milestone is the Stage B offline pebbling lower bound. It must use the committed graph to explore schedules under explicit byte costs while labeling future knowledge and planner memory separately. A later online attacker must reproduce canonical outputs while accounting for retained values, identifiers, versions, checkpoints, register state, work queues, stack, allocator overhead, and peak resident memory within an explicit budget.
+
+An offline trace, graph, planner, or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
 
 ## Change discipline
 

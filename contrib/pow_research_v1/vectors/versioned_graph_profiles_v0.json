@@ -1,0 +1,37 @@
+{
+  "format": "soveroot-pow-v1-versioned-graph-profile-vectors-v0",
+  "seed_derivation": "contrib/pow_research_cpp/benchmark_matrix_v1.py seed_for(index)",
+  "header": "Soveroot reproducible C++ benchmark matrix v1",
+  "profiles": {
+    "smoke": {
+      "params": {"dataset_bytes": 65536, "scratchpad_bytes": 8192, "passes": 1},
+      "mix_iterations": 1024,
+      "read_edges": 2064,
+      "write_versions": 2048,
+      "cases": [
+        {"seed_index": 0, "initial_zero_edges": 756, "materialized_edges": 1308, "graph_commitment": "1d6c204caeb0a51eeed433ada7645b2c6b26e67055ba25e3843e1e6a3f98618e97aedf893c6aa04b53538d358dedfca8"},
+        {"seed_index": 1, "initial_zero_edges": 730, "materialized_edges": 1334, "graph_commitment": "3af422ca0bd7ef522553d9af791df7ca241028a03fa77b2e10c589e11f935f14938e798fd9f4a3a96bd5326ad10ad82f"}
+      ]
+    },
+    "standard": {
+      "params": {"dataset_bytes": 2097152, "scratchpad_bytes": 262144, "passes": 3},
+      "mix_iterations": 98304,
+      "read_edges": 196624,
+      "write_versions": 196608,
+      "canonical_encoded_bytes": 11993583,
+      "packed_logical_model_bytes": 7995648,
+      "conservative_logical_model_bytes": 15991424,
+      "cases": [
+        {"seed_index": 0, "initial_zero_edges": 24052, "materialized_edges": 172572, "graph_commitment": "e7abc748fb9c88bf66767ca532915fefb93700c8d6efe92a695d4b22b5310cf4df66ae99ff8032c5082f802c866a44d9"},
+        {"seed_index": 1, "initial_zero_edges": 24213, "materialized_edges": 172411, "graph_commitment": "3e2d051eeae07ef92ef16dcdfc46df0bce00a6cee77c58cb5cd5352541971ba2e9d5149672f9be7a04e7b82df6d0b7bb"},
+        {"seed_index": 2, "initial_zero_edges": 24176, "materialized_edges": 172448, "graph_commitment": "b9f5e3e14f93937f7ac92b3e957e2f02a0004c6c95db49b0a28558ceba805df4c696e491429a2517b33e340ce275f469"},
+        {"seed_index": 3, "initial_zero_edges": 24171, "materialized_edges": 172453, "graph_commitment": "8ca669017a77237bef9fc88f6c4bbb822e67a3dede8ca63ca9e6f6978b0eecdba0ef402baa829c7db981c42b7d31ad4e"},
+        {"seed_index": 4, "initial_zero_edges": 24036, "materialized_edges": 172588, "graph_commitment": "6d6a359d418ed01cbda80cabb58ff850785b6c1403ef20eeb1120f1c96fd6c17d63bd9540a5eeebd2b19908fef72a868"},
+        {"seed_index": 5, "initial_zero_edges": 23980, "materialized_edges": 172644, "graph_commitment": "ff7108eaf29e239164d6fcd5a9f5782d65bc842304e3959531d41d78bcc228a9e7afc4732b4632b39857e5a58ac8d441"},
+        {"seed_index": 6, "initial_zero_edges": 24201, "materialized_edges": 172423, "graph_commitment": "4373f0359c94d3e181907e2a02be7a8d46964b3d58f459805f9fe36d7fc3d8719e3b8ebbe3700acf35f0216b521b9d3c"},
+        {"seed_index": 7, "initial_zero_edges": 24078, "materialized_edges": 172546, "graph_commitment": "d72587a532a981c5ab04293285fe2b0dc3814bb28ad5c6a6a6bbde71cda9acd285f6d838073ba391e45b20888877eae3"}
+      ]
+    }
+  },
+  "warning": "NON-CONSENSUS DETERMINISTIC GRAPH COMMITMENTS; these are not benchmark or gate results"
+}
