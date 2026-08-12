@@ -7,11 +7,13 @@
 #include <algorithm>
 #include <array>
 #include <bit>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <numeric>
 #include <span>
 #include <sstream>
 #include <stdexcept>
@@ -370,14 +372,87 @@ void PrintResult(const ExecutionResult& result)
     std::cout << '\n';
 }
 
+std::string CompilerDescription()
+{
+#if defined(__clang__)
+    return "clang-" __clang_version__;
+#elif defined(__GNUC__)
+    return "gcc-" __VERSION__;
+#elif defined(_MSC_VER)
+    return "msvc-" + std::to_string(_MSC_VER);
+#else
+    return "unknown";
+#endif
+}
+
+void PrintBenchmark(const Bytes& seed, const Bytes& header, std::uint64_t first_nonce, std::size_t attempts, const Params& params)
+{
+    if (attempts < 1 || attempts > 10000) throw std::invalid_argument("attempts must be in [1, 10000]");
+    using Clock = std::chrono::steady_clock;
+    const auto prepare_started = Clock::now();
+    const EpochContext context = PrepareEpoch(seed, params);
+    const auto prepare_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - prepare_started).count();
+
+    std::vector<std::int64_t> samples;
+    samples.reserve(attempts);
+    std::uint64_t digest_xor{0};
+    for (std::size_t attempt{0}; attempt < attempts; ++attempt) {
+        const auto started = Clock::now();
+        const ExecutionResult result = Evaluate(context, header, first_nonce + attempt);
+        samples.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count());
+        digest_xor ^= ReadLE64(result.digest.data());
+    }
+    std::vector<std::int64_t> sorted = samples;
+    std::sort(sorted.begin(), sorted.end());
+    const std::int64_t median = sorted.size() % 2 == 0
+        ? (sorted[sorted.size() / 2 - 1] + sorted[sorted.size() / 2]) / 2
+        : sorted[sorted.size() / 2];
+    const std::int64_t mean = std::accumulate(samples.begin(), samples.end(), std::int64_t{0}) / static_cast<std::int64_t>(samples.size());
+    const std::size_t working_set = params.dataset_bytes + params.scratchpad_bytes + params.program_instructions * 11 + REGISTER_COUNT * 8;
+
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-research-cpp-benchmark-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS PROTOTYPE; timings do not predict mining economics or specialization advantage\",\n"
+              << "  \"compiler\": \"" << CompilerDescription() << "\",\n"
+              << "  \"steady_clock\": true,\n"
+              << "  \"attempts\": " << attempts << ",\n"
+              << "  \"first_nonce\": " << first_nonce << ",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"program_instructions\": " << params.program_instructions
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"working_set_bytes_estimate\": " << working_set << ",\n"
+              << "  \"prepare_ns\": " << prepare_ns << ",\n"
+              << "  \"attempt_ns\": {\"min\": " << sorted.front()
+              << ", \"median\": " << median << ", \"mean\": " << mean
+              << ", \"max\": " << sorted.back() << ", \"samples\": [";
+    for (std::size_t i{0}; i < samples.size(); ++i) {
+        if (i != 0) std::cout << ',';
+        std::cout << samples[i];
+    }
+    std::cout << "]},\n"
+              << "  \"digest_xor_64\": \"" << std::hex << std::setfill('0') << std::setw(16) << digest_xor << "\"\n"
+              << "}\n";
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 10 && std::string_view{argv[1]} == "benchmark") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t first_nonce = std::stoull(argv[4]);
+            const std::size_t attempts = ParseSize(argv[5]);
+            const Params params{ParseSize(argv[6]), ParseSize(argv[7]), ParseSize(argv[8]), ParseSize(argv[9])};
+            PrintBenchmark(seed, header, first_nonce, attempts, params);
+            return 0;
+        }
         if (argc != 8) {
             std::cerr << "NON-CONSENSUS Soveroot PoW research implementation\n"
-                      << "usage: powvm_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES INSTRUCTIONS PASSES\n";
+                      << "usage: powvm_cpp SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES INSTRUCTIONS PASSES\n"
+                      << "   or: powvm_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES INSTRUCTIONS PASSES\n";
             return 2;
         }
         const Bytes seed = ParseHex(argv[1]);
