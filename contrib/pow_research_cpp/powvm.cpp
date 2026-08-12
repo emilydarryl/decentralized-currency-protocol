@@ -67,6 +67,13 @@ struct ExecutionResult {
     Bytes scratchpad_digest;
 };
 
+struct ExecutionTiming {
+    std::int64_t input_setup_ns;
+    std::int64_t scratchpad_init_ns;
+    std::int64_t vm_execute_ns;
+    std::int64_t finalize_ns;
+};
+
 constexpr std::array<std::uint64_t, 24> KECCAK_ROUND_CONSTANTS{
     0x0000000000000001ULL, 0x0000000000008082ULL,
     0x800000000000808aULL, 0x8000000080008000ULL,
@@ -257,18 +264,22 @@ void WriteMemory(Bytes& memory, std::uint64_t selector, std::uint64_t value)
     WriteLE64(memory.data() + offset, value);
 }
 
-ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::uint64_t nonce)
+ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::uint64_t nonce, ExecutionTiming* timing = nullptr)
 {
+    using Clock = std::chrono::steady_clock;
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) throw std::invalid_argument("header size is outside the research envelope");
 
+    const auto input_started = Clock::now();
     Bytes nonce_bytes;
     AppendLE64(nonce_bytes, nonce);
     const Bytes header_digest = Sha3_384(header);
     const Bytes register_bytes = Shake256(DomainInput(DOMAIN_REGISTERS, context.seed, header_digest, nonce_bytes), REGISTER_COUNT * 8);
     std::array<std::uint64_t, REGISTER_COUNT> registers{};
     for (std::size_t i{0}; i < REGISTER_COUNT; ++i) registers[i] = ReadLE64(register_bytes.data() + i * 8);
+    const auto scratchpad_started = Clock::now();
     Bytes scratchpad = Shake256(DomainInput(DOMAIN_SCRATCH, context.seed, header_digest, nonce_bytes), context.params.scratchpad_bytes);
+    const auto vm_started = Clock::now();
 
     for (std::size_t pass{0}; pass < context.params.passes; ++pass) {
         for (std::size_t pc{0}; pc < context.program.size(); ++pc) {
@@ -317,6 +328,7 @@ ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::
         }
     }
 
+    const auto finalize_started = Clock::now();
     Bytes encoded_registers;
     for (const std::uint64_t value : registers) AppendLE64(encoded_registers, value);
     const Bytes scratchpad_digest = Sha3_384(scratchpad);
@@ -325,7 +337,15 @@ ExecutionResult Evaluate(const EpochContext& context, const Bytes& header, std::
     final_input.insert(final_input.end(), context.dataset_digest.begin(), context.dataset_digest.end());
     final_input.insert(final_input.end(), encoded_registers.begin(), encoded_registers.end());
     final_input.insert(final_input.end(), scratchpad_digest.begin(), scratchpad_digest.end());
-    return {Sha3_384(final_input), registers, context.program_digest, context.dataset_digest, scratchpad_digest};
+    ExecutionResult result{Sha3_384(final_input), registers, context.program_digest, context.dataset_digest, scratchpad_digest};
+    const auto finished = Clock::now();
+    if (timing != nullptr) {
+        timing->input_setup_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(scratchpad_started - input_started).count();
+        timing->scratchpad_init_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(vm_started - scratchpad_started).count();
+        timing->vm_execute_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(finalize_started - vm_started).count();
+        timing->finalize_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(finished - finalize_started).count();
+    }
+    return result;
 }
 
 Bytes ParseHex(std::string_view text)
@@ -385,6 +405,55 @@ std::string CompilerDescription()
 #endif
 }
 
+struct TimingSummary {
+    std::int64_t minimum;
+    std::int64_t median;
+    std::int64_t mean;
+    std::int64_t maximum;
+};
+
+TimingSummary Summarize(const std::vector<std::int64_t>& samples)
+{
+    if (samples.empty()) throw std::invalid_argument("cannot summarize empty timings");
+    std::vector<std::int64_t> sorted = samples;
+    std::sort(sorted.begin(), sorted.end());
+    const std::int64_t median = sorted.size() % 2 == 0
+        ? (sorted[sorted.size() / 2 - 1] + sorted[sorted.size() / 2]) / 2
+        : sorted[sorted.size() / 2];
+    return {
+        sorted.front(),
+        median,
+        std::accumulate(samples.begin(), samples.end(), std::int64_t{0}) / static_cast<std::int64_t>(samples.size()),
+        sorted.back(),
+    };
+}
+
+void PrintTimingJson(std::string_view name, const std::vector<std::int64_t>& samples, bool trailing_comma)
+{
+    const TimingSummary summary = Summarize(samples);
+    std::cout << "    \"" << name << "\": {\"min\": " << summary.minimum
+              << ", \"median\": " << summary.median << ", \"mean\": " << summary.mean
+              << ", \"max\": " << summary.maximum << ", \"samples\": [";
+    for (std::size_t i{0}; i < samples.size(); ++i) {
+        if (i != 0) std::cout << ',';
+        std::cout << samples[i];
+    }
+    std::cout << "]}" << (trailing_comma ? "," : "") << '\n';
+}
+
+void PrintAttemptTimingJson(const std::vector<std::int64_t>& samples)
+{
+    const TimingSummary summary = Summarize(samples);
+    std::cout << "  \"attempt_ns\": {\"min\": " << summary.minimum
+              << ", \"median\": " << summary.median << ", \"mean\": " << summary.mean
+              << ", \"max\": " << summary.maximum << ", \"samples\": [";
+    for (std::size_t i{0}; i < samples.size(); ++i) {
+        if (i != 0) std::cout << ',';
+        std::cout << samples[i];
+    }
+    std::cout << "]},\n";
+}
+
 void PrintBenchmark(const Bytes& seed, const Bytes& header, std::uint64_t first_nonce, std::size_t attempts, const Params& params)
 {
     if (attempts < 1 || attempts > 10000) throw std::invalid_argument("attempts must be in [1, 10000]");
@@ -394,20 +463,27 @@ void PrintBenchmark(const Bytes& seed, const Bytes& header, std::uint64_t first_
     const auto prepare_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - prepare_started).count();
 
     std::vector<std::int64_t> samples;
+    std::vector<std::int64_t> input_setup_samples;
+    std::vector<std::int64_t> scratchpad_init_samples;
+    std::vector<std::int64_t> vm_execute_samples;
+    std::vector<std::int64_t> finalize_samples;
     samples.reserve(attempts);
+    input_setup_samples.reserve(attempts);
+    scratchpad_init_samples.reserve(attempts);
+    vm_execute_samples.reserve(attempts);
+    finalize_samples.reserve(attempts);
     std::uint64_t digest_xor{0};
     for (std::size_t attempt{0}; attempt < attempts; ++attempt) {
+        ExecutionTiming timing{};
         const auto started = Clock::now();
-        const ExecutionResult result = Evaluate(context, header, first_nonce + attempt);
+        const ExecutionResult result = Evaluate(context, header, first_nonce + attempt, &timing);
         samples.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>(Clock::now() - started).count());
+        input_setup_samples.push_back(timing.input_setup_ns);
+        scratchpad_init_samples.push_back(timing.scratchpad_init_ns);
+        vm_execute_samples.push_back(timing.vm_execute_ns);
+        finalize_samples.push_back(timing.finalize_ns);
         digest_xor ^= ReadLE64(result.digest.data());
     }
-    std::vector<std::int64_t> sorted = samples;
-    std::sort(sorted.begin(), sorted.end());
-    const std::int64_t median = sorted.size() % 2 == 0
-        ? (sorted[sorted.size() / 2 - 1] + sorted[sorted.size() / 2]) / 2
-        : sorted[sorted.size() / 2];
-    const std::int64_t mean = std::accumulate(samples.begin(), samples.end(), std::int64_t{0}) / static_cast<std::int64_t>(samples.size());
     const std::size_t working_set = params.dataset_bytes + params.scratchpad_bytes + params.program_instructions * 11 + REGISTER_COUNT * 8;
 
     std::cout << "{\n"
@@ -422,15 +498,14 @@ void PrintBenchmark(const Bytes& seed, const Bytes& header, std::uint64_t first_
               << ", \"program_instructions\": " << params.program_instructions
               << ", \"passes\": " << params.passes << "},\n"
               << "  \"working_set_bytes_estimate\": " << working_set << ",\n"
-              << "  \"prepare_ns\": " << prepare_ns << ",\n"
-              << "  \"attempt_ns\": {\"min\": " << sorted.front()
-              << ", \"median\": " << median << ", \"mean\": " << mean
-              << ", \"max\": " << sorted.back() << ", \"samples\": [";
-    for (std::size_t i{0}; i < samples.size(); ++i) {
-        if (i != 0) std::cout << ',';
-        std::cout << samples[i];
-    }
-    std::cout << "]},\n"
+              << "  \"prepare_ns\": " << prepare_ns << ",\n";
+    PrintAttemptTimingJson(samples);
+    std::cout << "  \"phase_ns\": {\n";
+    PrintTimingJson("input_setup", input_setup_samples, true);
+    PrintTimingJson("scratchpad_init", scratchpad_init_samples, true);
+    PrintTimingJson("vm_execute", vm_execute_samples, true);
+    PrintTimingJson("finalize", finalize_samples, false);
+    std::cout << "  },\n"
               << "  \"digest_xor_64\": \"" << std::hex << std::setfill('0') << std::setw(16) << digest_xor << "\"\n"
               << "}\n";
 }

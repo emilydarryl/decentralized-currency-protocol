@@ -73,7 +73,7 @@ jobs:
           python3 test/pow_research/run_cpp_vectors.py --binary build/powvm_cpp
           python3 contrib/pow_research_cpp/benchmark_matrix.py \
             --binary build/powvm_cpp --profile smoke --output build/pow-benchmark-smoke.json
-          python3 -m json.tool build/pow-benchmark-smoke.json >/dev/null
+          python3 -c "import json; d=json.load(open('build/pow-benchmark-smoke.json')); assert all(set(r['median_phase_ns_across_seeds']) == {'input_setup','scratchpad_init','vm_execute','finalize'} for r in d['results'])"
 
       - name: Configure focused node and test build
         shell: bash
