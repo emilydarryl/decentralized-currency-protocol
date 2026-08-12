@@ -15,6 +15,14 @@ def _milliseconds(nanoseconds: int) -> str:
     return f"{nanoseconds / 1_000_000:.3f}"
 
 
+def _attempt_median(results: dict[str, dict[str, object]], name: str) -> int:
+    return int(results[name]["median_attempt_ns_across_seeds"]["median"])
+
+
+def _ratio(numerator: int, denominator: int) -> str:
+    return f"{numerator / denominator:.2f}x"
+
+
 def render(matrix_path: Path, gates_path: Path, label: str) -> str:
     raw = matrix_path.read_bytes()
     matrix = json.loads(raw)
@@ -27,7 +35,7 @@ def render(matrix_path: Path, gates_path: Path, label: str) -> str:
     lines = [
         f"# Soveroot CPU Research Baseline: {label}",
         "",
-        "Status: **INFORMATIONAL ONLY — NO POW GATE PASSED**",
+        "Status: **INFORMATIONAL ONLY -- NO POW GATE PASSED**",
         "",
         f"Raw matrix SHA3-384: `{hashlib.sha3_384(raw).hexdigest()}`",
         f"Source revision: `{matrix.get('source_revision', 'unrecorded')}`",
@@ -59,8 +67,25 @@ def render(matrix_path: Path, gates_path: Path, label: str) -> str:
             f"{_milliseconds(result['median_attempt_ns_across_seeds']['median'])} | {spread:.2f}% |"
         )
 
+    indexed_results = {result["config"]["name"]: result for result in matrix["results"]}
+    screening_lines = []
+    required = {"dataset-64k", "dataset-4096k", "scratch-8k", "scratch-512k", "instructions-16", "instructions-256", "passes-1", "passes-16"}
+    if required.issubset(indexed_results):
+        screening_lines = [
+            "",
+            "## Screening observations",
+            "",
+            f"- Increasing the dataset 64x (64 KiB to 4 MiB) changed median attempt time by {_ratio(_attempt_median(indexed_results, 'dataset-4096k'), _attempt_median(indexed_results, 'dataset-64k'))}.",
+            f"- Increasing the scratchpad 64x (8 KiB to 512 KiB) changed median attempt time by {_ratio(_attempt_median(indexed_results, 'scratch-512k'), _attempt_median(indexed_results, 'scratch-8k'))}.",
+            f"- Increasing the instruction count 16x changed median attempt time by {_ratio(_attempt_median(indexed_results, 'instructions-256'), _attempt_median(indexed_results, 'instructions-16'))}.",
+            f"- Increasing passes 16x changed median attempt time by {_ratio(_attempt_median(indexed_results, 'passes-16'), _attempt_median(indexed_results, 'passes-1'))}.",
+            "",
+            "These shared-runner results suggest that per-attempt scratchpad expansion and final hashing dominate the current prototype while dataset access and variable VM execution contribute too little. This is a screening inference, not a hardware gate result. Phase-level instrumentation and workload redesign should precede GPU, FPGA, or ASIC comparisons.",
+        ]
+
     seed_gate = next(gate for gate in gates["gates"] if gate["id"] == "seed_variance")
     observed_seeds = min(result["seed_count"] for result in matrix["results"])
+    lines += screening_lines
     lines += [
         "",
         "## Gate interpretation",

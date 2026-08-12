@@ -51,16 +51,13 @@ def seed_for(index: int) -> bytes:
 
 
 def cpu_model() -> str:
-    reported = platform.processor()
-    if reported:
-        return reported
     try:
         for line in Path("/proc/cpuinfo").read_text(encoding="utf-8").splitlines():
             if line.lower().startswith("model name"):
                 return line.partition(":")[2].strip()
     except OSError:
         pass
-    return "unavailable"
+    return platform.processor() or "unavailable"
 
 
 def run_case(binary: Path, config: Config, seed_index: int, attempts: int) -> dict[str, object]:
