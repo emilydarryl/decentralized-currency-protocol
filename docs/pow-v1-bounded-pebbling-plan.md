@@ -66,6 +66,8 @@ Implementation status: **complete as an offline graph study**. The initial floor
 - Fail the test on any digest, register, or memory-commitment mismatch.
 - Detect file-backed mappings, temporary files, and helper processes.
 
+Implementation status: **fail-closed execution scaffold implemented; exact attacker incomplete**. The [online bounded-probe note](pow-v1-online-bounded-probe.md) documents a one-arena half-scratch layout and independently matched exact-prefix refusal boundaries. It does not yet reconstruct a missing value, emit an exact proof, measure actual peak memory, or assess the gate.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

@@ -44,6 +44,9 @@ constexpr char DOMAIN_COMMITMENT[] = "Soveroot/PowResearch/Commitment/v1\0";
 constexpr char DOMAIN_RESULT[] = "Soveroot/PowResearch/Result/v1\0";
 constexpr char DOMAIN_ACCESS_TRACE[] = "Soveroot/PowResearch/AccessTrace/v1\0";
 constexpr char DOMAIN_VERSIONED_GRAPH[] = "Soveroot/PowResearch/VersionedGraph/v1\0";
+constexpr char DOMAIN_BOUNDED_STATE[] = "Soveroot/PowResearch/BoundedProbeState/v1\0";
+constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
+constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -103,6 +106,36 @@ struct RecomputationStats {
 struct MachineState {
     std::array<std::uint64_t, REGISTER_COUNT> registers{};
     std::uint64_t accumulator{0};
+};
+
+struct BoundedProbeStats {
+    std::size_t budget_bytes{0};
+    std::size_t fixed_state_reserve_bytes{0};
+    std::size_t arena_bytes{0};
+    std::size_t write_bitmap_bytes{0};
+    std::size_t cache_entry_bytes{0};
+    std::size_t cache_capacity{0};
+    std::size_t cache_payload_bytes{0};
+    std::size_t unused_arena_bytes{0};
+    std::size_t admitted_bytes{0};
+    std::uint64_t reads{0};
+    std::uint64_t cache_hits{0};
+    std::uint64_t initial_zero_reads{0};
+    std::uint64_t materialized_misses{0};
+    std::uint64_t writes{0};
+    std::uint64_t evictions{0};
+};
+
+struct BoundedProbeResult {
+    bool exact_complete{false};
+    std::uint64_t completed_iterations{0};
+    std::uint8_t miss_consumer_kind{0};
+    std::uint64_t miss_consumer{0};
+    std::uint8_t miss_slot{0};
+    std::uint64_t miss_word{0};
+    Bytes state_commitment;
+    ExecutionResult execution_result{};
+    BoundedProbeStats stats{};
 };
 
 struct TraceEvent {
@@ -714,6 +747,128 @@ private:
     TraceRecorder* m_trace;
 };
 
+class BoundedReadMiss final : public std::runtime_error {
+public:
+    BoundedReadMiss(
+        std::uint8_t consumer_kind,
+        std::uint64_t consumer,
+        std::uint8_t slot,
+        std::uint64_t word)
+        : std::runtime_error("bounded probe encountered a materialized cache miss"),
+          consumer_kind(consumer_kind),
+          consumer(consumer),
+          slot(slot),
+          word(word)
+    {
+    }
+
+    std::uint8_t consumer_kind;
+    std::uint64_t consumer;
+    std::uint8_t slot;
+    std::uint64_t word;
+};
+
+class BoundedArenaScratchpad {
+public:
+    BoundedArenaScratchpad(
+        std::size_t scratchpad_bytes,
+        std::size_t budget_bytes,
+        std::uint64_t total_iterations)
+        : m_word_count(scratchpad_bytes / 8),
+          m_total_iterations(total_iterations)
+    {
+        m_stats.budget_bytes = budget_bytes;
+        m_stats.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_stats.write_bitmap_bytes = (m_word_count + 7) / 8;
+        m_stats.cache_entry_bytes = BOUNDED_CACHE_ENTRY_BYTES;
+        if (budget_bytes <= BOUNDED_FIXED_STATE_RESERVE_BYTES) {
+            throw std::invalid_argument("bounded-probe budget cannot hold the fixed reserve");
+        }
+        m_stats.arena_bytes = budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        if (m_stats.arena_bytes <= m_stats.write_bitmap_bytes) {
+            throw std::invalid_argument("bounded-probe budget cannot hold the write bitmap and one cache entry");
+        }
+        m_stats.cache_capacity =
+            (m_stats.arena_bytes - m_stats.write_bitmap_bytes) / BOUNDED_CACHE_ENTRY_BYTES;
+        if (m_stats.cache_capacity == 0) {
+            throw std::invalid_argument("bounded-probe budget cannot hold one cache entry");
+        }
+        m_stats.cache_payload_bytes = m_stats.cache_capacity * BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.unused_arena_bytes =
+            m_stats.arena_bytes - m_stats.write_bitmap_bytes - m_stats.cache_payload_bytes;
+        m_stats.admitted_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES + m_stats.arena_bytes;
+        m_cache_offset = m_stats.write_bitmap_bytes;
+        m_arena.resize(m_stats.arena_bytes, 0);
+        for (std::size_t slot{0}; slot < m_stats.cache_capacity; ++slot) {
+            WriteLE64(m_arena.data() + EntryOffset(slot), std::numeric_limits<std::uint64_t>::max());
+        }
+    }
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        const std::uint64_t read_ordinal = m_stats.reads++;
+        const std::size_t entry_offset = EntryOffset(word % m_stats.cache_capacity);
+        const std::uint64_t tag = ReadLE64(m_arena.data() + entry_offset);
+        if (tag == word) {
+            ++m_stats.cache_hits;
+            return ReadLE64(m_arena.data() + entry_offset + 8);
+        }
+        if (!WasWritten(word)) {
+            ++m_stats.initial_zero_reads;
+            return 0;
+        }
+
+        ++m_stats.materialized_misses;
+        if (read_ordinal < m_total_iterations * 2) {
+            throw BoundedReadMiss{
+                0,
+                read_ordinal / 2,
+                static_cast<std::uint8_t>(read_ordinal & 1),
+                word};
+        }
+        throw BoundedReadMiss{1, read_ordinal - m_total_iterations * 2, 0, word};
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = static_cast<std::size_t>(selector) & (m_word_count - 1);
+        const std::size_t entry_offset = EntryOffset(word % m_stats.cache_capacity);
+        const std::uint64_t previous = ReadLE64(m_arena.data() + entry_offset);
+        if (previous != std::numeric_limits<std::uint64_t>::max() && previous != word) {
+            ++m_stats.evictions;
+        }
+        WriteLE64(m_arena.data() + entry_offset, word);
+        WriteLE64(m_arena.data() + entry_offset + 8, value);
+        MarkWritten(word);
+        ++m_stats.writes;
+    }
+
+    const BoundedProbeStats& Stats() const { return m_stats; }
+
+private:
+    std::size_t EntryOffset(std::size_t slot) const
+    {
+        return m_cache_offset + slot * BOUNDED_CACHE_ENTRY_BYTES;
+    }
+
+    bool WasWritten(std::size_t word) const
+    {
+        return (m_arena[word / 8] & (std::uint8_t{1} << (word & 7))) != 0;
+    }
+
+    void MarkWritten(std::size_t word)
+    {
+        m_arena[word / 8] |= std::uint8_t{1} << (word & 7);
+    }
+
+    std::size_t m_word_count;
+    std::uint64_t m_total_iterations;
+    std::size_t m_cache_offset{0};
+    Bytes m_arena;
+    BoundedProbeStats m_stats;
+};
+
 class StaticHalfSpillScratchpad {
 public:
     StaticHalfSpillScratchpad(
@@ -1129,6 +1284,98 @@ ExecutionResult EvaluateHalfRecompute(
         nonce);
 }
 
+BoundedProbeResult ProbeBounded(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce)
+{
+    Validate(context.seed, context.params);
+    if (header.empty() || header.size() > MAX_HEADER_BYTES) {
+        throw std::invalid_argument("header size is outside the v1 research envelope");
+    }
+    const Bytes params_bytes = EncodeParams(context.params);
+    Bytes nonce_bytes;
+    AppendLE64(nonce_bytes, nonce);
+    const Bytes header_digest = Sha3_384(header);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
+    const std::uint64_t total_iterations = context.params.passes * scratchpad_words;
+    BoundedArenaScratchpad scratchpad(
+        context.params.scratchpad_bytes,
+        context.params.scratchpad_bytes / 2,
+        total_iterations);
+    BoundedProbeResult probe{};
+
+    try {
+        for (std::uint64_t iteration{0}; iteration < total_iterations; ++iteration) {
+            ExecuteMixIteration(context, scratchpad, state, iteration);
+            ++probe.completed_iterations;
+        }
+
+        std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
+        std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
+        for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
+            selector =
+                std::rotl(selector ^ state.registers[i & (REGISTER_COUNT - 1)], static_cast<int>((i + 1) & 63)) +
+                0x9E3779B97F4A7C15ULL + i;
+            samples[i] = scratchpad.Read(selector);
+            selector ^= samples[i];
+        }
+
+        Bytes encoded_registers;
+        encoded_registers.reserve(REGISTER_COUNT * 8);
+        for (const std::uint64_t value : state.registers) AppendLE64(encoded_registers, value);
+        Bytes encoded_accumulator;
+        AppendLE64(encoded_accumulator, state.accumulator);
+        Bytes encoded_samples;
+        encoded_samples.reserve(FINAL_SAMPLE_WORDS * 8);
+        for (const std::uint64_t value : samples) AppendLE64(encoded_samples, value);
+        Bytes commitment_input = DomainBytes(DOMAIN_COMMITMENT);
+        Append(commitment_input, params_bytes);
+        Append(commitment_input, encoded_registers);
+        Append(commitment_input, encoded_accumulator);
+        Append(commitment_input, encoded_samples);
+        const Bytes memory_commitment = Sha3_384(commitment_input);
+        Bytes result_input = DomainBytes(DOMAIN_RESULT);
+        Append(result_input, context.seed);
+        Append(result_input, header_digest);
+        Append(result_input, nonce_bytes);
+        Append(result_input, params_bytes);
+        Append(result_input, context.schedule_digest);
+        Append(result_input, context.dataset_digest);
+        Append(result_input, encoded_registers);
+        Append(result_input, encoded_accumulator);
+        Append(result_input, memory_commitment);
+        probe.exact_complete = true;
+        probe.execution_result = {
+            Sha3_384(result_input),
+            state.registers,
+            context.schedule_digest,
+            context.dataset_digest,
+            memory_commitment,
+        };
+    } catch (const BoundedReadMiss& miss) {
+        probe.miss_consumer_kind = miss.consumer_kind;
+        probe.miss_consumer = miss.consumer;
+        probe.miss_slot = miss.slot;
+        probe.miss_word = miss.word;
+        Bytes encoded = DomainBytes(DOMAIN_BOUNDED_STATE);
+        Append(encoded, context.seed);
+        Append(encoded, header_digest);
+        Append(encoded, nonce_bytes);
+        Append(encoded, params_bytes);
+        AppendLE64(encoded, miss.consumer);
+        encoded.push_back(miss.slot);
+        AppendLE64(encoded, miss.word);
+        encoded.push_back(miss.consumer_kind);
+        for (const std::uint64_t value : state.registers) AppendLE64(encoded, value);
+        AppendLE64(encoded, state.accumulator);
+        probe.state_commitment = Sha3_384(encoded);
+    }
+    probe.stats = scratchpad.Stats();
+    return probe;
+}
+
 Bytes ParseHex(std::string_view text)
 {
     if (text.size() % 2 != 0) throw std::invalid_argument("hex input must have even length");
@@ -1173,6 +1420,55 @@ void PrintResult(const ExecutionResult& result)
         std::cout << std::setw(16) << result.registers[i];
     }
     std::cout << '\n';
+}
+
+void PrintBoundedProbe(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const BoundedProbeResult probe = ProbeBounded(PrepareEpoch(seed, params), header, nonce);
+    const BoundedProbeStats& stats = probe.stats;
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-online-bounded-probe-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS FAIL-CLOSED PREFIX PROBE; not an exact reduced-memory evaluator or gate result\",\n"
+              << "  \"status\": \"" << (probe.exact_complete ? "exact_complete" : "refused_materialized_miss") << "\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"layout\": {\"budget_bytes\": " << stats.budget_bytes
+              << ", \"fixed_state_reserve_bytes\": " << stats.fixed_state_reserve_bytes
+              << ", \"arena_bytes\": " << stats.arena_bytes
+              << ", \"write_bitmap_bytes\": " << stats.write_bitmap_bytes
+              << ", \"cache_entry_bytes\": " << stats.cache_entry_bytes
+              << ", \"cache_capacity\": " << stats.cache_capacity
+              << ", \"cache_payload_bytes\": " << stats.cache_payload_bytes
+              << ", \"unused_arena_bytes\": " << stats.unused_arena_bytes
+              << ", \"admitted_bytes\": " << stats.admitted_bytes << "},\n"
+              << "  \"completed_iterations\": " << probe.completed_iterations << ",\n"
+              << "  \"reads\": " << stats.reads << ",\n"
+              << "  \"cache_hits\": " << stats.cache_hits << ",\n"
+              << "  \"initial_zero_reads\": " << stats.initial_zero_reads << ",\n"
+              << "  \"materialized_misses\": " << stats.materialized_misses << ",\n"
+              << "  \"writes\": " << stats.writes << ",\n"
+              << "  \"evictions\": " << stats.evictions << ",\n";
+    if (probe.exact_complete) {
+        std::cout << "  \"miss\": null,\n"
+                  << "  \"state_commitment\": null,\n"
+                  << "  \"digest\": \"" << Hex(probe.execution_result.digest) << "\",\n"
+                  << "  \"memory_commitment\": \"" << Hex(probe.execution_result.memory_commitment) << "\"\n";
+    } else {
+        std::cout << "  \"miss\": {\"consumer_kind\": " << static_cast<unsigned>(probe.miss_consumer_kind)
+                  << ", \"consumer\": " << probe.miss_consumer
+                  << ", \"slot\": " << static_cast<unsigned>(probe.miss_slot)
+                  << ", \"word\": " << probe.miss_word << "},\n"
+                  << "  \"state_commitment\": \"" << Hex(probe.state_commitment) << "\",\n"
+                  << "  \"digest\": null,\n"
+                  << "  \"memory_commitment\": null\n";
+    }
+    std::cout << "}\n";
 }
 
 void PrintTrace(
@@ -1507,6 +1803,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "bounded-probe") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintBoundedProbe(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "graph") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -1575,6 +1879,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp benchmark SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp trace SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp graph SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp bounded-probe SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
