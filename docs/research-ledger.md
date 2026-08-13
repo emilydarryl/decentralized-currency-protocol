@@ -2,7 +2,7 @@
 
 Status: **WORKING DESIGN; NO PRODUCTION NETWORK; NO PROOF-OF-WORK GATE PASSED**
 
-Evidence cutoff: 2026-08-12, source revision `584cc5f8b94534827f88b8fa7d689189fa25d2c0`
+Evidence cutoff: 2026-08-13, source revision `f09f642c689236928f2676a3b5e380a601aeb4c2`
 
 This is the project-level index for decisions made, evidence collected, claims rejected, and work still required. Detailed specifications remain authoritative within their stated scope. This ledger exists so that a reader does not need private conversations to understand the project.
 
@@ -74,7 +74,7 @@ The first Stage B result now supplies an [optimistic offline cut-set lower bound
 
 The remaining Stage B [offline schedule search](pow-v1-offline-pebbling-schedule.md) is now complete. Across eight standard seeds, its compact layout needs a median 3,424,646 abstract producer replays and a 13,989,059-byte direct action stream; its conservative layout needs 6,419,925 replays and 26,101,215 bytes. These are results for one optimistic graph-only policy, not lower bounds, executable proofs, or claims that no compressed schedule exists.
 
-Stage C now has a fail-closed online probe, first and repeated reconstruction results, packed and paged layouts, and an [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md). The indexed layout raises standard seed-zero page utilization from 59.2% to 90.8% and extends the exact prefix from iteration 3,599 to 5,759. It performs 5.13 million attempted replay iterations and still refuses without a proof, showing that value-layout optimization alone is insufficient. The immediate milestone is a byte-accounted time-checkpoint or hierarchical replay construction that reduces genesis replay while retaining exact state. A later exact attacker must account for retained values, identities, versions, checkpoints, register state, work queues, stack, allocator overhead, and peak resident memory within the ceiling.
+Stage C now has a fail-closed online probe, first and repeated reconstruction results, packed and paged layouts, an [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md), and a [time-checkpoint feasibility screen](pow-v1-time-checkpoint-screen.md). The indexed layout reaches 90.8% utilization but still refuses without a proof. The checkpoint screen then shows that all 17 standard seed-zero cuts need 155,490 bytes even under an optimistic future-aware staged store, 18.63% above the half-scratch ceiling. A single no-regeneration checkpoint cannot lower the global live-value peak. The immediate milestone is recursive exact value regeneration with a byte-accounted cache and work stack. A later exact attacker must still account for every retained value, identity, version, checkpoint, register, queue, stack, allocator allowance, and peak resident byte within the ceiling.
 
 An offline trace, graph, planner, or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
 
