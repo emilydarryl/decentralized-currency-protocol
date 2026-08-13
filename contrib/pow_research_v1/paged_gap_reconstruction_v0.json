@@ -1,0 +1,48 @@
+{
+  "format": "soveroot-pow-v1-paged-gap-reconstruction-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS PAGED-GAP RECONSTRUCTION METHOD",
+  "question": "Can fixed-size gap pages preserve exact bounded reconstruction while sharply reducing packed insertion movement?",
+  "arena": {
+    "budget_fraction": "1/2 of declared scratchpad",
+    "allocation_count": 1,
+    "fixed_state_reserve_bytes": 512,
+    "canonical_write_bitmap": "one bit per logical scratch word",
+    "primary_cache_fraction": "1/4 of bytes remaining after bitmaps and rank directory",
+    "replay_membership": "one bit per logical scratch word",
+    "rank_directory": "16-bit Fenwick tree over 256-word chunks",
+    "page_layout": "32 values per 256-byte physical page",
+    "page_metadata": "16-bit logical page directory plus 16-bit count per physical page"
+  },
+  "policy": [
+    "stop before state mutation at every missing materialized read",
+    "replay canonically from iteration zero in the reserved paged arena",
+    "split a full page 16/16 into the next free physical page",
+    "shift only a page suffix and the affected logical directory suffix",
+    "require replayed registers and accumulator to match the live state",
+    "retain the recovered value in the primary cache and retry",
+    "refuse without output when a split needs a physical page after all pages are allocated"
+  ],
+  "accounting": [
+    "successful and attempted replay iterations",
+    "rank-directory and bitmap probes",
+    "logical page-directory and page-count probes",
+    "bytes shifted inside pages, during splits, and in the logical directory",
+    "maximum occupied replay values and allocated pages",
+    "first, last, transcript, and exhaustion commitments"
+  ],
+  "limitations": [
+    "partially filled pages cause internal fragmentation and early refusal",
+    "logical page lookup is a linear scan and dominates directory probes",
+    "every reconstruction still replays from iteration zero",
+    "there are no durable time checkpoints or recursive eviction recovery",
+    "the 512-byte fixed reserve is logical rather than measured process high water",
+    "the deterministic screen is not a throughput benchmark or lower bound",
+    "the standard pilot does not reach an exact proof output"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "movement falls sharply, but the evaluator still exhausts before a proof and physical memory is unmeasured"
+  },
+  "next_use": "replace linear page lookup with a byte-accounted page-count index and add bounded gap rebalancing"
+}

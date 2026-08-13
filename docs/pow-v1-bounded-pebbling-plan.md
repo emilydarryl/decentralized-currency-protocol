@@ -74,6 +74,8 @@ The [bounded repeated-reconstruction result](pow-v1-bounded-repeated-reconstruct
 
 The [packed checkpoint pilot](pow-v1-packed-checkpoint-reconstruction.md) replaces per-value tags with bitmap rank, raising standard replay capacity from 4,940 to 11,449 values and extending seed zero to iteration 6,615. It also exposes 180.8 GB of charged insertion movement, motivating a block-gap or indexed layout.
 
+The [paged-gap pilot](pow-v1-paged-gap-reconstruction.md) replaces global shifts with 32-value physical pages and a logical page directory. On standard seed zero it reduces charged movement to 183.3 MB, approximately 986 times less, but fragmented pages exhaust at 6,667 occupied values and linear lookup charges 489.8 million directory probes. The next construction must index page counts and rebalance gaps without exceeding the same byte ceiling.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
