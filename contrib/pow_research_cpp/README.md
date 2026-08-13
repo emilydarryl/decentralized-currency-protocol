@@ -90,6 +90,13 @@ python3 contrib/pow_research_cpp/render_pebbling_lower_bound_report_v1.py \
   --matrix build/pow-v1-pebbling-lower-bound.json \
   --method contrib/pow_research_v1/pebbling_lower_bound_v0.json \
   --label "local" --output build/pow-v1-pebbling-lower-bound.md
+
+python3 contrib/pow_research_cpp/offline_pebbling_schedule_v1.py \
+  --profile standard --output build/pow-v1-offline-pebbling-schedule.json
+python3 contrib/pow_research_cpp/render_offline_pebbling_schedule_report_v1.py \
+  --matrix build/pow-v1-offline-pebbling-schedule.json \
+  --method contrib/pow_research_v1/offline_pebbling_schedule_v0.json \
+  --label "local" --output build/pow-v1-offline-pebbling-schedule.md
 ```
 
 The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.

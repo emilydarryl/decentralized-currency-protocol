@@ -57,7 +57,7 @@ Implementation status: **complete as a deterministic diagnostic**. The Python an
 - Report future knowledge and planner resources separately.
 - Use the result only to bound what an online evaluator might achieve.
 
-Implementation status: **the first Stage B lower bound is complete**. The method and deterministic standard-profile screen are documented in [the offline pebbling lower-bound note](pow-v1-pebbling-lower-bound.md). An offline schedule search with explicit schedule bytes remains before Stage B is complete. The cut-set result is not a schedule, executable attacker, throughput estimate, or gate result.
+Implementation status: **complete as an offline graph study**. The initial floor is documented in [the offline pebbling lower-bound note](pow-v1-pebbling-lower-bound.md). The subsequent [offline pebbling schedule note](pow-v1-offline-pebbling-schedule.md) records concrete recursive action streams, replay work, dependency depth, retained and transient values, and explicit schedule bytes. Neither result is an executable attacker, throughput estimate, or gate result.
 
 ### Stage C: exact online attacker
 

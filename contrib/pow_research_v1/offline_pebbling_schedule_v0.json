@@ -1,0 +1,38 @@
+{
+  "format": "soveroot-pow-v1-offline-pebbling-schedule-method-v0",
+  "version": "0.1",
+  "status": "FROZEN NON-CONSENSUS OPTIMISTIC OFFLINE GRAPH-SCHEDULE METHOD",
+  "question": "What concrete recursive replay stream does an offline farthest-next-use cache produce under the half-scratch value budget?",
+  "model_scope": "scratch-version DAG only; historical machine state, executable replay, algebraic shortcuts, and alternative proof algorithms are outside this schedule",
+  "budgets": {
+    "fraction_of_scratchpad": "1/2",
+    "compact_value_entry_bytes": 16,
+    "conservative_value_entry_bytes": 24,
+    "schedule_bytes_charged_to_value_capacity": 0,
+    "schedule_bytes_reported_separately": true
+  },
+  "algorithm": [
+    "derive each producer's two scratch-version inputs and outputs from the canonical graph event stream",
+    "retain values with the nearest canonical future use and evict or discard the farthest-next-use unpinned value",
+    "on a canonical miss, recursively materialize producer dependencies",
+    "append each abstract producer to the miss frame after its dependencies, yielding a deterministic postorder action stream",
+    "report replay work, recursion depth, retained-value high water, transient outputs, and encoded schedule bytes"
+  ],
+  "schedule_encoding": {
+    "header": "domain bytes plus little-endian u64 budget bytes, value-entry bytes, and producer count",
+    "miss_frame": "u8 tag 1, u32 requested version, u32 action count, then u32 producer ordinals",
+    "commitment": "SHA3-384 over the exact encoded stream"
+  },
+  "relaxations": [
+    "complete graph and perfect future knowledge are available offline",
+    "historical VM and address state are free",
+    "producer execution is an abstract DAG action, not the canonical v1 evaluator",
+    "all budget bytes hold value entries",
+    "schedule and planner bytes are not charged to value capacity"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "the schedule is not an exact online reduced-memory evaluator and supplies no valid throughput measurement"
+  },
+  "next_use": "select or reject designs for a Stage C online evaluator; the evaluator may not load this graph or offline schedule"
+}
