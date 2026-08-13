@@ -1,0 +1,50 @@
+{
+  "format": "soveroot-pow-v1-online-bounded-probe-vectors-v0",
+  "source_vectors": "v1.json",
+  "layout": {
+    "budget_bytes": 4096,
+    "fixed_state_reserve_bytes": 512,
+    "arena_bytes": 3584,
+    "write_bitmap_bytes": 128,
+    "cache_entry_bytes": 16,
+    "cache_capacity": 216,
+    "cache_payload_bytes": 3456,
+    "unused_arena_bytes": 0,
+    "admitted_bytes": 4096
+  },
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "completed_iterations": 54,
+      "reads": 110,
+      "cache_hits": 3,
+      "initial_zero_reads": 106,
+      "writes": 108,
+      "evictions": 16,
+      "miss": {"consumer_kind": 0, "consumer": 54, "slot": 1, "word": 482},
+      "state_commitment": "0f900254e8e19f36c5564b0260452837492be9dd92a6518a5deda7edf0cca158ab0a8ebc19069beb633f19c5df12784b"
+    },
+    {
+      "name": "incrementing-seed",
+      "completed_iterations": 63,
+      "reads": 128,
+      "cache_hits": 5,
+      "initial_zero_reads": 122,
+      "writes": 126,
+      "evictions": 19,
+      "miss": {"consumer_kind": 0, "consumer": 63, "slot": 1, "word": 261},
+      "state_commitment": "96d2dc12f4ec580be93d409dc701a40c08318c5f9b0da997dce9e43f63658392000d3803a9d42ab9a7973c2fb7a16f13"
+    },
+    {
+      "name": "high-bit-pattern",
+      "completed_iterations": 47,
+      "reads": 96,
+      "cache_hits": 0,
+      "initial_zero_reads": 95,
+      "writes": 94,
+      "evictions": 11,
+      "miss": {"consumer_kind": 0, "consumer": 47, "slot": 1, "word": 454},
+      "state_commitment": "ee1c88959aad7f6015226f9de0c3dbcb3f837e07c988afde2e3de767115879240794bcd173f5b1711db61ffe3821ebc6"
+    }
+  ]
+}

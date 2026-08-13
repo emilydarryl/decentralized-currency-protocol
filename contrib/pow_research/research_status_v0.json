@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-12",
-  "evidence_cutoff_revision": "a08f85998ad8fa20cd90306f2b82090a5b087210",
+  "evidence_cutoff_revision": "977763c5e6479a40cdebeb7fb43b78862d2ec493",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -102,14 +102,20 @@
       "id": "pow_v1_pebbling_lower_bound",
       "pull_request": 27,
       "conclusion": "An optimistic cut-set argument establishes nonzero replay floors under half-scratch value capacity but is not an executable schedule."
+    },
+    {
+      "id": "pow_v1_offline_pebbling_schedule",
+      "pull_request": 28,
+      "conclusion": "Concrete graph-only schedules require millions of abstract replays and multi-megabyte direct action streams, but omit historical VM state and are not executable attacks."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_online_bounded_evaluator_prototype",
+    "id": "pow_v1_bounded_miss_reconstruction",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
-    "required_outcome": "Design a compact online rule and historical-state reconstruction, then reproduce exact outputs while charging all attack state inside the half-scratch ceiling."
+    "stage_c_probe": "Fail-closed online evaluator scaffold implemented with a one-arena logical budget and independent prefix commitments; every fixed case refuses without output and no gate is assessed.",
+    "required_outcome": "Reconstruct the first missing materialized value and historical machine state without a graph, trace, schedule, spill, or budget overflow; retain refusal on any unaccounted path."
   }
 }

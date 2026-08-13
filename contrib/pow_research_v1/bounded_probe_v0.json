@@ -1,0 +1,28 @@
+{
+  "format": "soveroot-pow-v1-online-bounded-probe-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS FAIL-CLOSED ONLINE PREFIX PROBE",
+  "question": "How far can a byte-admitted online cache execute exactly before the first materialized value that it cannot supply?",
+  "arena": {
+    "budget_fraction": "1/2 of declared scratchpad",
+    "allocation_count": 1,
+    "fixed_state_reserve_bytes": 512,
+    "write_bitmap": "one bit per logical scratch word",
+    "cache_entry": "u64 word tag plus u64 value",
+    "replacement": "direct mapped by word modulo capacity"
+  },
+  "failure_rule": "A cache miss returns zero only when the write bitmap proves the word has never been written. The first missing materialized word stops execution before state mutation and emits no digest.",
+  "boundary_commitment": "SHA3-384 over a domain, seed, header digest, nonce, parameters, miss location, and the exact pre-read registers and accumulator",
+  "limitations": [
+    "the probe has no historical-state or scratch-value reconstruction engine",
+    "the 512-byte reserve is a logical allowance rather than measured stack and allocator usage",
+    "dataset and epoch schedule are shared state and excluded under the gate policy",
+    "direct mapping is a simple online baseline and not an optimal cache",
+    "a refused prefix supplies no proof output or throughput result"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "every fixed vector refuses before producing a digest and actual process memory is not yet instrumented"
+  },
+  "next_use": "add an exact historical-state reconstruction path for a materialized miss without exceeding the admitted arena"
+}
