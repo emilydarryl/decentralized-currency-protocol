@@ -106,6 +106,15 @@ python3 contrib/pow_research_cpp/render_bounded_probe_report_v1.py \
   --matrix build/pow-v1-online-bounded-probe.json \
   --method contrib/pow_research_v1/bounded_probe_v0.json \
   --label "local" --output build/pow-v1-online-bounded-probe.md
+
+python3 test/pow_research/run_cpp_bounded_reconstruction_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/bounded_reconstruction_v1.py \
+  --profile standard --output build/pow-v1-bounded-first-reconstruction.json
+python3 contrib/pow_research_cpp/render_bounded_reconstruction_report_v1.py \
+  --matrix build/pow-v1-bounded-first-reconstruction.json \
+  --method contrib/pow_research_v1/bounded_reconstruction_v0.json \
+  --label "local" --output build/pow-v1-bounded-first-reconstruction.md
 ```
 
 The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.

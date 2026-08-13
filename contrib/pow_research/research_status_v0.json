@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
-  "as_of": "2026-08-12",
-  "evidence_cutoff_revision": "977763c5e6479a40cdebeb7fb43b78862d2ec493",
+  "as_of": "2026-08-13",
+  "evidence_cutoff_revision": "7234092f287ca50972e29def065beafd02357f68",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -107,15 +107,21 @@
       "id": "pow_v1_offline_pebbling_schedule",
       "pull_request": 28,
       "conclusion": "Concrete graph-only schedules require millions of abstract replays and multi-megabyte direct action streams, but omit historical VM state and are not executable attacks."
+    },
+    {
+      "id": "pow_v1_online_bounded_probe",
+      "pull_request": 29,
+      "conclusion": "A one-arena online evaluator independently reproduces exact prefixes and refuses without output at the first materialized cache miss; it does not yet reconstruct missing values."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_bounded_miss_reconstruction",
+    "id": "pow_v1_repeated_bounded_reconstruction",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
     "stage_c_probe": "Fail-closed online evaluator scaffold implemented with a one-arena logical budget and independent prefix commitments; every fixed case refuses without output and no gate is assessed.",
-    "required_outcome": "Reconstruct the first missing materialized value and historical machine state without a graph, trace, schedule, spill, or budget overflow; retain refusal on any unaccounted path."
+    "stage_c_first_reconstruction": "One missing value and matching historical machine state are reconstructed by sparse replay inside the preallocated arena; execution then refuses at the next miss without output.",
+    "required_outcome": "Handle successive materialized misses under the same arena, reporting cumulative replay, depth, and workspace exhaustion before requiring exact final outputs."
   }
 }

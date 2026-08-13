@@ -68,6 +68,8 @@ Implementation status: **complete as an offline graph study**. The initial floor
 
 Implementation status: **fail-closed execution scaffold implemented; exact attacker incomplete**. The [online bounded-probe note](pow-v1-online-bounded-probe.md) documents a one-arena half-scratch layout and independently matched exact-prefix refusal boundaries. It does not yet reconstruct a missing value, emit an exact proof, measure actual peak memory, or assess the gate.
 
+The subsequent [bounded first-reconstruction result](pow-v1-bounded-first-reconstruction.md) exactly reconstructs one missing value and matching historical machine state within that arena, retries the interrupted iteration, and refuses at the next miss. Repeated reconstruction, exact final outputs, and physical memory measurement remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

@@ -45,8 +45,11 @@ constexpr char DOMAIN_RESULT[] = "Soveroot/PowResearch/Result/v1\0";
 constexpr char DOMAIN_ACCESS_TRACE[] = "Soveroot/PowResearch/AccessTrace/v1\0";
 constexpr char DOMAIN_VERSIONED_GRAPH[] = "Soveroot/PowResearch/VersionedGraph/v1\0";
 constexpr char DOMAIN_BOUNDED_STATE[] = "Soveroot/PowResearch/BoundedProbeState/v1\0";
+constexpr char DOMAIN_RECONSTRUCTION[] = "Soveroot/PowResearch/BoundedReconstruction/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
+constexpr std::size_t REPLAY_NUMERATOR{5};
+constexpr std::size_t REPLAY_DENOMINATOR{8};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -136,6 +139,47 @@ struct BoundedProbeResult {
     Bytes state_commitment;
     ExecutionResult execution_result{};
     BoundedProbeStats stats{};
+};
+
+struct BoundedReconstructionStats {
+    std::size_t budget_bytes{0};
+    std::size_t fixed_state_reserve_bytes{0};
+    std::size_t arena_bytes{0};
+    std::size_t write_bitmap_bytes{0};
+    std::size_t cache_entry_bytes{0};
+    std::size_t primary_cache_capacity{0};
+    std::size_t primary_cache_bytes{0};
+    std::size_t replay_capacity{0};
+    std::size_t replay_workspace_bytes{0};
+    std::size_t unused_arena_bytes{0};
+    std::size_t admitted_bytes{0};
+    std::uint64_t canonical_reads{0};
+    std::uint64_t cache_hits{0};
+    std::uint64_t initial_zero_reads{0};
+    std::uint64_t materialized_misses{0};
+    std::uint64_t writes{0};
+    std::uint64_t evictions{0};
+    std::uint64_t replay_peak_entries{0};
+    std::uint64_t replay_hash_probes{0};
+};
+
+struct BoundedReconstructionResult {
+    std::string status{"refused_before_reconstruction"};
+    std::uint64_t completed_iterations{0};
+    std::uint64_t reconstructed_misses{0};
+    std::uint64_t replayed_iterations{0};
+    std::uint64_t reconstruction_consumer{0};
+    std::uint8_t reconstruction_slot{0};
+    std::uint64_t reconstruction_word{0};
+    std::uint64_t reconstruction_value{0};
+    Bytes reconstruction_commitment;
+    bool replay_state_matched{false};
+    std::uint64_t refusal_consumer{0};
+    std::uint8_t refusal_slot{0};
+    std::uint64_t refusal_word{0};
+    Bytes refusal_state_commitment;
+    ExecutionResult execution_result{};
+    BoundedReconstructionStats stats{};
 };
 
 struct TraceEvent {
@@ -869,6 +913,203 @@ private:
     BoundedProbeStats m_stats;
 };
 
+class ReplayWorkspaceExhausted final : public std::runtime_error {
+public:
+    ReplayWorkspaceExhausted()
+        : std::runtime_error("bounded sparse replay workspace is full")
+    {
+    }
+};
+
+class BoundedReconstructionArena {
+public:
+    BoundedReconstructionArena(std::size_t scratchpad_bytes, std::size_t budget_bytes)
+        : m_word_count(scratchpad_bytes / 8)
+    {
+        m_stats.budget_bytes = budget_bytes;
+        m_stats.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_stats.write_bitmap_bytes = (m_word_count + 7) / 8;
+        m_stats.cache_entry_bytes = BOUNDED_CACHE_ENTRY_BYTES;
+        if (budget_bytes <= BOUNDED_FIXED_STATE_RESERVE_BYTES) {
+            throw std::invalid_argument("bounded reconstruction budget cannot hold the fixed reserve");
+        }
+        m_stats.arena_bytes = budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        if (m_stats.arena_bytes <= m_stats.write_bitmap_bytes + BOUNDED_CACHE_ENTRY_BYTES * 2) {
+            throw std::invalid_argument("bounded reconstruction budget cannot hold primary and replay entries");
+        }
+        const std::size_t total_slots =
+            (m_stats.arena_bytes - m_stats.write_bitmap_bytes) / BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.replay_capacity = total_slots * REPLAY_NUMERATOR / REPLAY_DENOMINATOR;
+        m_stats.primary_cache_capacity = total_slots - m_stats.replay_capacity;
+        if (m_stats.replay_capacity == 0 || m_stats.primary_cache_capacity == 0) {
+            throw std::invalid_argument("bounded reconstruction cannot split primary and replay capacities");
+        }
+        m_stats.primary_cache_bytes = m_stats.primary_cache_capacity * BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.replay_workspace_bytes = m_stats.replay_capacity * BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.unused_arena_bytes =
+            m_stats.arena_bytes - m_stats.write_bitmap_bytes -
+            m_stats.primary_cache_bytes - m_stats.replay_workspace_bytes;
+        m_stats.admitted_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES + m_stats.arena_bytes;
+        m_primary_offset = m_stats.write_bitmap_bytes;
+        m_replay_offset = m_primary_offset + m_stats.primary_cache_bytes;
+        m_arena.resize(m_stats.arena_bytes, 0);
+        for (std::size_t slot{0}; slot < m_stats.primary_cache_capacity; ++slot) {
+            WriteLE64(m_arena.data() + PrimaryEntryOffset(slot), EmptyTag());
+        }
+    }
+
+    void SetConsumer(std::uint64_t consumer)
+    {
+        m_consumer = consumer;
+        m_slot = 0;
+    }
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        const std::uint8_t slot = m_slot++;
+        ++m_stats.canonical_reads;
+        const std::size_t offset = PrimaryEntryOffset(word % m_stats.primary_cache_capacity);
+        if (ReadLE64(m_arena.data() + offset) == word) {
+            ++m_stats.cache_hits;
+            return ReadLE64(m_arena.data() + offset + 8);
+        }
+        if (!WasWritten(word)) {
+            ++m_stats.initial_zero_reads;
+            return 0;
+        }
+        ++m_stats.materialized_misses;
+        throw BoundedReadMiss{0, m_consumer, slot, word};
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        StorePrimary(word, value, true);
+        MarkWritten(word);
+        ++m_stats.writes;
+    }
+
+    void RetainReconstructed(std::uint64_t word, std::uint64_t value)
+    {
+        StorePrimary(static_cast<std::size_t>(word), value, true);
+    }
+
+    void ResetReplay()
+    {
+        m_replay_distinct = 0;
+        m_stats.replay_peak_entries = 0;
+        m_stats.replay_hash_probes = 0;
+        for (std::size_t slot{0}; slot < m_stats.replay_capacity; ++slot) {
+            WriteLE64(m_arena.data() + ReplayEntryOffset(slot), EmptyTag());
+        }
+    }
+
+    std::uint64_t ReplayRead(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        const auto [found, offset] = FindReplay(word, false);
+        return found ? ReadLE64(m_arena.data() + offset + 8) : 0;
+    }
+
+    void ReplayWrite(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        const auto [found, offset] = FindReplay(word, true);
+        if (!found && ReadLE64(m_arena.data() + offset) == EmptyTag()) {
+            ++m_replay_distinct;
+            m_stats.replay_peak_entries =
+                std::max<std::uint64_t>(m_stats.replay_peak_entries, m_replay_distinct);
+        }
+        WriteLE64(m_arena.data() + offset, word);
+        WriteLE64(m_arena.data() + offset + 8, value);
+    }
+
+    const BoundedReconstructionStats& Stats() const { return m_stats; }
+
+private:
+    static constexpr std::uint64_t EmptyTag()
+    {
+        return std::numeric_limits<std::uint64_t>::max();
+    }
+
+    std::size_t Word(std::uint64_t selector) const
+    {
+        return static_cast<std::size_t>(selector) & (m_word_count - 1);
+    }
+
+    std::size_t PrimaryEntryOffset(std::size_t slot) const
+    {
+        return m_primary_offset + slot * BOUNDED_CACHE_ENTRY_BYTES;
+    }
+
+    std::size_t ReplayEntryOffset(std::size_t slot) const
+    {
+        return m_replay_offset + slot * BOUNDED_CACHE_ENTRY_BYTES;
+    }
+
+    bool WasWritten(std::size_t word) const
+    {
+        return (m_arena[word / 8] & (std::uint8_t{1} << (word & 7))) != 0;
+    }
+
+    void MarkWritten(std::size_t word)
+    {
+        m_arena[word / 8] |= std::uint8_t{1} << (word & 7);
+    }
+
+    void StorePrimary(std::size_t word, std::uint64_t value, bool count_eviction)
+    {
+        const std::size_t offset = PrimaryEntryOffset(word % m_stats.primary_cache_capacity);
+        const std::uint64_t previous = ReadLE64(m_arena.data() + offset);
+        if (count_eviction && previous != EmptyTag() && previous != word) {
+            ++m_stats.evictions;
+        }
+        WriteLE64(m_arena.data() + offset, word);
+        WriteLE64(m_arena.data() + offset + 8, value);
+    }
+
+    std::pair<bool, std::size_t> FindReplay(std::size_t word, bool for_write)
+    {
+        constexpr std::uint64_t HASH_MULTIPLIER{0x9E3779B97F4A7C15ULL};
+        const std::size_t start =
+            static_cast<std::size_t>(
+                static_cast<std::uint64_t>(word) * HASH_MULTIPLIER % m_stats.replay_capacity);
+        for (std::size_t distance{0}; distance < m_stats.replay_capacity; ++distance) {
+            ++m_stats.replay_hash_probes;
+            const std::size_t offset =
+                ReplayEntryOffset((start + distance) % m_stats.replay_capacity);
+            const std::uint64_t tag = ReadLE64(m_arena.data() + offset);
+            if (tag == word) return {true, offset};
+            if (tag == EmptyTag()) {
+                return {false, for_write ? offset : std::size_t{0}};
+            }
+        }
+        if (for_write) throw ReplayWorkspaceExhausted{};
+        return {false, 0};
+    }
+
+    std::size_t m_word_count;
+    std::size_t m_primary_offset{0};
+    std::size_t m_replay_offset{0};
+    std::uint64_t m_consumer{0};
+    std::uint8_t m_slot{0};
+    std::uint64_t m_replay_distinct{0};
+    Bytes m_arena;
+    BoundedReconstructionStats m_stats;
+};
+
+class SparseReplayView {
+public:
+    explicit SparseReplayView(BoundedReconstructionArena& arena) : m_arena(arena) {}
+
+    std::uint64_t Read(std::uint64_t selector) { return m_arena.ReplayRead(selector); }
+    void Write(std::uint64_t selector, std::uint64_t value) { m_arena.ReplayWrite(selector, value); }
+
+private:
+    BoundedReconstructionArena& m_arena;
+};
+
 class StaticHalfSpillScratchpad {
 public:
     StaticHalfSpillScratchpad(
@@ -1376,6 +1617,162 @@ BoundedProbeResult ProbeBounded(
     return probe;
 }
 
+BoundedReconstructionResult ProbeFirstReconstruction(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce)
+{
+    Validate(context.seed, context.params);
+    if (header.empty() || header.size() > MAX_HEADER_BYTES) {
+        throw std::invalid_argument("header size is outside the v1 research envelope");
+    }
+    const Bytes params_bytes = EncodeParams(context.params);
+    Bytes nonce_bytes;
+    AppendLE64(nonce_bytes, nonce);
+    const Bytes header_digest = Sha3_384(header);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
+    const std::uint64_t total_iterations = context.params.passes * scratchpad_words;
+    BoundedReconstructionArena arena(
+        context.params.scratchpad_bytes,
+        context.params.scratchpad_bytes / 2);
+    BoundedReconstructionResult result{};
+
+    auto boundary_commitment = [&](bool reconstruction,
+                                   const BoundedReadMiss& miss,
+                                   const std::uint64_t* value) {
+        Bytes encoded = reconstruction
+            ? DomainBytes(DOMAIN_RECONSTRUCTION)
+            : DomainBytes(DOMAIN_BOUNDED_STATE);
+        Append(encoded, context.seed);
+        Append(encoded, header_digest);
+        Append(encoded, nonce_bytes);
+        Append(encoded, params_bytes);
+        AppendLE64(encoded, miss.consumer);
+        encoded.push_back(miss.slot);
+        AppendLE64(encoded, miss.word);
+        for (const std::uint64_t item : state.registers) AppendLE64(encoded, item);
+        AppendLE64(encoded, state.accumulator);
+        if (value != nullptr) AppendLE64(encoded, *value);
+        return Sha3_384(encoded);
+    };
+
+    auto refuse = [&](const BoundedReadMiss& miss) {
+        result.status = "refused_after_one_reconstruction";
+        result.refusal_consumer = miss.consumer;
+        result.refusal_slot = miss.slot;
+        result.refusal_word = miss.word;
+        result.refusal_state_commitment = boundary_commitment(false, miss, nullptr);
+        result.stats = arena.Stats();
+    };
+
+    auto reconstruct = [&](const BoundedReadMiss& miss) {
+        if (miss.consumer >= total_iterations) {
+            throw ReplayWorkspaceExhausted{};
+        }
+        arena.ResetReplay();
+        SparseReplayView replay{arena};
+        MachineState replay_state = InitializeMachineState(
+            context, header_digest, nonce_bytes, params_bytes);
+        for (std::uint64_t iteration{0}; iteration < miss.consumer; ++iteration) {
+            ExecuteMixIteration(context, replay, replay_state, iteration);
+        }
+        result.replayed_iterations += miss.consumer;
+        result.replay_state_matched =
+            replay_state.registers == state.registers &&
+            replay_state.accumulator == state.accumulator;
+        if (!result.replay_state_matched) {
+            throw std::logic_error("replayed machine state does not match the live prefix");
+        }
+        const std::uint64_t value = arena.ReplayRead(miss.word);
+        result.reconstructed_misses = 1;
+        result.reconstruction_consumer = miss.consumer;
+        result.reconstruction_slot = miss.slot;
+        result.reconstruction_word = miss.word;
+        result.reconstruction_value = value;
+        result.reconstruction_commitment = boundary_commitment(true, miss, &value);
+        arena.RetainReconstructed(miss.word, value);
+    };
+
+    try {
+        for (std::uint64_t iteration{0}; iteration < total_iterations; ++iteration) {
+            while (true) {
+                arena.SetConsumer(iteration);
+                try {
+                    ExecuteMixIteration(context, arena, state, iteration);
+                    break;
+                } catch (const BoundedReadMiss& miss) {
+                    if (result.reconstructed_misses != 0) {
+                        refuse(miss);
+                        return result;
+                    }
+                    reconstruct(miss);
+                }
+            }
+            ++result.completed_iterations;
+        }
+
+        std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
+        std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
+        for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
+            selector =
+                std::rotl(selector ^ state.registers[i & (REGISTER_COUNT - 1)], static_cast<int>((i + 1) & 63)) +
+                0x9E3779B97F4A7C15ULL + i;
+            while (true) {
+                arena.SetConsumer(total_iterations + i);
+                try {
+                    samples[i] = arena.Read(selector);
+                    break;
+                } catch (const BoundedReadMiss& miss) {
+                    if (result.reconstructed_misses != 0) {
+                        refuse(miss);
+                        return result;
+                    }
+                    reconstruct(miss);
+                }
+            }
+            selector ^= samples[i];
+        }
+
+        Bytes encoded_registers;
+        encoded_registers.reserve(REGISTER_COUNT * 8);
+        for (const std::uint64_t value : state.registers) AppendLE64(encoded_registers, value);
+        Bytes encoded_accumulator;
+        AppendLE64(encoded_accumulator, state.accumulator);
+        Bytes encoded_samples;
+        encoded_samples.reserve(FINAL_SAMPLE_WORDS * 8);
+        for (const std::uint64_t value : samples) AppendLE64(encoded_samples, value);
+        Bytes commitment_input = DomainBytes(DOMAIN_COMMITMENT);
+        Append(commitment_input, params_bytes);
+        Append(commitment_input, encoded_registers);
+        Append(commitment_input, encoded_accumulator);
+        Append(commitment_input, encoded_samples);
+        const Bytes memory_commitment = Sha3_384(commitment_input);
+        Bytes result_input = DomainBytes(DOMAIN_RESULT);
+        Append(result_input, context.seed);
+        Append(result_input, header_digest);
+        Append(result_input, nonce_bytes);
+        Append(result_input, params_bytes);
+        Append(result_input, context.schedule_digest);
+        Append(result_input, context.dataset_digest);
+        Append(result_input, encoded_registers);
+        Append(result_input, encoded_accumulator);
+        Append(result_input, memory_commitment);
+        result.status = "exact_complete";
+        result.execution_result = {
+            Sha3_384(result_input),
+            state.registers,
+            context.schedule_digest,
+            context.dataset_digest,
+            memory_commitment,
+        };
+    } catch (const ReplayWorkspaceExhausted&) {
+        result.status = "refused_replay_workspace_exhausted";
+    }
+    result.stats = arena.Stats();
+    return result;
+}
+
 Bytes ParseHex(std::string_view text)
 {
     if (text.size() % 2 != 0) throw std::invalid_argument("hex input must have even length");
@@ -1466,6 +1863,74 @@ void PrintBoundedProbe(
                   << ", \"word\": " << probe.miss_word << "},\n"
                   << "  \"state_commitment\": \"" << Hex(probe.state_commitment) << "\",\n"
                   << "  \"digest\": null,\n"
+                  << "  \"memory_commitment\": null\n";
+    }
+    std::cout << "}\n";
+}
+
+void PrintBoundedReconstruction(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const BoundedReconstructionResult result =
+        ProbeFirstReconstruction(PrepareEpoch(seed, params), header, nonce);
+    const BoundedReconstructionStats& stats = result.stats;
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-bounded-first-reconstruction-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS ONE-MISS RECONSTRUCTION; no completed proof, throughput, or gate result\",\n"
+              << "  \"status\": \"" << result.status << "\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"layout\": {\"budget_bytes\": " << stats.budget_bytes
+              << ", \"fixed_state_reserve_bytes\": " << stats.fixed_state_reserve_bytes
+              << ", \"arena_bytes\": " << stats.arena_bytes
+              << ", \"write_bitmap_bytes\": " << stats.write_bitmap_bytes
+              << ", \"cache_entry_bytes\": " << stats.cache_entry_bytes
+              << ", \"primary_cache_capacity\": " << stats.primary_cache_capacity
+              << ", \"primary_cache_bytes\": " << stats.primary_cache_bytes
+              << ", \"replay_capacity\": " << stats.replay_capacity
+              << ", \"replay_workspace_bytes\": " << stats.replay_workspace_bytes
+              << ", \"unused_arena_bytes\": " << stats.unused_arena_bytes
+              << ", \"admitted_bytes\": " << stats.admitted_bytes << "},\n"
+              << "  \"completed_iterations\": " << result.completed_iterations << ",\n"
+              << "  \"canonical_reads\": " << stats.canonical_reads << ",\n"
+              << "  \"cache_hits\": " << stats.cache_hits << ",\n"
+              << "  \"initial_zero_reads\": " << stats.initial_zero_reads << ",\n"
+              << "  \"materialized_misses\": " << stats.materialized_misses << ",\n"
+              << "  \"writes\": " << stats.writes << ",\n"
+              << "  \"evictions\": " << stats.evictions << ",\n"
+              << "  \"reconstructed_misses\": " << result.reconstructed_misses << ",\n"
+              << "  \"replayed_iterations\": " << result.replayed_iterations << ",\n"
+              << "  \"replay_peak_entries\": " << stats.replay_peak_entries << ",\n"
+              << "  \"replay_hash_probes\": " << stats.replay_hash_probes << ",\n";
+    if (result.reconstructed_misses != 0) {
+        std::cout << "  \"reconstruction\": {\"consumer\": " << result.reconstruction_consumer
+                  << ", \"slot\": " << static_cast<unsigned>(result.reconstruction_slot)
+                  << ", \"word\": " << result.reconstruction_word
+                  << ", \"value\": " << result.reconstruction_value
+                  << ", \"commitment\": \"" << Hex(result.reconstruction_commitment) << "\"},\n";
+    } else {
+        std::cout << "  \"reconstruction\": null,\n";
+    }
+    std::cout << "  \"replay_state_matched\": "
+              << (result.replay_state_matched ? "true" : "false") << ",\n";
+    if (!result.refusal_state_commitment.empty()) {
+        std::cout << "  \"refusal\": {\"consumer\": " << result.refusal_consumer
+                  << ", \"slot\": " << static_cast<unsigned>(result.refusal_slot)
+                  << ", \"word\": " << result.refusal_word
+                  << ", \"state_commitment\": \"" << Hex(result.refusal_state_commitment) << "\"},\n";
+    } else {
+        std::cout << "  \"refusal\": null,\n";
+    }
+    if (result.status == "exact_complete") {
+        std::cout << "  \"digest\": \"" << Hex(result.execution_result.digest) << "\",\n"
+                  << "  \"memory_commitment\": \"" << Hex(result.execution_result.memory_commitment) << "\"\n";
+    } else {
+        std::cout << "  \"digest\": null,\n"
                   << "  \"memory_commitment\": null\n";
     }
     std::cout << "}\n";
@@ -1803,6 +2268,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-one") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintBoundedReconstruction(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "bounded-probe") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -1880,6 +2353,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp trace SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp graph SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-probe SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp bounded-reconstruct-one SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
