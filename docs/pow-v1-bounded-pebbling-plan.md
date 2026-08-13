@@ -76,6 +76,8 @@ The [packed checkpoint pilot](pow-v1-packed-checkpoint-reconstruction.md) replac
 
 The [paged-gap pilot](pow-v1-paged-gap-reconstruction.md) replaces global shifts with 32-value physical pages and a logical page directory. On standard seed zero it reduces charged movement to 183.3 MB, approximately 986 times less, but fragmented pages exhaust at 6,667 occupied values and linear lookup charges 489.8 million directory probes. The next construction must index page counts and rebalance gaps without exceeding the same byte ceiling.
 
+The [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md) adds a byte-accounted page-count Fenwick tree and bounded adjacent-page borrowing. It raises standard seed-zero utilization from 59.2% to 90.8% and advances the exact prefix from iteration 3,599 to 5,759. It still exhausts without a proof after 5.13 million attempted replay iterations, so the next construction should add byte-accounted time checkpoints or hierarchical replay rather than continue optimizing value layout alone.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
