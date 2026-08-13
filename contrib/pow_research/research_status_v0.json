@@ -145,7 +145,7 @@
     },
     {
       "id": "pow_v1_recursive_value_regeneration",
-      "pull_request": null,
+      "pull_request": 36,
       "conclusion": "The first exact historical value is recursively regenerated inside a logically byte-accounted half-scratch arena before the pilot refuses without a proof at the next miss; physical memory remains unmeasured."
     }
   ],
