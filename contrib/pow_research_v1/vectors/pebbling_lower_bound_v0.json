@@ -1,0 +1,31 @@
+{
+  "format": "soveroot-pow-v1-pebbling-lower-bound-vectors-v0",
+  "layouts": {
+    "compact": {"value_entry_bytes": 16},
+    "conservative": {"value_entry_bytes": 24}
+  },
+  "profiles": {
+    "smoke": {
+      "budget_bytes": 4096,
+      "cases": [
+        {"seed_index": 0, "graph_commitment": "1d6c204caeb0a51eeed433ada7645b2c6b26e67055ba25e3843e1e6a3f98618e97aedf893c6aa04b53538d358dedfca8", "compact_replay_min": 91, "conservative_replay_min": 177},
+        {"seed_index": 1, "graph_commitment": "3af422ca0bd7ef522553d9af791df7ca241028a03fa77b2e10c589e11f935f14938e798fd9f4a3a96bd5326ad10ad82f", "compact_replay_min": 83, "conservative_replay_min": 169}
+      ]
+    },
+    "standard": {
+      "budget_bytes": 131072,
+      "mix_iterations": 98304,
+      "cases": [
+        {"seed_index": 0, "graph_commitment": "e7abc748fb9c88bf66767ca532915fefb93700c8d6efe92a695d4b22b5310cf4df66ae99ff8032c5082f802c866a44d9", "compact_replay_min": 7055, "conservative_replay_min": 9786},
+        {"seed_index": 1, "graph_commitment": "3e2d051eeae07ef92ef16dcdfc46df0bce00a6cee77c58cb5cd5352541971ba2e9d5149672f9be7a04e7b82df6d0b7bb", "compact_replay_min": 6984, "conservative_replay_min": 9715},
+        {"seed_index": 2, "graph_commitment": "b9f5e3e14f93937f7ac92b3e957e2f02a0004c6c95db49b0a28558ceba805df4c696e491429a2517b33e340ce275f469", "compact_replay_min": 7012, "conservative_replay_min": 9743},
+        {"seed_index": 3, "graph_commitment": "8ca669017a77237bef9fc88f6c4bbb822e67a3dede8ca63ca9e6f6978b0eecdba0ef402baa829c7db981c42b7d31ad4e", "compact_replay_min": 6979, "conservative_replay_min": 9710},
+        {"seed_index": 4, "graph_commitment": "6d6a359d418ed01cbda80cabb58ff850785b6c1403ef20eeb1120f1c96fd6c17d63bd9540a5eeebd2b19908fef72a868", "compact_replay_min": 6952, "conservative_replay_min": 9683},
+        {"seed_index": 5, "graph_commitment": "ff7108eaf29e239164d6fcd5a9f5782d65bc842304e3959531d41d78bcc228a9e7afc4732b4632b39857e5a58ac8d441", "compact_replay_min": 6984, "conservative_replay_min": 9715},
+        {"seed_index": 6, "graph_commitment": "4373f0359c94d3e181907e2a02be7a8d46964b3d58f459805f9fe36d7fc3d8719e3b8ebbe3700acf35f0216b521b9d3c", "compact_replay_min": 7035, "conservative_replay_min": 9766},
+        {"seed_index": 7, "graph_commitment": "d72587a532a981c5ab04293285fe2b0dc3814bb28ad5c6a6a6bbde71cda9acd285f6d838073ba391e45b20888877eae3", "compact_replay_min": 6975, "conservative_replay_min": 9706}
+      ]
+    }
+  },
+  "warning": "NON-CONSENSUS OPTIMISTIC CUT-SET BOUNDS; not executable attack results"
+}

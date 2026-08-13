@@ -29,10 +29,20 @@ PACKED_LAYOUT = Layout(16, 24, 4)
 CONSERVATIVE_LAYOUT = Layout(40, 40, 8)
 
 
+@dataclass(frozen=True)
+class CapturedVersionedGraph:
+    """Offline-only event stream used by lower-bound planning tools."""
+
+    # Event tag 0 is a read of the named version; tag 1 creates that version.
+    events: tuple[tuple[int, int], ...]
+    # Index zero is the initial scratch value and has no producer iteration.
+    version_producers: tuple[int | None, ...]
+
+
 class VersionedGraphRecorder:
     """Commit to exact read-from and overwrite edges without retaining the graph."""
 
-    def __init__(self, word_count: int, mix_iterations: int) -> None:
+    def __init__(self, word_count: int, mix_iterations: int, *, capture_graph: bool = False) -> None:
         self.word_count = word_count
         self.mix_iterations = mix_iterations
         self.current_version = [0] * word_count
@@ -41,6 +51,9 @@ class VersionedGraphRecorder:
         self.initial_zero_edges = 0
         self.materialized_edges = 0
         self.overwrite_edges = 0
+        self._capture_graph = capture_graph
+        self._events: list[tuple[int, int]] = []
+        self._version_producers: list[int | None] = [None]
         self._hasher = hashlib.sha3_384()
         self._hasher.update(DOMAIN_VERSIONED_GRAPH)
         self._hasher.update(struct.pack("<QQQ", word_count, mix_iterations, FINAL_SAMPLE_WORDS))
@@ -53,6 +66,8 @@ class VersionedGraphRecorder:
         if not 0 <= word < self.word_count:
             raise ValueError("read word is outside the scratchpad")
         source_version = self.current_version[word]
+        if self._capture_graph:
+            self._events.append((0, source_version))
         self._hasher.update(struct.pack("<BBQBQQ", 0, consumer_kind, consumer, slot, word, source_version))
         self.read_edges += 1
         if source_version == 0:
@@ -67,6 +82,9 @@ class VersionedGraphRecorder:
             raise ValueError("write word is outside the scratchpad")
         previous_version = self.current_version[word]
         self.write_versions += 1
+        if self._capture_graph:
+            self._events.append((1, self.write_versions))
+            self._version_producers.append(iteration)
         self._hasher.update(struct.pack(
             "<BQQBQQ",
             1,
@@ -126,6 +144,13 @@ class VersionedGraphRecorder:
             },
         }
 
+    def captured_graph(self) -> CapturedVersionedGraph:
+        if not self._capture_graph:
+            raise ValueError("graph capture was not enabled")
+        if len(self._version_producers) != self.write_versions + 1:
+            raise ValueError("captured producer table is incomplete")
+        return CapturedVersionedGraph(tuple(self._events), tuple(self._version_producers))
+
 
 def evaluate_versioned_graph(
     context: EpochContext,
@@ -136,3 +161,20 @@ def evaluate_versioned_graph(
     recorder = VersionedGraphRecorder(word_count, word_count * context.params.passes)
     result = evaluate(context, header, nonce, scratch_observer=recorder)
     return result, recorder.summary()
+
+
+def evaluate_captured_versioned_graph(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+) -> tuple[ExecutionResult, dict[str, object], CapturedVersionedGraph]:
+    """Evaluate with full-memory graph capture for explicitly offline planning."""
+
+    word_count = context.params.scratchpad_bytes // 8
+    recorder = VersionedGraphRecorder(
+        word_count,
+        word_count * context.params.passes,
+        capture_graph=True,
+    )
+    result = evaluate(context, header, nonce, scratch_observer=recorder)
+    return result, recorder.summary(), recorder.captured_graph()
