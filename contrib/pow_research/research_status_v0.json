@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-13",
-  "evidence_cutoff_revision": "6ccde2000067bfaeab00acc80fcfe70c0f0b3b46",
+  "evidence_cutoff_revision": "b8ac2c1cc7b4e8a7415087b0b55aef300e297080",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -117,10 +117,15 @@
       "id": "pow_v1_bounded_first_reconstruction",
       "pull_request": 30,
       "conclusion": "One missing value and matching historical VM state are independently reconstructed inside the same arena before execution refuses without output at the next miss."
+    },
+    {
+      "id": "pow_v1_repeated_bounded_reconstruction",
+      "pull_request": 31,
+      "conclusion": "Repeated exact reconstruction recovers 109 to 137 missing values before the flat sparse replay table fills; every standard case refuses without a proof output."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_checkpointed_or_recursive_reconstruction",
+    "id": "pow_v1_low_movement_packed_checkpoint",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
@@ -128,6 +133,7 @@
     "stage_c_probe": "Fail-closed online evaluator scaffold implemented with a one-arena logical budget and independent prefix commitments; every fixed case refuses without output and no gate is assessed.",
     "stage_c_first_reconstruction": "One missing value and matching historical machine state are reconstructed by sparse replay inside the preallocated arena; execution then refuses at the next miss without output.",
     "stage_c_repeated_reconstruction": "Repeated exact replay recovers successive misses until the sparse table fills, with cumulative work, depth, transcript, and exhaustion boundaries independently committed; no proof output is reached.",
-    "required_outcome": "Implement bounded checkpoints or recursive recovery beyond flat-table exhaustion, then require exact final outputs and measured physical memory."
+    "stage_c_packed_checkpoint": "Bitmap-ranked packed replay more than doubles retained-value capacity and extends the exact prefix, but sorted insertion creates prohibitive charged byte movement; no proof output is reached.",
+    "required_outcome": "Implement a byte-accounted block-gap, indexed-packed, or bounded time-checkpoint layout that reduces update work, then require exact final outputs and measured physical memory."
   }
 }

@@ -124,6 +124,15 @@ python3 contrib/pow_research_cpp/render_repeated_reconstruction_report_v1.py \
   --matrix build/pow-v1-bounded-repeated-reconstruction.json \
   --method contrib/pow_research_v1/repeated_reconstruction_v0.json \
   --label "local" --output build/pow-v1-bounded-repeated-reconstruction.md
+
+python3 test/pow_research/run_cpp_packed_reconstruction_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/packed_reconstruction_v1.py \
+  --profile standard --seeds 1 --output build/pow-v1-packed-checkpoint-reconstruction.json
+python3 contrib/pow_research_cpp/render_packed_reconstruction_report_v1.py \
+  --matrix build/pow-v1-packed-checkpoint-reconstruction.json \
+  --method contrib/pow_research_v1/packed_reconstruction_v0.json \
+  --label "local" --output build/pow-v1-packed-checkpoint-reconstruction.md
 ```
 
 The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.

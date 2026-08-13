@@ -47,10 +47,15 @@ constexpr char DOMAIN_VERSIONED_GRAPH[] = "Soveroot/PowResearch/VersionedGraph/v
 constexpr char DOMAIN_BOUNDED_STATE[] = "Soveroot/PowResearch/BoundedProbeState/v1\0";
 constexpr char DOMAIN_RECONSTRUCTION[] = "Soveroot/PowResearch/BoundedReconstruction/v1\0";
 constexpr char DOMAIN_REPEATED_TRANSCRIPT[] = "Soveroot/PowResearch/RepeatedReconstruction/v1\0";
+constexpr char DOMAIN_PACKED_RECONSTRUCTION[] = "Soveroot/PowResearch/PackedReconstruction/v1\0";
+constexpr char DOMAIN_PACKED_TRANSCRIPT[] = "Soveroot/PowResearch/PackedTranscript/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
 constexpr std::size_t REPLAY_DENOMINATOR{8};
+constexpr std::size_t PACKED_RANK_CHUNK_WORDS{256};
+constexpr std::size_t PACKED_PRIMARY_NUMERATOR{1};
+constexpr std::size_t PACKED_PRIMARY_DENOMINATOR{4};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -222,6 +227,67 @@ struct RepeatedReconstructionResult {
     bool has_exhaustion{false};
     ReplayExhaustionBoundary exhaustion{};
     ExecutionResult execution_result{};
+    BoundedReconstructionStats stats{};
+};
+
+struct PackedLayout {
+    std::size_t budget_bytes{0};
+    std::size_t fixed_state_reserve_bytes{0};
+    std::size_t arena_bytes{0};
+    std::size_t canonical_write_bitmap_bytes{0};
+    std::size_t primary_cache_capacity{0};
+    std::size_t primary_cache_bytes{0};
+    std::size_t replay_bitmap_bytes{0};
+    std::size_t rank_directory_bytes{0};
+    std::size_t replay_value_capacity{0};
+    std::size_t replay_value_bytes{0};
+    std::size_t unused_arena_bytes{0};
+    std::size_t admitted_bytes{0};
+};
+
+struct PackedBoundary {
+    std::uint64_t consumer{0};
+    std::uint8_t slot{0};
+    std::uint64_t word{0};
+    std::uint64_t value{0};
+    std::uint64_t replayed_iterations{0};
+    std::uint64_t replay_peak_entries{0};
+    std::uint64_t replay_rank_probes{0};
+    std::uint64_t replay_shifted_bytes{0};
+    Bytes commitment;
+};
+
+struct PackedExhaustionBoundary {
+    std::uint64_t consumer{0};
+    std::uint8_t slot{0};
+    std::uint64_t word{0};
+    std::uint64_t replay_completed_iterations{0};
+    std::uint64_t replay_peak_entries{0};
+    std::uint64_t replay_rank_probes{0};
+    std::uint64_t replay_shifted_bytes{0};
+    Bytes state_commitment;
+};
+
+struct PackedReconstructionResult {
+    std::string status{"refused_packed_checkpoint_exhausted"};
+    std::uint64_t completed_iterations{0};
+    std::uint64_t reconstruction_attempts{0};
+    std::uint64_t reconstructed_misses{0};
+    std::uint64_t successful_replayed_iterations{0};
+    std::uint64_t attempted_replay_iterations{0};
+    std::uint64_t cumulative_rank_probes{0};
+    std::uint64_t cumulative_shifted_bytes{0};
+    std::uint64_t max_replay_peak_entries{0};
+    std::uint64_t max_reconstruction_depth{0};
+    bool all_replay_states_matched{true};
+    Bytes transcript_commitment;
+    bool has_first{false};
+    PackedBoundary first_reconstruction{};
+    PackedBoundary last_reconstruction{};
+    bool has_exhaustion{false};
+    PackedExhaustionBoundary exhaustion{};
+    ExecutionResult execution_result{};
+    PackedLayout layout{};
     BoundedReconstructionStats stats{};
 };
 
@@ -1162,6 +1228,248 @@ private:
     BoundedReconstructionArena& m_arena;
 };
 
+class PackedReplayExhausted final : public std::runtime_error {
+public:
+    PackedReplayExhausted() : std::runtime_error("packed replay value area is full") {}
+};
+
+class PackedReconstructionArena {
+public:
+    PackedReconstructionArena(std::size_t scratchpad_bytes, std::size_t budget_bytes)
+        : m_word_count(scratchpad_bytes / 8)
+    {
+        m_layout.budget_bytes = budget_bytes;
+        m_layout.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_layout.arena_bytes = budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_layout.canonical_write_bitmap_bytes = (m_word_count + 7) / 8;
+        m_layout.replay_bitmap_bytes = m_layout.canonical_write_bitmap_bytes;
+        m_rank_chunks = (m_word_count + PACKED_RANK_CHUNK_WORDS - 1) / PACKED_RANK_CHUNK_WORDS;
+        m_layout.rank_directory_bytes = (m_rank_chunks + 1) * 2;
+        const std::size_t fixed = m_layout.canonical_write_bitmap_bytes +
+            m_layout.replay_bitmap_bytes + m_layout.rank_directory_bytes;
+        if (m_layout.arena_bytes <= fixed + BOUNDED_CACHE_ENTRY_BYTES + 8) {
+            throw std::invalid_argument("budget cannot hold packed replay and primary cache");
+        }
+        const std::size_t available = m_layout.arena_bytes - fixed;
+        m_layout.primary_cache_bytes =
+            available * PACKED_PRIMARY_NUMERATOR / PACKED_PRIMARY_DENOMINATOR;
+        m_layout.primary_cache_bytes -=
+            m_layout.primary_cache_bytes % BOUNDED_CACHE_ENTRY_BYTES;
+        m_layout.primary_cache_capacity =
+            m_layout.primary_cache_bytes / BOUNDED_CACHE_ENTRY_BYTES;
+        const std::size_t replay_bytes = available - m_layout.primary_cache_bytes;
+        m_layout.replay_value_capacity = replay_bytes / 8;
+        m_layout.replay_value_bytes = m_layout.replay_value_capacity * 8;
+        m_layout.unused_arena_bytes = replay_bytes - m_layout.replay_value_bytes;
+        m_layout.admitted_bytes = budget_bytes;
+        if (m_layout.primary_cache_capacity == 0 || m_layout.replay_value_capacity == 0) {
+            throw std::invalid_argument("budget cannot split packed replay and primary cache");
+        }
+        m_primary_offset = m_layout.canonical_write_bitmap_bytes;
+        m_replay_bitmap_offset = m_primary_offset + m_layout.primary_cache_bytes;
+        m_rank_offset = m_replay_bitmap_offset + m_layout.replay_bitmap_bytes;
+        m_values_offset = m_rank_offset + m_layout.rank_directory_bytes;
+        m_arena.resize(m_layout.arena_bytes, 0);
+        for (std::size_t slot{0}; slot < m_layout.primary_cache_capacity; ++slot) {
+            WriteLE64(m_arena.data() + PrimaryOffset(slot), EmptyTag());
+        }
+        m_stats.budget_bytes = m_layout.budget_bytes;
+        m_stats.fixed_state_reserve_bytes = m_layout.fixed_state_reserve_bytes;
+        m_stats.arena_bytes = m_layout.arena_bytes;
+        m_stats.write_bitmap_bytes = m_layout.canonical_write_bitmap_bytes;
+        m_stats.cache_entry_bytes = BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.primary_cache_capacity = m_layout.primary_cache_capacity;
+        m_stats.primary_cache_bytes = m_layout.primary_cache_bytes;
+        m_stats.replay_capacity = m_layout.replay_value_capacity;
+        m_stats.replay_workspace_bytes = m_layout.replay_bitmap_bytes +
+            m_layout.rank_directory_bytes + m_layout.replay_value_bytes;
+        m_stats.unused_arena_bytes = m_layout.unused_arena_bytes;
+        m_stats.admitted_bytes = m_layout.admitted_bytes;
+    }
+
+    void SetConsumer(std::uint64_t consumer) { m_consumer = consumer; m_slot = 0; }
+
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        const std::uint8_t slot = m_slot++;
+        ++m_stats.canonical_reads;
+        const std::size_t offset = PrimaryOffset(word % m_layout.primary_cache_capacity);
+        if (ReadLE64(m_arena.data() + offset) == word) {
+            ++m_stats.cache_hits;
+            return ReadLE64(m_arena.data() + offset + 8);
+        }
+        if (!CanonicalWritten(word)) {
+            ++m_stats.initial_zero_reads;
+            return 0;
+        }
+        ++m_stats.materialized_misses;
+        throw BoundedReadMiss{0, m_consumer, slot, word};
+    }
+
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        StorePrimary(word, value, true);
+        m_arena[word / 8] |= std::uint8_t{1} << (word & 7);
+        ++m_stats.writes;
+    }
+
+    void Retain(std::uint64_t word, std::uint64_t value)
+    {
+        StorePrimary(static_cast<std::size_t>(word), value, true);
+    }
+
+    void ResetReplay()
+    {
+        std::fill(
+            m_arena.begin() + static_cast<std::ptrdiff_t>(m_replay_bitmap_offset),
+            m_arena.begin() + static_cast<std::ptrdiff_t>(m_values_offset),
+            std::uint8_t{0});
+        m_replay_distinct = 0;
+        m_replay_rank_probes = 0;
+        m_replay_shifted_bytes = 0;
+        m_stats.replay_peak_entries = 0;
+    }
+
+    std::uint64_t ReplayRead(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        if (!ReplayPresent(word)) return 0;
+        return ReadLE64(m_arena.data() + m_values_offset + ReplayRank(word) * 8);
+    }
+
+    std::uint64_t ReplayReadExact(std::uint64_t word)
+    {
+        const std::size_t exact = static_cast<std::size_t>(word);
+        if (!ReplayPresent(exact)) {
+            throw std::logic_error("materialized word is absent from packed replay state");
+        }
+        return ReadLE64(m_arena.data() + m_values_offset + ReplayRank(exact) * 8);
+    }
+
+    void ReplayWrite(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        const bool present = ReplayPresent(word);
+        const std::size_t rank = ReplayRank(word);
+        if (present) {
+            WriteLE64(m_arena.data() + m_values_offset + rank * 8, value);
+            return;
+        }
+        if (m_replay_distinct == m_layout.replay_value_capacity) {
+            throw PackedReplayExhausted{};
+        }
+        const std::size_t move_bytes = (m_replay_distinct - rank) * 8;
+        if (move_bytes != 0) {
+            auto first = m_arena.begin() + static_cast<std::ptrdiff_t>(m_values_offset + rank * 8);
+            auto last = first + static_cast<std::ptrdiff_t>(move_bytes);
+            std::copy_backward(first, last, last + 8);
+            m_replay_shifted_bytes += move_bytes;
+        }
+        WriteLE64(m_arena.data() + m_values_offset + rank * 8, value);
+        m_arena[m_replay_bitmap_offset + word / 8] |= std::uint8_t{1} << (word & 7);
+        FenwickAdd(word / PACKED_RANK_CHUNK_WORDS);
+        ++m_replay_distinct;
+        m_stats.replay_peak_entries = std::max<std::uint64_t>(
+            m_stats.replay_peak_entries, m_replay_distinct);
+    }
+
+    const PackedLayout& Layout() const { return m_layout; }
+    const BoundedReconstructionStats& Stats() const { return m_stats; }
+    std::uint64_t ReplayRankProbes() const { return m_replay_rank_probes; }
+    std::uint64_t ReplayShiftedBytes() const { return m_replay_shifted_bytes; }
+
+private:
+    static constexpr std::uint64_t EmptyTag() { return std::numeric_limits<std::uint64_t>::max(); }
+    std::size_t Word(std::uint64_t selector) const { return static_cast<std::size_t>(selector) & (m_word_count - 1); }
+    std::size_t PrimaryOffset(std::size_t slot) const { return m_primary_offset + slot * BOUNDED_CACHE_ENTRY_BYTES; }
+    bool CanonicalWritten(std::size_t word) const { return (m_arena[word / 8] & (std::uint8_t{1} << (word & 7))) != 0; }
+    bool ReplayPresent(std::size_t word) const { return (m_arena[m_replay_bitmap_offset + word / 8] & (std::uint8_t{1} << (word & 7))) != 0; }
+
+    std::uint16_t ReadRank(std::size_t index) const
+    {
+        const std::size_t offset = m_rank_offset + index * 2;
+        return static_cast<std::uint16_t>(m_arena[offset]) |
+            static_cast<std::uint16_t>(m_arena[offset + 1] << 8);
+    }
+
+    void WriteRank(std::size_t index, std::uint16_t value)
+    {
+        const std::size_t offset = m_rank_offset + index * 2;
+        m_arena[offset] = static_cast<std::uint8_t>(value);
+        m_arena[offset + 1] = static_cast<std::uint8_t>(value >> 8);
+    }
+
+    std::size_t FenwickPrefix(std::size_t chunk)
+    {
+        std::size_t total{0};
+        for (std::size_t index{chunk}; index > 0; index -= index & (~index + 1)) {
+            total += ReadRank(index);
+            ++m_replay_rank_probes;
+        }
+        return total;
+    }
+
+    void FenwickAdd(std::size_t chunk)
+    {
+        for (std::size_t index{chunk + 1}; index <= m_rank_chunks; index += index & (~index + 1)) {
+            WriteRank(index, static_cast<std::uint16_t>(ReadRank(index) + 1));
+            ++m_replay_rank_probes;
+        }
+    }
+
+    std::size_t ReplayRank(std::size_t word)
+    {
+        const std::size_t chunk = word / PACKED_RANK_CHUNK_WORDS;
+        std::size_t total = FenwickPrefix(chunk);
+        const std::size_t first_byte = chunk * PACKED_RANK_CHUNK_WORDS / 8;
+        const std::size_t final_byte = word / 8;
+        for (std::size_t byte{first_byte}; byte < final_byte; ++byte) {
+            total += std::popcount(m_arena[m_replay_bitmap_offset + byte]);
+            ++m_replay_rank_probes;
+        }
+        const std::uint8_t partial = m_arena[m_replay_bitmap_offset + final_byte];
+        const std::uint8_t mask = static_cast<std::uint8_t>((std::uint16_t{1} << (word & 7)) - 1);
+        total += std::popcount(static_cast<std::uint8_t>(partial & mask));
+        ++m_replay_rank_probes;
+        return total;
+    }
+
+    void StorePrimary(std::size_t word, std::uint64_t value, bool count_eviction)
+    {
+        const std::size_t offset = PrimaryOffset(word % m_layout.primary_cache_capacity);
+        const std::uint64_t previous = ReadLE64(m_arena.data() + offset);
+        if (count_eviction && previous != EmptyTag() && previous != word) ++m_stats.evictions;
+        WriteLE64(m_arena.data() + offset, word);
+        WriteLE64(m_arena.data() + offset + 8, value);
+    }
+
+    std::size_t m_word_count;
+    std::size_t m_rank_chunks{0};
+    std::size_t m_primary_offset{0};
+    std::size_t m_replay_bitmap_offset{0};
+    std::size_t m_rank_offset{0};
+    std::size_t m_values_offset{0};
+    std::uint64_t m_consumer{0};
+    std::uint8_t m_slot{0};
+    std::uint64_t m_replay_distinct{0};
+    std::uint64_t m_replay_rank_probes{0};
+    std::uint64_t m_replay_shifted_bytes{0};
+    Bytes m_arena;
+    PackedLayout m_layout;
+    BoundedReconstructionStats m_stats;
+};
+
+class PackedReplayView {
+public:
+    explicit PackedReplayView(PackedReconstructionArena& arena) : m_arena(arena) {}
+    std::uint64_t Read(std::uint64_t selector) { return m_arena.ReplayRead(selector); }
+    void Write(std::uint64_t selector, std::uint64_t value) { m_arena.ReplayWrite(selector, value); }
+private:
+    PackedReconstructionArena& m_arena;
+};
+
 class StaticHalfSpillScratchpad {
 public:
     StaticHalfSpillScratchpad(
@@ -2011,6 +2319,167 @@ RepeatedReconstructionResult ProbeRepeatedReconstruction(
     return result;
 }
 
+PackedReconstructionResult ProbePackedReconstruction(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce)
+{
+    Validate(context.seed, context.params);
+    if (header.empty() || header.size() > MAX_HEADER_BYTES) {
+        throw std::invalid_argument("header size is outside the v1 research envelope");
+    }
+    const Bytes params_bytes = EncodeParams(context.params);
+    Bytes nonce_bytes;
+    AppendLE64(nonce_bytes, nonce);
+    const Bytes header_digest = Sha3_384(header);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    const std::size_t scratchpad_words = context.params.scratchpad_bytes / 8;
+    const std::uint64_t total_iterations = context.params.passes * scratchpad_words;
+    PackedReconstructionArena arena(context.params.scratchpad_bytes, context.params.scratchpad_bytes / 2);
+    PackedReconstructionResult result{};
+    Bytes transcript_input = DomainBytes(DOMAIN_PACKED_TRANSCRIPT);
+
+    auto boundary_commitment = [&](const BoundedReadMiss& miss, const std::uint64_t* value) {
+        Bytes encoded = DomainBytes(DOMAIN_PACKED_RECONSTRUCTION);
+        Append(encoded, context.seed);
+        Append(encoded, header_digest);
+        Append(encoded, nonce_bytes);
+        Append(encoded, params_bytes);
+        AppendLE64(encoded, miss.consumer);
+        encoded.push_back(miss.slot);
+        AppendLE64(encoded, miss.word);
+        for (const std::uint64_t item : state.registers) AppendLE64(encoded, item);
+        AppendLE64(encoded, state.accumulator);
+        if (value != nullptr) AppendLE64(encoded, *value);
+        return Sha3_384(encoded);
+    };
+
+    auto reconstruct = [&](const BoundedReadMiss& miss) {
+        ++result.reconstruction_attempts;
+        result.max_reconstruction_depth = 1;
+        arena.ResetReplay();
+        PackedReplayView replay{arena};
+        MachineState replay_state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+        const std::uint64_t replay_limit = std::min(miss.consumer, total_iterations);
+        std::uint64_t replay_completed{0};
+        try {
+            for (std::uint64_t iteration{0}; iteration < replay_limit; ++iteration) {
+                ExecuteMixIteration(context, replay, replay_state, iteration);
+                ++replay_completed;
+            }
+        } catch (const PackedReplayExhausted&) {
+            result.attempted_replay_iterations += replay_completed;
+            result.cumulative_rank_probes += arena.ReplayRankProbes();
+            result.cumulative_shifted_bytes += arena.ReplayShiftedBytes();
+            result.max_replay_peak_entries = std::max(
+                result.max_replay_peak_entries, arena.Stats().replay_peak_entries);
+            result.has_exhaustion = true;
+            result.exhaustion = {
+                miss.consumer, miss.slot, miss.word, replay_completed,
+                arena.Stats().replay_peak_entries, arena.ReplayRankProbes(),
+                arena.ReplayShiftedBytes(), boundary_commitment(miss, nullptr),
+            };
+            return false;
+        }
+        result.attempted_replay_iterations += replay_completed;
+        result.successful_replayed_iterations += replay_completed;
+        result.all_replay_states_matched = result.all_replay_states_matched &&
+            replay_state.registers == state.registers && replay_state.accumulator == state.accumulator;
+        if (!result.all_replay_states_matched) {
+            throw std::logic_error("packed replay machine state does not match the live prefix");
+        }
+        const std::uint64_t value = arena.ReplayReadExact(miss.word);
+        result.cumulative_rank_probes += arena.ReplayRankProbes();
+        result.cumulative_shifted_bytes += arena.ReplayShiftedBytes();
+        result.max_replay_peak_entries = std::max(
+            result.max_replay_peak_entries, arena.Stats().replay_peak_entries);
+        PackedBoundary boundary{
+            miss.consumer, miss.slot, miss.word, value, replay_completed,
+            arena.Stats().replay_peak_entries, arena.ReplayRankProbes(),
+            arena.ReplayShiftedBytes(), boundary_commitment(miss, &value),
+        };
+        Append(transcript_input, boundary.commitment);
+        if (!result.has_first) {
+            result.has_first = true;
+            result.first_reconstruction = boundary;
+        }
+        result.last_reconstruction = boundary;
+        ++result.reconstructed_misses;
+        arena.Retain(miss.word, value);
+        return true;
+    };
+
+    bool stopped{false};
+    for (std::uint64_t iteration{0}; iteration < total_iterations; ++iteration) {
+        while (true) {
+            arena.SetConsumer(iteration);
+            try {
+                ExecuteMixIteration(context, arena, state, iteration);
+                break;
+            } catch (const BoundedReadMiss& miss) {
+                if (!reconstruct(miss)) { stopped = true; break; }
+            }
+        }
+        if (stopped) break;
+        ++result.completed_iterations;
+    }
+
+    std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
+    if (!stopped) {
+        std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
+        for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
+            selector = std::rotl(
+                selector ^ state.registers[i & (REGISTER_COUNT - 1)],
+                static_cast<int>((i + 1) & 63)) + 0x9E3779B97F4A7C15ULL + i;
+            while (true) {
+                arena.SetConsumer(total_iterations + i);
+                try {
+                    samples[i] = arena.Read(selector);
+                    break;
+                } catch (const BoundedReadMiss& miss) {
+                    if (!reconstruct(miss)) { stopped = true; break; }
+                }
+            }
+            if (stopped) break;
+            selector ^= samples[i];
+        }
+    }
+
+    if (!stopped) {
+        Bytes encoded_registers;
+        for (const std::uint64_t value : state.registers) AppendLE64(encoded_registers, value);
+        Bytes encoded_accumulator;
+        AppendLE64(encoded_accumulator, state.accumulator);
+        Bytes encoded_samples;
+        for (const std::uint64_t value : samples) AppendLE64(encoded_samples, value);
+        Bytes commitment_input = DomainBytes(DOMAIN_COMMITMENT);
+        Append(commitment_input, params_bytes);
+        Append(commitment_input, encoded_registers);
+        Append(commitment_input, encoded_accumulator);
+        Append(commitment_input, encoded_samples);
+        const Bytes memory_commitment = Sha3_384(commitment_input);
+        Bytes result_input = DomainBytes(DOMAIN_RESULT);
+        Append(result_input, context.seed);
+        Append(result_input, header_digest);
+        Append(result_input, nonce_bytes);
+        Append(result_input, params_bytes);
+        Append(result_input, context.schedule_digest);
+        Append(result_input, context.dataset_digest);
+        Append(result_input, encoded_registers);
+        Append(result_input, encoded_accumulator);
+        Append(result_input, memory_commitment);
+        result.status = "exact_complete";
+        result.execution_result = {
+            Sha3_384(result_input), state.registers, context.schedule_digest,
+            context.dataset_digest, memory_commitment,
+        };
+    }
+    result.transcript_commitment = Sha3_384(transcript_input);
+    result.layout = arena.Layout();
+    result.stats = arena.Stats();
+    return result;
+}
+
 Bytes ParseHex(std::string_view text)
 {
     if (text.size() % 2 != 0) throw std::invalid_argument("hex input must have even length");
@@ -2254,6 +2723,92 @@ void PrintRepeatedReconstruction(
     } else {
         std::cout << ",\n  \"digest\": null,\n"
                   << "  \"memory_commitment\": null\n";
+    }
+    std::cout << "}\n";
+}
+
+void PrintPackedReconstruction(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const PackedReconstructionResult result =
+        ProbePackedReconstruction(PrepareEpoch(seed, params), header, nonce);
+    const PackedLayout& layout = result.layout;
+    const BoundedReconstructionStats& stats = result.stats;
+    auto print_boundary = [](const PackedBoundary& boundary) {
+        std::cout << "{\"consumer\": " << boundary.consumer
+                  << ", \"slot\": " << static_cast<unsigned>(boundary.slot)
+                  << ", \"word\": " << boundary.word
+                  << ", \"value\": " << boundary.value
+                  << ", \"replayed_iterations\": " << boundary.replayed_iterations
+                  << ", \"replay_peak_entries\": " << boundary.replay_peak_entries
+                  << ", \"replay_rank_probes\": " << boundary.replay_rank_probes
+                  << ", \"replay_shifted_bytes\": " << boundary.replay_shifted_bytes
+                  << ", \"commitment\": \"" << Hex(boundary.commitment) << "\"}";
+    };
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-packed-checkpoint-reconstruction-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS PACKED CHECKPOINT; no completed proof, throughput, or gate result\",\n"
+              << "  \"status\": \"" << result.status << "\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"layout\": {\"budget_bytes\": " << layout.budget_bytes
+              << ", \"fixed_state_reserve_bytes\": " << layout.fixed_state_reserve_bytes
+              << ", \"arena_bytes\": " << layout.arena_bytes
+              << ", \"canonical_write_bitmap_bytes\": " << layout.canonical_write_bitmap_bytes
+              << ", \"primary_cache_capacity\": " << layout.primary_cache_capacity
+              << ", \"primary_cache_bytes\": " << layout.primary_cache_bytes
+              << ", \"replay_bitmap_bytes\": " << layout.replay_bitmap_bytes
+              << ", \"rank_directory_bytes\": " << layout.rank_directory_bytes
+              << ", \"replay_value_capacity\": " << layout.replay_value_capacity
+              << ", \"replay_value_bytes\": " << layout.replay_value_bytes
+              << ", \"unused_arena_bytes\": " << layout.unused_arena_bytes
+              << ", \"admitted_bytes\": " << layout.admitted_bytes << "},\n"
+              << "  \"completed_iterations\": " << result.completed_iterations << ",\n"
+              << "  \"canonical_reads\": " << stats.canonical_reads << ",\n"
+              << "  \"cache_hits\": " << stats.cache_hits << ",\n"
+              << "  \"initial_zero_reads\": " << stats.initial_zero_reads << ",\n"
+              << "  \"materialized_misses\": " << stats.materialized_misses << ",\n"
+              << "  \"writes\": " << stats.writes << ",\n"
+              << "  \"evictions\": " << stats.evictions << ",\n"
+              << "  \"reconstruction_attempts\": " << result.reconstruction_attempts << ",\n"
+              << "  \"reconstructed_misses\": " << result.reconstructed_misses << ",\n"
+              << "  \"successful_replayed_iterations\": " << result.successful_replayed_iterations << ",\n"
+              << "  \"attempted_replay_iterations\": " << result.attempted_replay_iterations << ",\n"
+              << "  \"cumulative_rank_probes\": " << result.cumulative_rank_probes << ",\n"
+              << "  \"cumulative_shifted_bytes\": " << result.cumulative_shifted_bytes << ",\n"
+              << "  \"max_replay_peak_entries\": " << result.max_replay_peak_entries << ",\n"
+              << "  \"max_reconstruction_depth\": " << result.max_reconstruction_depth << ",\n"
+              << "  \"all_replay_states_matched\": "
+              << (result.all_replay_states_matched ? "true" : "false") << ",\n"
+              << "  \"transcript_commitment\": \"" << Hex(result.transcript_commitment) << "\",\n"
+              << "  \"first_reconstruction\": ";
+    if (result.has_first) print_boundary(result.first_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"last_reconstruction\": ";
+    if (result.has_first) print_boundary(result.last_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"exhaustion\": ";
+    if (result.has_exhaustion) {
+        const PackedExhaustionBoundary& boundary = result.exhaustion;
+        std::cout << "{\"consumer\": " << boundary.consumer
+                  << ", \"slot\": " << static_cast<unsigned>(boundary.slot)
+                  << ", \"word\": " << boundary.word
+                  << ", \"replay_completed_iterations\": " << boundary.replay_completed_iterations
+                  << ", \"replay_peak_entries\": " << boundary.replay_peak_entries
+                  << ", \"replay_rank_probes\": " << boundary.replay_rank_probes
+                  << ", \"replay_shifted_bytes\": " << boundary.replay_shifted_bytes
+                  << ", \"state_commitment\": \"" << Hex(boundary.state_commitment) << "\"}";
+    } else {
+        std::cout << "null";
+    }
+    if (result.status == "exact_complete") {
+        std::cout << ",\n  \"digest\": \"" << Hex(result.execution_result.digest) << "\",\n"
+                  << "  \"memory_commitment\": \"" << Hex(result.execution_result.memory_commitment) << "\"\n";
+    } else {
+        std::cout << ",\n  \"digest\": null,\n  \"memory_commitment\": null\n";
     }
     std::cout << "}\n";
 }
@@ -2590,6 +3145,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-packed") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintPackedReconstruction(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-repeated") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -2685,6 +3248,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp bounded-probe SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-one SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-repeated SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp bounded-reconstruct-packed SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

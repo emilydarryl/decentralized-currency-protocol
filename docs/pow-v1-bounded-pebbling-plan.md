@@ -72,6 +72,8 @@ The subsequent [bounded first-reconstruction result](pow-v1-bounded-first-recons
 
 The [bounded repeated-reconstruction result](pow-v1-bounded-repeated-reconstruction.md) recovers 109–137 missing values across the fixed standard cases before its sparse replay table fills. It reports cumulative work and the precise fail-closed exhaustion boundary. Checkpointed or recursive recovery, exact final outputs, and physical memory measurement remain incomplete.
 
+The [packed checkpoint pilot](pow-v1-packed-checkpoint-reconstruction.md) replaces per-value tags with bitmap rank, raising standard replay capacity from 4,940 to 11,449 values and extending seed zero to iteration 6,615. It also exposes 180.8 GB of charged insertion movement, motivating a block-gap or indexed layout.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
