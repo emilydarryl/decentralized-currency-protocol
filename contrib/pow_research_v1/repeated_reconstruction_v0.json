@@ -1,0 +1,42 @@
+{
+  "format": "soveroot-pow-v1-bounded-repeated-reconstruction-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS REPEATED ONLINE RECONSTRUCTION METHOD",
+  "question": "How far can exact repeated prefix replay advance inside the existing half-scratch arena before its sparse workspace fills?",
+  "arena": {
+    "budget_fraction": "1/2 of declared scratchpad",
+    "allocation_count": 1,
+    "fixed_state_reserve_bytes": 512,
+    "write_bitmap": "one bit per logical scratch word",
+    "entry_bytes": 16,
+    "entry_split": "5/8 sparse replay workspace and 3/8 direct-mapped primary cache"
+  },
+  "policy": [
+    "stop before state mutation at every missing materialized read",
+    "clear only the reserved replay table and replay the canonical VM from iteration zero",
+    "retain every distinct replay-written word and refuse if the table fills",
+    "require replayed registers and accumulator to match the live pre-read state",
+    "retain the exact recovered value in the primary cache and retry the interrupted operation",
+    "repeat until exact completion or replay-workspace exhaustion"
+  ],
+  "accounting": [
+    "successful and attempted replay iterations",
+    "cumulative open-addressing hash probes",
+    "maximum replay-table entries",
+    "reconstruction attempts and successful recoveries",
+    "maximum reconstruction depth",
+    "first, last, transcript, and exhaustion commitments"
+  ],
+  "limitations": [
+    "every replay starts at iteration zero and stores the entire distinct write set for that prefix",
+    "there are no checkpoints, recursive eviction recovery, or adaptive arena partitions",
+    "the 512-byte fixed reserve is logical rather than measured process high water",
+    "the deterministic screen is not a throughput benchmark or lower bound",
+    "no fixed standard run reaches an exact proof output"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "the evaluator exhausts its workspace before a proof, actual process memory is unmeasured, and no controlled throughput result exists"
+  },
+  "next_use": "add bounded checkpoints or recursive recovery, then require exact final outputs under measured physical memory"
+}

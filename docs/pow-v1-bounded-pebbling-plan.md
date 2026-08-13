@@ -70,6 +70,8 @@ Implementation status: **fail-closed execution scaffold implemented; exact attac
 
 The subsequent [bounded first-reconstruction result](pow-v1-bounded-first-reconstruction.md) exactly reconstructs one missing value and matching historical machine state within that arena, retries the interrupted iteration, and refuses at the next miss. Repeated reconstruction, exact final outputs, and physical memory measurement remain incomplete.
 
+The [bounded repeated-reconstruction result](pow-v1-bounded-repeated-reconstruction.md) recovers 109–137 missing values across the fixed standard cases before its sparse replay table fills. It reports cumulative work and the precise fail-closed exhaustion boundary. Checkpointed or recursive recovery, exact final outputs, and physical memory measurement remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
