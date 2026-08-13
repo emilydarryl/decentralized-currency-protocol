@@ -1,0 +1,40 @@
+{
+  "format": "soveroot-pow-v1-bounded-first-reconstruction-vectors-v0",
+  "source_vectors": "v1.json",
+  "layout": {
+    "budget_bytes": 4096,
+    "fixed_state_reserve_bytes": 512,
+    "arena_bytes": 3584,
+    "write_bitmap_bytes": 128,
+    "cache_entry_bytes": 16,
+    "primary_cache_capacity": 81,
+    "primary_cache_bytes": 1296,
+    "replay_capacity": 135,
+    "replay_workspace_bytes": 2160,
+    "unused_arena_bytes": 0,
+    "admitted_bytes": 4096
+  },
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [76, 155, 7, 146, 2, 152, 66, 71, 134, 1597],
+      "reconstruction": [71, 1, 130, 17659150816533055446, "ea889f9964ab6b9df124472534cfcb36300a47d3e07e831c17e2716b16c2db799246281acad5544e08103f7e6edeaedc"],
+      "refusal": [76, 0, 1010, "4ca509d3399d4a36c813ab4a57e4f57dc1725cfc69037d1e98ec6d668341edfc79b85d7eb427a91946cc2578c38cdb71"]
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [68, 140, 7, 131, 2, 136, 57, 63, 121, 914],
+      "reconstruction": [63, 1, 261, 3597622854706662604, "2de5cf74e94bec1f0e5e7781fe8ee28f653f84592bce84d00a6e4d5c87f60740731e8cf287d5495ce200a86469f847d7"],
+      "refusal": [68, 1, 36, "e2cf560c09fdbba2a46ce911d9cb7070ea5fcb7fc5620cd34b5eecaab73b607d0e23abdbc222b2441ecad2cc21916f09"]
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [69, 140, 5, 133, 2, 138, 59, 64, 125, 723],
+      "reconstruction": [64, 0, 52, 5252422596624590308, "e87b8b3192354ca0ad9c8fed9b29f4f680eb5d7cf2c0195ea60025bff8bda9df68b717a0b4d922ebfa8cda5bf227c164"],
+      "refusal": [69, 0, 796, "c01084428242a1142501d2ca5e50f3159574bcc38d5c2b1e04cf076cb97a1f5ba527da64b3c2309f6863e7ad30928d88"]
+    }
+  ],
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "replayed_iterations", "replay_peak_entries", "replay_hash_probes"],
+  "reconstruction_fields": ["consumer", "slot", "word", "value", "commitment"],
+  "refusal_fields": ["consumer", "slot", "word", "state_commitment"]
+}
