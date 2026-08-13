@@ -140,7 +140,7 @@
     },
     {
       "id": "pow_v1_time_checkpoint_screen",
-      "pull_request": null,
+      "pull_request": 35,
       "conclusion": "All 17 standard seed-zero cuts exceed the half-scratch ceiling even under an optimistic future-aware staged store; this rejects one no-regeneration checkpoint representation, not all reduced-memory attacks."
     }
   ],
