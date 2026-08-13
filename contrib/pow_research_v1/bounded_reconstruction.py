@@ -285,6 +285,12 @@ class _SparseReplay:
         offset = self._find(word, False)
         return 0 if offset is None else struct.unpack_from("<Q", self.owner.arena, offset + 8)[0]
 
+    def read_exact_word(self, word: int) -> int:
+        offset = self._find(word, False)
+        if offset is None:
+            raise RuntimeError("materialized word is absent from the exact replay state")
+        return struct.unpack_from("<Q", self.owner.arena, offset + 8)[0]
+
     def write(self, selector: int, value: int) -> None:
         word = selector & (self.owner.word_count - 1)
         offset = self._find(word, True)
@@ -376,7 +382,7 @@ def reconstruct_first_miss(
         )
         if not replay_state_matched:
             raise RuntimeError("replayed machine state does not match the live prefix")
-        value = replay.read(miss.word, miss.consumer, miss.slot)
+        value = replay.read_exact_word(miss.word)
         replay_probes = replay.hash_probes
         commitment = _boundary_commitment(
             DOMAIN_RECONSTRUCTION,

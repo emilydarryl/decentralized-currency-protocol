@@ -34,6 +34,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [pow-v1-offline-pebbling-schedule.md](docs/pow-v1-offline-pebbling-schedule.md) documents the concrete graph-only replay schedules, their multi-million-node work, and explicit action-stream sizes that complete the offline portion of Stage B.
 - [pow-v1-online-bounded-probe.md](docs/pow-v1-online-bounded-probe.md) documents the first Stage C online execution scaffold, its half-scratch logical admission, and its fail-closed reconstruction boundaries.
 - [pow-v1-bounded-first-reconstruction.md](docs/pow-v1-bounded-first-reconstruction.md) documents exact recovery of the first missing value and historical machine state inside the same preallocated half-scratch arena.
+- [pow-v1-bounded-repeated-reconstruction.md](docs/pow-v1-bounded-repeated-reconstruction.md) documents repeated exact recovery until the arena's sparse replay workspace fills.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.

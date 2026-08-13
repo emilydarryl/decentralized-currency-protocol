@@ -1,0 +1,57 @@
+{
+  "format": "soveroot-pow-v1-bounded-repeated-reconstruction-vectors-v0",
+  "source_vectors": "v1.json",
+  "layout": {
+    "budget_bytes": 4096,
+    "fixed_state_reserve_bytes": 512,
+    "arena_bytes": 3584,
+    "write_bitmap_bytes": 128,
+    "cache_entry_bytes": 16,
+    "primary_cache_capacity": 81,
+    "primary_cache_bytes": 1296,
+    "replay_capacity": 135,
+    "replay_workspace_bytes": 2160,
+    "unused_arena_bytes": 0,
+    "admitted_bytes": 4096
+  },
+  "counter_fields": [
+    "completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads",
+    "materialized_misses", "writes", "evictions", "reconstruction_attempts",
+    "reconstructed_misses", "successful_replayed_iterations", "attempted_replay_iterations",
+    "cumulative_replay_hash_probes", "max_replay_peak_entries"
+  ],
+  "reconstruction_fields": [
+    "consumer", "slot", "word", "value", "replayed_iterations",
+    "replay_peak_entries", "replay_hash_probes", "commitment"
+  ],
+  "exhaustion_fields": [
+    "consumer", "slot", "word", "replay_completed_iterations",
+    "replay_peak_entries", "replay_hash_probes", "state_commitment"
+  ],
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [76, 155, 7, 146, 2, 152, 66, 2, 1, 71, 143, 3661, 135],
+      "transcript_commitment": "d1ad288909310541e7250b8cf7d327e2ec28a73da8a4fa54600674551cca4f9f28e634a29ae36cc7e7fbce066079f7fb",
+      "first": [71, 1, 130, 17659150816533055446, 71, 134, 1597, "ea889f9964ab6b9df124472534cfcb36300a47d3e07e831c17e2716b16c2db799246281acad5544e08103f7e6edeaedc"],
+      "last": [71, 1, 130, 17659150816533055446, 71, 134, 1597, "ea889f9964ab6b9df124472534cfcb36300a47d3e07e831c17e2716b16c2db799246281acad5544e08103f7e6edeaedc"],
+      "exhaustion": [76, 0, 1010, 72, 135, 2064, "b62bb986d1827475181d037549a8c46cee3263bb7c05befa7086d169132bf3ef756e10ff1391c4cbd2b3ccd3e2fed73f"]
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [73, 152, 9, 140, 3, 146, 64, 3, 2, 131, 202, 4184, 135],
+      "transcript_commitment": "7dc9065634c2b2027d4b4ca294d14b3e551be98bd1ca6fda01ebaac55a08c78e7871bcfc5ebb48079f43ef88cfefb7cb",
+      "first": [63, 1, 261, 3597622854706662604, 63, 121, 914, "2de5cf74e94bec1f0e5e7781fe8ee28f653f84592bce84d00a6e4d5c87f60740731e8cf287d5495ce200a86469f847d7"],
+      "last": [68, 1, 36, 10583962269994356052, 68, 129, 1186, "851b0f47857cbf904eafab505578efc5e4e2e78bfa502da55c5919057e2cdb144c145245777b985d26a6eef9a2705e06"],
+      "exhaustion": [73, 1, 15, 71, 135, 2084, "b6a24d72cbd9519e81ccb64db1ec6490ec2f782222b557cacc526025557c1fcd25458b354b298cbcd1a2d09ca38a1dfc"]
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [89, 181, 11, 167, 3, 178, 92, 3, 2, 133, 203, 3375, 135],
+      "transcript_commitment": "29e5bb90cae52a79ba62a131da5641edacbb97fd67f772c7251a0b48b358aee9dfc84b6c1fa2f5532e7d2accb486b244",
+      "first": [64, 0, 52, 5252422596624590308, 64, 125, 723, "e87b8b3192354ca0ad9c8fed9b29f4f680eb5d7cf2c0195ea60025bff8bda9df68b717a0b4d922ebfa8cda5bf227c164"],
+      "last": [69, 0, 796, 8602311919473733294, 69, 133, 1015, "2f6390d5e3ad7ef989386876edbe8dbeea1e126a23d08ca0c33ab7842894359207600cbcda57a55761ab47c1dab434d6"],
+      "exhaustion": [89, 0, 133, 70, 135, 1637, "2e9de70fa8c45344a1193d2dad8c23ddf20ae3b9f12802108efc76282d9ca5dd0044603137d48b69a583d4968b4c0594"]
+    }
+  ]
+}
