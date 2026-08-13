@@ -1,0 +1,32 @@
+{
+  "format": "soveroot-pow-v1-time-checkpoint-screen-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS FULL-MEMORY OFFLINE FEASIBILITY SCREEN",
+  "question": "Can a conventional exact time checkpoint fit the half-scratch ceiling, and does one checkpoint lower the optimistic live-value floor?",
+  "cuts": "17 deterministic cuts at 0/16 through 16/16 of mixing iterations",
+  "models": {
+    "full_checkpoint": "fixed reserve plus bitmap-ranked values for every materialized word at the cut",
+    "naive_snapshot_delta": "immutable full checkpoint plus every distinct word written after the cut",
+    "optimistic_staged": "one reusable bitmap-ranked store sized to the larger of exact offline capture and resume live frontiers during forward execution without recursive regeneration"
+  },
+  "byte_accounting": {
+    "fixed_state_reserve_bytes": 512,
+    "value_bytes": 8,
+    "identity": "one bitmap bit per logical word",
+    "rank_directory": "16-bit Fenwick tree over 256-word chunks",
+    "empty_store": "zero bytes",
+    "omitted_from_optimistic_model": "canonical cache, future-use schedule, allocator overhead, and physical-memory effects"
+  },
+  "interpretation": [
+    "registers and accumulator alone are never an exact resumable checkpoint because later addresses read historical scratch values",
+    "full and snapshot-delta models are executable representation costs but this screen does not execute them",
+    "the optimistic staged model grants perfect future knowledge and free scheduling, so failure to fit is adverse evidence",
+    "a fitting optimistic cut would not establish an executable attacker or pass a gate",
+    "one checkpoint cannot remove the workload's global live-value maximum; exact recursive regeneration is required when that floor exceeds the ceiling"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "the analysis uses a full-memory trace and future knowledge and produces no reduced-memory proof"
+  },
+  "next_use": "if no optimistic staged cut fits, implement recursive value regeneration with a byte-accounted stack and cache"
+}

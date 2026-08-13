@@ -36,6 +36,9 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [pow-v1-bounded-first-reconstruction.md](docs/pow-v1-bounded-first-reconstruction.md) documents exact recovery of the first missing value and historical machine state inside the same preallocated half-scratch arena.
 - [pow-v1-bounded-repeated-reconstruction.md](docs/pow-v1-bounded-repeated-reconstruction.md) documents repeated exact recovery until the arena's sparse replay workspace fills.
 - [pow-v1-packed-checkpoint-reconstruction.md](docs/pow-v1-packed-checkpoint-reconstruction.md) documents a denser bitmap-ranked replay checkpoint and its explicitly charged insertion cost.
+- [pow-v1-paged-gap-reconstruction.md](docs/pow-v1-paged-gap-reconstruction.md) documents fixed-size replay pages, bounded movement, and the fragmentation limit they expose.
+- [pow-v1-indexed-gap-reconstruction.md](docs/pow-v1-indexed-gap-reconstruction.md) documents indexed page lookup and adjacent-gap rebalancing under the same half-scratch arena.
+- [pow-v1-time-checkpoint-screen.md](docs/pow-v1-time-checkpoint-screen.md) tests full, snapshot-delta, and optimistic staged checkpoint representations and motivates recursive value regeneration.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.

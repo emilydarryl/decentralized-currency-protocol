@@ -151,6 +151,15 @@ python3 contrib/pow_research_cpp/render_indexed_gap_reconstruction_report_v1.py 
   --matrix build/pow-v1-indexed-gap-reconstruction.json \
   --method contrib/pow_research_v1/indexed_gap_reconstruction_v0.json \
   --label "local" --output build/pow-v1-indexed-gap-reconstruction.md
+
+python3 test/pow_research/run_cpp_time_checkpoint_screen_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/time_checkpoint_screen_v1.py \
+  --profile standard --seeds 1 --output build/pow-v1-time-checkpoint-screen.json
+python3 contrib/pow_research_cpp/render_time_checkpoint_screen_report_v1.py \
+  --matrix build/pow-v1-time-checkpoint-screen.json \
+  --method contrib/pow_research_v1/time_checkpoint_screen_v0.json \
+  --label "local" --output build/pow-v1-time-checkpoint-screen.md
 ```
 
 The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.

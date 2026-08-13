@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-13",
-  "evidence_cutoff_revision": "f6c3b4f27231dc85b0255cc3ba205f353a412bf9",
+  "evidence_cutoff_revision": "f09f642c689236928f2676a3b5e380a601aeb4c2",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -132,10 +132,20 @@
       "id": "pow_v1_paged_gap_reconstruction",
       "pull_request": 33,
       "conclusion": "Fixed replay pages reduce insertion movement by approximately 986 times but exhaust at 59.2 percent slot utilization and do not produce a proof."
+    },
+    {
+      "id": "pow_v1_indexed_gap_reconstruction",
+      "pull_request": 34,
+      "conclusion": "Indexed lookup and adjacent-gap rebalancing raise standard seed-zero utilization to 90.8 percent but still exhaust without a proof after 5.13 million attempted replay iterations."
+    },
+    {
+      "id": "pow_v1_time_checkpoint_screen",
+      "pull_request": 35,
+      "conclusion": "All 17 standard seed-zero cuts exceed the half-scratch ceiling even under an optimistic future-aware staged store; this rejects one no-regeneration checkpoint representation, not all reduced-memory attacks."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_bounded_time_checkpoint_replay",
+    "id": "pow_v1_recursive_value_regeneration",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
@@ -146,6 +156,7 @@
     "stage_c_packed_checkpoint": "Bitmap-ranked packed replay more than doubles retained-value capacity and extends the exact prefix, but sorted insertion creates prohibitive charged byte movement; no proof output is reached.",
     "stage_c_paged_gap": "Fixed-size replay pages reduce charged insertion movement by approximately 986 times on standard seed zero, but fragmentation and linear page lookup prevent completion; no proof output is reached.",
     "stage_c_indexed_gap": "A byte-accounted page-count index and neighbor rebalancing raise page utilization to 90.8 percent and extend the exact prefix, but repeated genesis replay still exhausts before an output.",
-    "required_outcome": "Implement byte-accounted time checkpoints or hierarchical replay that reduces genesis replay, then require exact final outputs and measured physical memory."
+    "stage_c_time_checkpoint_screen": "Full snapshots, snapshot-plus-delta, and an optimistic future-aware staged store are screened at 17 cuts; the standard staged floor is 18.63 percent above the half-scratch ceiling, so no gate is assessed.",
+    "required_outcome": "Implement recursive exact value regeneration with a byte-accounted cache, identity metadata, bounded work stack, and transient values, then require exact final outputs and measured physical memory."
   }
 }

@@ -53,6 +53,7 @@ constexpr char DOMAIN_PAGED_RECONSTRUCTION[] = "Soveroot/PowResearch/PagedGapRec
 constexpr char DOMAIN_PAGED_TRANSCRIPT[] = "Soveroot/PowResearch/PagedGapTranscript/v1\0";
 constexpr char DOMAIN_INDEXED_GAP_RECONSTRUCTION[] = "Soveroot/PowResearch/IndexedGapReconstruction/v1\0";
 constexpr char DOMAIN_INDEXED_GAP_TRANSCRIPT[] = "Soveroot/PowResearch/IndexedGapTranscript/v1\0";
+constexpr char DOMAIN_TIME_CHECKPOINT_SCREEN[] = "Soveroot/PowResearch/TimeCheckpointScreen/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -63,6 +64,7 @@ constexpr std::size_t PACKED_PRIMARY_DENOMINATOR{4};
 constexpr std::size_t PAGED_SLOTS{32};
 constexpr std::size_t PAGED_BYTES{PAGED_SLOTS * 8};
 constexpr std::size_t PAGED_METADATA_BYTES{4};
+constexpr std::size_t CHECKPOINT_DIVISIONS{16};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -413,6 +415,30 @@ struct TraceSummary {
     BudgetCacheScenario conservative_half_budget{};
 };
 
+struct CheckpointStoreLayout {
+    std::size_t budget_bytes{0}, fixed_state_reserve_bytes{0};
+    std::size_t bitmap_bytes_per_nonempty_store{0}, rank_directory_bytes_per_nonempty_store{0};
+    std::size_t value_bytes{8}, checkpoint_divisions{CHECKPOINT_DIVISIONS};
+};
+
+struct CheckpointCut {
+    std::uint64_t checkpoint_iteration{0}, snapshot_materialized_values{0};
+    std::uint64_t suffix_distinct_write_values{0}, duplicated_snapshot_delta_values{0};
+    std::uint64_t checkpoint_frontier_values{0}, capture_peak_live_values{0};
+    std::uint64_t resume_peak_live_values{0}, staged_peak_live_values{0};
+    std::uint64_t full_checkpoint_bytes{0}, naive_snapshot_delta_bytes{0}, optimistic_staged_bytes{0};
+    bool full_checkpoint_fits{false}, naive_snapshot_delta_fits{false}, optimistic_staged_fits{false};
+};
+
+struct TimeCheckpointScreenResult {
+    CheckpointStoreLayout layout{};
+    std::uint64_t total_iterations{0}, trace_reads{0}, trace_writes{0};
+    std::uint64_t global_maximum_live_values{0};
+    std::vector<CheckpointCut> cuts;
+    bool any_naive_snapshot_delta_fits{false}, any_optimistic_staged_fits{false};
+    Bytes screen_commitment;
+};
+
 struct GraphLayoutEstimate {
     std::size_t read_edge_bytes;
     std::size_t write_version_bytes;
@@ -450,6 +476,7 @@ public:
 
     TraceSummary Summarize() const;
     VersionedGraphSummary SummarizeVersionedGraph() const;
+    TimeCheckpointScreenResult ScreenTimeCheckpoints(std::size_t budget_bytes) const;
 
 private:
     CacheTraceStats SimulateCache(std::size_t capacity_words) const;
@@ -845,6 +872,100 @@ TraceSummary TraceRecorder::Summarize() const
     summary.compact_half_budget = budget_scenario(16);
     summary.conservative_half_budget = budget_scenario(24);
     return summary;
+}
+
+TimeCheckpointScreenResult TraceRecorder::ScreenTimeCheckpoints(std::size_t budget_bytes) const
+{
+    constexpr std::size_t FINAL_READS{FINAL_SAMPLE_WORDS};
+    constexpr std::size_t EVENTS_PER_ITERATION{4};
+    if (m_events.size() < FINAL_READS || (m_events.size() - FINAL_READS) % EVENTS_PER_ITERATION != 0) {
+        throw std::logic_error("trace does not match the v1 iteration/finalization shape");
+    }
+    TimeCheckpointScreenResult result{};
+    result.total_iterations = (m_events.size() - FINAL_READS) / EVENTS_PER_ITERATION;
+    result.layout.budget_bytes = budget_bytes;
+    result.layout.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+    result.layout.bitmap_bytes_per_nonempty_store = (m_word_count + 7) / 8;
+    const std::size_t rank_chunks = (m_word_count + PACKED_RANK_CHUNK_WORDS - 1) / PACKED_RANK_CHUNK_WORDS;
+    result.layout.rank_directory_bytes_per_nonempty_store = (rank_chunks + 1) * 2;
+    result.cuts.reserve(CHECKPOINT_DIVISIONS + 1);
+
+    std::vector<bool> materialized(m_events.size(), false), forward_written(m_word_count, false);
+    for (std::size_t index{0}; index < m_events.size(); ++index) {
+        const TraceEvent& event = m_events[index];
+        if (event.is_write) {
+            forward_written[event.word] = true;
+            ++result.trace_writes;
+        } else {
+            materialized[index] = forward_written[event.word];
+            ++result.trace_reads;
+        }
+    }
+    auto backward_live = [&](std::size_t start, std::size_t stop, std::vector<bool> live) {
+        std::size_t live_count = static_cast<std::size_t>(std::count(live.begin(), live.end(), true));
+        std::size_t peak = live_count;
+        for (std::size_t index{stop}; index > start; --index) {
+            const TraceEvent& event = m_events[index - 1];
+            if (event.is_write) {
+                if (live[event.word]) { live[event.word] = false; --live_count; }
+            } else if (materialized[index - 1] && !live[event.word]) {
+                live[event.word] = true; ++live_count;
+            }
+            peak = std::max(peak, live_count);
+        }
+        return std::pair<std::vector<bool>, std::size_t>{std::move(live), peak};
+    };
+    auto store_bytes = [&](std::size_t values) {
+        if (values == 0) return std::size_t{0};
+        return result.layout.bitmap_bytes_per_nonempty_store +
+            result.layout.rank_directory_bytes_per_nonempty_store + values * result.layout.value_bytes;
+    };
+    Bytes transcript = DomainBytes(DOMAIN_TIME_CHECKPOINT_SCREEN);
+    AppendLE64(transcript, m_word_count); AppendLE64(transcript, result.total_iterations);
+    AppendLE64(transcript, budget_bytes); AppendLE64(transcript, CHECKPOINT_DIVISIONS);
+    const std::size_t mix_event_count = result.total_iterations * EVENTS_PER_ITERATION;
+    for (std::size_t division{0}; division <= CHECKPOINT_DIVISIONS; ++division) {
+        const std::size_t checkpoint = result.total_iterations * division / CHECKPOINT_DIVISIONS;
+        const std::size_t boundary = checkpoint * EVENTS_PER_ITERATION;
+        std::vector<bool> prefix_written(m_word_count, false), suffix_written(m_word_count, false);
+        for (std::size_t index{0}; index < boundary; ++index) if (m_events[index].is_write) prefix_written[m_events[index].word] = true;
+        for (std::size_t index{boundary}; index < mix_event_count; ++index) if (m_events[index].is_write) suffix_written[m_events[index].word] = true;
+        auto [frontier, resume_peak] = backward_live(boundary, m_events.size(), std::vector<bool>(m_word_count, false));
+        auto [unused, capture_peak] = backward_live(0, boundary, frontier);
+        static_cast<void>(unused);
+        const std::size_t snapshot = static_cast<std::size_t>(std::count(prefix_written.begin(), prefix_written.end(), true));
+        const std::size_t delta = static_cast<std::size_t>(std::count(suffix_written.begin(), suffix_written.end(), true));
+        const std::size_t frontier_count = static_cast<std::size_t>(std::count(frontier.begin(), frontier.end(), true));
+        std::size_t duplicated{0};
+        for (std::size_t word{0}; word < m_word_count; ++word) if (prefix_written[word] && suffix_written[word]) ++duplicated;
+        const std::size_t staged_peak = std::max(capture_peak, resume_peak);
+        CheckpointCut cut{};
+        cut.checkpoint_iteration = checkpoint; cut.snapshot_materialized_values = snapshot;
+        cut.suffix_distinct_write_values = delta; cut.duplicated_snapshot_delta_values = duplicated;
+        cut.checkpoint_frontier_values = frontier_count; cut.capture_peak_live_values = capture_peak;
+        cut.resume_peak_live_values = resume_peak; cut.staged_peak_live_values = staged_peak;
+        cut.full_checkpoint_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES + store_bytes(snapshot);
+        cut.naive_snapshot_delta_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES + store_bytes(snapshot) + store_bytes(delta);
+        cut.optimistic_staged_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES + store_bytes(staged_peak);
+        cut.full_checkpoint_fits = cut.full_checkpoint_bytes <= budget_bytes;
+        cut.naive_snapshot_delta_fits = cut.naive_snapshot_delta_bytes <= budget_bytes;
+        cut.optimistic_staged_fits = cut.optimistic_staged_bytes <= budget_bytes;
+        result.any_naive_snapshot_delta_fits = result.any_naive_snapshot_delta_fits || cut.naive_snapshot_delta_fits;
+        result.any_optimistic_staged_fits = result.any_optimistic_staged_fits || cut.optimistic_staged_fits;
+        for (const std::uint64_t value : std::array<std::uint64_t, 11>{
+                 cut.checkpoint_iteration, cut.snapshot_materialized_values,
+                 cut.suffix_distinct_write_values, cut.duplicated_snapshot_delta_values,
+                 cut.checkpoint_frontier_values, cut.capture_peak_live_values,
+                 cut.resume_peak_live_values, cut.staged_peak_live_values,
+                 cut.full_checkpoint_bytes, cut.naive_snapshot_delta_bytes,
+                 cut.optimistic_staged_bytes}) AppendLE64(transcript, value);
+        transcript.push_back(cut.full_checkpoint_fits); transcript.push_back(cut.naive_snapshot_delta_fits);
+        transcript.push_back(cut.optimistic_staged_fits);
+        result.cuts.push_back(cut);
+    }
+    result.global_maximum_live_values = result.cuts.front().resume_peak_live_values;
+    result.screen_commitment = Sha3_384(transcript);
+    return result;
 }
 
 VersionedGraphSummary TraceRecorder::SummarizeVersionedGraph() const
@@ -3759,6 +3880,71 @@ void PrintTrace(
               << "}\n";
 }
 
+void PrintTimeCheckpointScreen(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const EpochContext context = PrepareEpoch(seed, params);
+    TraceRecorder recorder(params.scratchpad_bytes / 8);
+    const ExecutionResult execution = EvaluateWithScratchpad<FullScratchpad>(
+        context, header, nonce, nullptr, nullptr, nullptr, &recorder);
+    const TimeCheckpointScreenResult r = recorder.ScreenTimeCheckpoints(params.scratchpad_bytes / 2);
+    const auto& l = r.layout;
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-time-checkpoint-screen-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS FULL-MEMORY OFFLINE CHECKPOINT SCREEN; not an executable attack or gate result\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"layout\": {\"budget_bytes\": " << l.budget_bytes
+              << ", \"fixed_state_reserve_bytes\": " << l.fixed_state_reserve_bytes
+              << ", \"bitmap_bytes_per_nonempty_store\": " << l.bitmap_bytes_per_nonempty_store
+              << ", \"rank_directory_bytes_per_nonempty_store\": " << l.rank_directory_bytes_per_nonempty_store
+              << ", \"value_bytes\": " << l.value_bytes
+              << ", \"checkpoint_divisions\": " << l.checkpoint_divisions << "},\n"
+              << "  \"total_iterations\": " << r.total_iterations
+              << ",\n  \"trace_reads\": " << r.trace_reads
+              << ",\n  \"trace_writes\": " << r.trace_writes
+              << ",\n  \"global_maximum_live_values\": " << r.global_maximum_live_values
+              << ",\n  \"cuts\": [\n";
+    for (std::size_t index{0}; index < r.cuts.size(); ++index) {
+        const auto& c = r.cuts[index];
+        std::cout << "    {\"checkpoint_iteration\": " << c.checkpoint_iteration
+                  << ", \"snapshot_materialized_values\": " << c.snapshot_materialized_values
+                  << ", \"suffix_distinct_write_values\": " << c.suffix_distinct_write_values
+                  << ", \"duplicated_snapshot_delta_values\": " << c.duplicated_snapshot_delta_values
+                  << ", \"checkpoint_frontier_values\": " << c.checkpoint_frontier_values
+                  << ", \"capture_peak_live_values\": " << c.capture_peak_live_values
+                  << ", \"resume_peak_live_values\": " << c.resume_peak_live_values
+                  << ", \"staged_peak_live_values\": " << c.staged_peak_live_values
+                  << ", \"full_checkpoint_bytes\": " << c.full_checkpoint_bytes
+                  << ", \"naive_snapshot_delta_bytes\": " << c.naive_snapshot_delta_bytes
+                  << ", \"optimistic_staged_bytes\": " << c.optimistic_staged_bytes
+                  << ", \"full_checkpoint_fits\": " << (c.full_checkpoint_fits ? "true" : "false")
+                  << ", \"naive_snapshot_delta_fits\": " << (c.naive_snapshot_delta_fits ? "true" : "false")
+                  << ", \"optimistic_staged_fits\": " << (c.optimistic_staged_fits ? "true" : "false")
+                  << "}" << (index + 1 == r.cuts.size() ? "" : ",") << "\n";
+    }
+    std::cout << "  ],\n  \"any_naive_snapshot_delta_fits\": "
+              << (r.any_naive_snapshot_delta_fits ? "true" : "false")
+              << ",\n  \"any_optimistic_staged_fits\": "
+              << (r.any_optimistic_staged_fits ? "true" : "false")
+              << ",\n  \"screen_commitment\": \"" << Hex(r.screen_commitment) << "\",\n"
+              << "  \"execution_result\": {\"digest\": \"" << Hex(execution.digest)
+              << "\", \"registers\": [";
+    for (std::size_t index{0}; index < execution.registers.size(); ++index) {
+        std::ostringstream value;
+        value << std::hex << std::setfill('0') << std::setw(16) << execution.registers[index];
+        std::cout << "\"" << value.str() << "\"" << (index + 1 == execution.registers.size() ? "" : ", ");
+    }
+    std::cout << "], \"schedule_digest\": \"" << Hex(execution.schedule_digest)
+              << "\", \"dataset_digest\": \"" << Hex(execution.dataset_digest)
+              << "\", \"memory_commitment\": \"" << Hex(execution.memory_commitment) << "\"}\n}\n";
+}
+
 void PrintVersionedGraph(
     const Bytes& seed,
     const Bytes& header,
@@ -4029,6 +4215,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "checkpoint-screen") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintTimeCheckpointScreen(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-indexed-gap") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -4151,6 +4345,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp bounded-reconstruct-packed SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-paged SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-indexed-gap SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp checkpoint-screen SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

@@ -78,6 +78,8 @@ The [paged-gap pilot](pow-v1-paged-gap-reconstruction.md) replaces global shifts
 
 The [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md) adds a byte-accounted page-count Fenwick tree and bounded adjacent-page borrowing. It raises standard seed-zero utilization from 59.2% to 90.8% and advances the exact prefix from iteration 3,599 to 5,759. It still exhausts without a proof after 5.13 million attempted replay iterations, so the next construction should add byte-accounted time checkpoints or hierarchical replay rather than continue optimizing value layout alone.
 
+The [time-checkpoint feasibility screen](pow-v1-time-checkpoint-screen.md) evaluates 17 cuts using full snapshots, immutable snapshot-plus-delta storage, and an optimistic one-store staged model with exact future knowledge. On standard seed zero, every optimistic cut requires 155,490 bytes, 18.63% above the 131,072-byte ceiling; every naive cut also fails. A single no-regeneration checkpoint therefore does not solve the capacity failure. The next Stage C implementation must recursively regenerate exact values with its cache, identity metadata, work stack, transient values, and control state charged inside one preallocated arena.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
