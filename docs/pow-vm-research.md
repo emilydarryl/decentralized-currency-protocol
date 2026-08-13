@@ -6,6 +6,12 @@ Status: Candidate direction only; not approved for mainnet or consensus implemen
 
 The initial non-consensus measurement harness lives in [`contrib/pow_research`](../contrib/pow_research/README.md), with an independent differential implementation in [`contrib/pow_research_cpp`](../contrib/pow_research_cpp/README.md). They provide a clear interpreter and cross-language reproducible vectors for research; they do not select the VM, constants, seed schedule, or mainnet proof of work.
 
+## Plain-language summary
+
+This research asks whether miners who use much less memory must pay a large speed penalty. Think of a normal miner as keeping a complete notebook and the experimental attacker as keeping half the pages and repeatedly recreating whatever is missing. Our latest attacker can recreate many missing values correctly, but after one million replayed calculations it still completes only about 1% of the standard mining workload and produces no valid proof.
+
+That result is encouraging, not conclusive. We are still searching for smarter attacks, and we have not yet measured every physical memory byte or compared optimized CPUs, GPUs, FPGAs, and possible ASICs. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the nontechnical project overview.
+
 ## 1. Objective
 
 Soveroot is investigating a permanent, chain-specific proof-of-work virtual machine with deterministic workload variation and substantial memory-bandwidth demand.

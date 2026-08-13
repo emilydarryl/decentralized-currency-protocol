@@ -1,0 +1,91 @@
+# Mining Decentralization in Plain English
+
+Status: **PUBLIC EXPLAINER FOR AN UNFINISHED RESEARCH PROTOCOL**
+
+Soveroot is trying to make mining power harder to concentrate, while being honest that no blockchain can guarantee that mining will remain decentralized forever.
+
+The project is not ready for public mining or monetary use. The Bitcoin-derived node and private two-node `labnet` work, but the proposed proof of work is still isolated research code and is not part of block consensus.
+
+## The problem we are trying to reduce
+
+Mining can become concentrated in several different ways:
+
+- a small number of companies may own the fastest hardware;
+- miners may depend on a few pools to choose transactions and create block templates;
+- large facilities may obtain cheaper electricity, financing, cooling, chips, or regulation; and
+- miners may appear independent while actually being controlled by the same organization.
+
+One consensus rule cannot solve all of these problems. Soveroot therefore separates the work into three layers: mining hardware, pool coordination, and rule governance.
+
+## 1. Making mining hardware less easy to monopolize
+
+Bitcoin mining repeatedly performs one well-known calculation. That made it worthwhile to build extremely specialized machines that perform that calculation much better than ordinary computers.
+
+Soveroot is researching a different kind of proof of work. Its rules would remain fixed, but the exact workload would change automatically from public chain data. The workload is also designed to require substantial memory and memory bandwidth.
+
+The goal is to keep commodity CPUs and GPUs relevant and make a narrow-purpose secret advantage more expensive and shorter-lived. This is a research goal, not a promise. A company could still build specialized hardware, and a large facility could still benefit from cheap power and capital.
+
+## 2. Preventing a pool from controlling every miner's block
+
+A mining pool can perform two separate jobs:
+
+1. combine many miners' work so payouts are less unpredictable; and
+2. choose which transactions go into the block.
+
+Soveroot wants to separate those jobs. Under the proposed official mining profile, each miner chooses transactions using its own node, constructs its own block candidate, and uses an authenticated Stratum V2 connection only for share accounting and payouts. A P2Pool-like decentralized share system is also a required testnet workstream.
+
+This means miners could cooperate on predictable payouts without automatically giving one pool operator control over block contents.
+
+The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
+
+## 3. Keeping miners from controlling the rules
+
+Miners propose blocks; independently operated nodes decide whether those blocks follow the rules. A miner with substantial hash power cannot make an invalid block valid unless users voluntarily install software accepting the changed rules.
+
+Soveroot therefore treats miner signaling as readiness information, not a binding vote. Consensus changes require explicit software adoption, independent validation, public review, and the activation process documented by the project.
+
+Hash power still matters. Concentrated miners can censor transactions temporarily, reorganize recent blocks, or delay an upgrade. The design reduces miner governance authority; it does not make concentrated hash power harmless.
+
+## What the current memory experiment means
+
+Imagine a mining job as an open-book exam with 98,304 steps. A normal miner keeps the whole notebook available. We are deliberately building a cheating miner that keeps only half the allowed memory and tries to recreate missing pages whenever it needs them.
+
+The first version recreated one missing value correctly. The latest version reused its notes and recreated 51 missing values correctly. It performed 1,000,000 replayed calculations but advanced the real job only to step 983. Another tested memory split reached step 999. None of the tested versions finished the job or produced a valid proof.
+
+That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and the prototypes have not measured every byte used by the program's real call stack and allocator.
+
+## Where we are now
+
+| Part | Plain-language status |
+| --- | --- |
+| Bitcoin-derived node and command-line client | Working development foundation |
+| Private two-node lab network | Working in automated tests |
+| Proposed mining workload | Research prototype only |
+| Half-memory attack | Correctly recovers some data but cannot finish |
+| Independent Python and C++ comparison | Passing for the current experiment |
+| Commodity CPU/GPU fairness | Not demonstrated |
+| ASIC, FPGA, and quantum analysis | Not complete |
+| Decentralized pool system | Designed on paper; not implemented end to end |
+| Public testnet | Not launched |
+| Production or mainnet readiness | Not ready |
+
+## What happens next
+
+The next experiment will make the half-memory attacker smarter by organizing its saved information hierarchically or combining small checkpoints with recursive recovery. We should try hard to defeat our own design before asking anyone to trust it.
+
+If an exact half-memory miner eventually finishes, we will measure its actual memory and speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
+
+Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
+
+## Short glossary
+
+- **Proof of work:** the difficult calculation miners perform to propose a block.
+- **Hash power:** the total rate at which mining work is attempted.
+- **Mining pool:** a service or protocol that combines miners' work and distributes payouts.
+- **Block template:** the transactions and other data a miner proposes to include in a block.
+- **Memory-hard:** designed so that using substantially less memory causes a major loss of speed.
+- **Node:** software that independently checks blocks and rejects any block that violates consensus rules.
+- **Consensus:** the objective rules that every validating node applies.
+- **Labnet:** Soveroot's private development network; it has no monetary value.
+
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest recursive-regeneration result](pow-v1-repeated-recursive-regeneration.md), and [research ledger](research-ledger.md).
