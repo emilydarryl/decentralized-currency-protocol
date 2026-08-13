@@ -64,6 +64,7 @@ class TimeCheckpointScreen:
 
     def to_dict(self) -> dict[str, object]:
         result = asdict(self)
+        result["cuts"] = [asdict(cut) for cut in self.cuts]
         result["execution_result"] = self.execution_result.to_dict()
         return result
 
