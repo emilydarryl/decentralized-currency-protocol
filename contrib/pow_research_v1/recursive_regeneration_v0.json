@@ -1,0 +1,41 @@
+{
+  "format": "soveroot-pow-v1-recursive-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS FIRST RECURSIVE REGENERATION PILOT",
+  "question": "Can one exact historical scratch value be recursively regenerated without a full replay scratchpad inside the half-scratch byte model?",
+  "algorithm": {
+    "primary_execution": "direct-mapped cache plus exact written-word bitmap",
+    "regeneration_key": "packed 32-bit (stop iteration, word) identity with 15 word bits",
+    "regeneration": "replay machine state from genesis; recursively request every missing read at an earlier stop iteration; retain the requested target word across writes",
+    "termination": "every child stop is strictly less than its parent stop; stop zero returns the initial zero value",
+    "memo": "four-way set-associative exact values; deterministic replacement after all ways are occupied",
+    "pilot_boundary": "regenerate the first primary miss, retry it exactly, then refuse without a digest at the next miss"
+  },
+  "byte_accounting": {
+    "fixed_state_reserve_bytes": 512,
+    "primary_entry_bytes": 16,
+    "frame_bytes": 104,
+    "frame_contents": "eight registers, accumulator, target value, packed stop, word, iteration and phase, plus one saved read value",
+    "maximum_frames": 20,
+    "memo_entry_bytes": 12,
+    "memo_entry_contents": "32-bit packed identity and 64-bit exact value",
+    "external_storage_bytes": 0
+  },
+  "limits": {
+    "work_limit_iterations": 1000000,
+    "memo_word_bits": 15,
+    "memo_ways": 4
+  },
+  "interpretation": [
+    "successful reconstruction proves an exact value boundary, not a completed reduced-memory proof",
+    "the Python and C++ prototypes reserve logical frame bytes but do not yet measure compiler or interpreter stack and allocator overhead",
+    "the intentionally tiny primary cache gives regeneration structures most of the half-scratch arena and is not a throughput-optimized split",
+    "the evaluator fails closed without a digest on the next miss, depth exhaustion, work exhaustion, or packed-key overflow",
+    "repeated recursive recovery, exact final outputs, and controlled physical-memory measurements remain required"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "only one primary miss is regenerated and physical peak memory and throughput are unmeasured"
+  },
+  "next_use": "extend the engine to repeated misses, then optimize primary, frame, and memo allocation without changing the frozen half-scratch ceiling"
+}
