@@ -55,6 +55,7 @@ constexpr char DOMAIN_INDEXED_GAP_RECONSTRUCTION[] = "Soveroot/PowResearch/Index
 constexpr char DOMAIN_INDEXED_GAP_TRANSCRIPT[] = "Soveroot/PowResearch/IndexedGapTranscript/v1\0";
 constexpr char DOMAIN_TIME_CHECKPOINT_SCREEN[] = "Soveroot/PowResearch/TimeCheckpointScreen/v1\0";
 constexpr char DOMAIN_RECURSIVE_REGENERATION[] = "Soveroot/PowResearch/RecursiveRegeneration/v1\0";
+constexpr char DOMAIN_REPEATED_RECURSIVE_REGENERATION[] = "Soveroot/PowResearch/RepeatedRecursiveRegeneration/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -70,6 +71,7 @@ constexpr std::size_t RECURSIVE_FRAME_BYTES{104};
 constexpr std::size_t RECURSIVE_MEMO_ENTRY_BYTES{12};
 constexpr std::size_t RECURSIVE_MEMO_WAYS{4};
 constexpr std::size_t RECURSIVE_MEMO_WORD_BITS{15};
+constexpr std::size_t RECURSIVE_PRIMARY_NUMERATOR{1};
 constexpr std::size_t RECURSIVE_PRIMARY_DENOMINATOR{64};
 constexpr std::size_t RECURSIVE_MAXIMUM_FRAMES{20};
 constexpr std::uint64_t RECURSIVE_WORK_LIMIT{1'000'000};
@@ -489,6 +491,33 @@ struct RecursiveRegenerationResult {
     Bytes refusal_state_commitment;
     RecursiveExhaustion exhaustion{};
     Bytes transcript_commitment;
+};
+
+struct RepeatedRecursiveExhaustion {
+    std::string reason;
+    std::uint64_t consumer{0}, word{0}, stop_iteration{0}, attempted_depth{0};
+    std::uint64_t regeneration_iterations{0};
+    std::uint8_t slot{0};
+    Bytes state_commitment;
+};
+
+struct RepeatedRecursiveRegenerationResult {
+    std::string status{"refused_recursive_regeneration_exhausted"};
+    RecursiveLayout layout{};
+    std::uint64_t primary_numerator{1}, primary_denominator{64};
+    std::uint64_t work_limit{RECURSIVE_WORK_LIMIT}, completed_iterations{0};
+    std::uint64_t canonical_reads{0}, cache_hits{0}, initial_zero_reads{0};
+    std::uint64_t materialized_misses{0}, writes{0}, evictions{0};
+    std::uint64_t reconstruction_attempts{0}, reconstructed_misses{0};
+    std::uint64_t regeneration_calls{0}, regeneration_cache_hits{0};
+    std::uint64_t regeneration_completed_values{0}, regeneration_iterations{0};
+    std::uint64_t maximum_depth{0}, memo_peak_entries{0}, memo_evictions{0};
+    std::uint64_t memo_probes{0}, memo_shifted_bytes{0};
+    bool has_first{false}, has_last{false}, has_exhaustion{false}, has_execution{false};
+    RecursiveBoundary first_reconstruction{}, last_reconstruction{};
+    RepeatedRecursiveExhaustion exhaustion{};
+    Bytes transcript_commitment;
+    ExecutionResult execution_result{};
 };
 
 struct GraphLayoutEstimate {
@@ -1519,9 +1548,17 @@ public:
 
 class RecursiveArena {
 public:
-    RecursiveArena(std::size_t scratchpad_bytes, std::size_t budget_bytes)
+    RecursiveArena(
+        std::size_t scratchpad_bytes,
+        std::size_t budget_bytes,
+        std::size_t primary_numerator = RECURSIVE_PRIMARY_NUMERATOR,
+        std::size_t primary_denominator = RECURSIVE_PRIMARY_DENOMINATOR)
         : m_word_count(scratchpad_bytes / 8)
     {
+        if (primary_numerator == 0 || primary_denominator == 0 ||
+            primary_numerator > primary_denominator) {
+            throw std::invalid_argument("recursive primary allocation ratio is invalid");
+        }
         m_layout.budget_bytes = budget_bytes;
         m_layout.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
         if (budget_bytes <= BOUNDED_FIXED_STATE_RESERVE_BYTES) {
@@ -1537,7 +1574,8 @@ public:
         const std::size_t total_primary_slots =
             (m_layout.arena_bytes - m_layout.write_bitmap_bytes) /
             BOUNDED_CACHE_ENTRY_BYTES;
-        m_layout.primary_cache_capacity = total_primary_slots / RECURSIVE_PRIMARY_DENOMINATOR;
+        m_layout.primary_cache_capacity =
+            total_primary_slots * primary_numerator / primary_denominator;
         if (m_layout.primary_cache_capacity == 0) {
             throw std::invalid_argument("recursive budget cannot hold one primary entry");
         }
@@ -3596,6 +3634,182 @@ RecursiveRegenerationResult ProbeFirstRecursiveRegeneration(
     return result;
 }
 
+RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
+    const EpochContext& context,
+    const Bytes& header,
+    std::uint64_t nonce,
+    std::uint64_t work_limit = RECURSIVE_WORK_LIMIT,
+    std::size_t primary_numerator = RECURSIVE_PRIMARY_NUMERATOR,
+    std::size_t primary_denominator = RECURSIVE_PRIMARY_DENOMINATOR)
+{
+    Validate(context.seed, context.params);
+    if (header.empty() || header.size() > MAX_HEADER_BYTES) {
+        throw std::invalid_argument("header size is outside the v1 research envelope");
+    }
+    const Bytes params_bytes = EncodeParams(context.params);
+    Bytes nonce_bytes;
+    AppendLE64(nonce_bytes, nonce);
+    const Bytes header_digest = Sha3_384(header);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    const std::uint64_t total_iterations =
+        context.params.passes * (context.params.scratchpad_bytes / 8);
+    RecursiveArena arena(
+        context.params.scratchpad_bytes,
+        context.params.scratchpad_bytes / 2,
+        primary_numerator,
+        primary_denominator);
+    RecursiveRegenerator regenerator(
+        arena, context, header_digest, nonce_bytes, params_bytes, work_limit);
+    RepeatedRecursiveRegenerationResult result{};
+    result.primary_numerator = primary_numerator;
+    result.primary_denominator = primary_denominator;
+    result.work_limit = work_limit;
+    result.layout = arena.Layout();
+    Bytes transcript_input = DomainBytes(DOMAIN_REPEATED_RECURSIVE_REGENERATION);
+
+    auto boundary_commitment = [&](const BoundedReadMiss& miss,
+                                   const std::uint64_t* value) {
+        Bytes encoded = DomainBytes(DOMAIN_REPEATED_RECURSIVE_REGENERATION);
+        Append(encoded, context.seed);
+        Append(encoded, header_digest);
+        Append(encoded, nonce_bytes);
+        Append(encoded, params_bytes);
+        AppendLE64(encoded, miss.consumer);
+        encoded.push_back(miss.slot);
+        AppendLE64(encoded, miss.word);
+        for (const std::uint64_t item : state.registers) AppendLE64(encoded, item);
+        AppendLE64(encoded, state.accumulator);
+        if (value != nullptr) AppendLE64(encoded, *value);
+        return Sha3_384(encoded);
+    };
+
+    auto recover = [&](const BoundedReadMiss& miss) {
+        ++result.reconstruction_attempts;
+        const Bytes state_commitment = boundary_commitment(miss, nullptr);
+        try {
+            const std::uint64_t value = regenerator.ValueAt(miss.word, miss.consumer);
+            RecursiveBoundary boundary{
+                miss.consumer, miss.word, value, regenerator.calls,
+                regenerator.cache_hits, regenerator.completed_values,
+                regenerator.iterations, regenerator.maximum_depth,
+                regenerator.memo_peak_entries, regenerator.memo_evictions,
+                regenerator.memo_probes, regenerator.memo_shifted_bytes,
+                miss.slot, boundary_commitment(miss, &value),
+            };
+            Append(transcript_input, boundary.commitment);
+            if (!result.has_first) {
+                result.has_first = true;
+                result.first_reconstruction = boundary;
+            }
+            result.has_last = true;
+            result.last_reconstruction = boundary;
+            arena.Retain(miss.word, value);
+            ++result.reconstructed_misses;
+            return true;
+        } catch (const RecursiveRegenerationExhausted& error) {
+            result.has_exhaustion = true;
+            result.exhaustion = {
+                error.reason, miss.consumer, miss.word, error.stop, error.depth,
+                regenerator.iterations, miss.slot, state_commitment,
+            };
+            return false;
+        }
+    };
+
+    bool stopped{false};
+    for (std::uint64_t iteration{0}; iteration < total_iterations; ++iteration) {
+        while (true) {
+            arena.SetConsumer(iteration);
+            try {
+                ExecuteMixIteration(context, arena, state, iteration);
+                break;
+            } catch (const BoundedReadMiss& miss) {
+                if (!recover(miss)) {
+                    stopped = true;
+                    break;
+                }
+            }
+        }
+        if (stopped) break;
+        ++result.completed_iterations;
+    }
+
+    std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
+    if (!stopped) {
+        std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
+        for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
+            selector =
+                std::rotl(selector ^ state.registers[i & (REGISTER_COUNT - 1)],
+                          static_cast<int>((i + 1) & 63)) +
+                0x9E3779B97F4A7C15ULL + i;
+            while (true) {
+                arena.SetConsumer(total_iterations + i);
+                try {
+                    samples[i] = arena.Read(selector);
+                    break;
+                } catch (const BoundedReadMiss& miss) {
+                    if (!recover(miss)) {
+                        stopped = true;
+                        break;
+                    }
+                }
+            }
+            if (stopped) break;
+            selector ^= samples[i];
+        }
+    }
+
+    if (!stopped) {
+        Bytes encoded_registers;
+        encoded_registers.reserve(REGISTER_COUNT * 8);
+        for (const std::uint64_t value : state.registers) AppendLE64(encoded_registers, value);
+        Bytes encoded_accumulator;
+        AppendLE64(encoded_accumulator, state.accumulator);
+        Bytes encoded_samples;
+        encoded_samples.reserve(FINAL_SAMPLE_WORDS * 8);
+        for (const std::uint64_t value : samples) AppendLE64(encoded_samples, value);
+        Bytes commitment_input = DomainBytes(DOMAIN_COMMITMENT);
+        Append(commitment_input, params_bytes);
+        Append(commitment_input, encoded_registers);
+        Append(commitment_input, encoded_accumulator);
+        Append(commitment_input, encoded_samples);
+        const Bytes memory_commitment = Sha3_384(commitment_input);
+        Bytes result_input = DomainBytes(DOMAIN_RESULT);
+        Append(result_input, context.seed);
+        Append(result_input, header_digest);
+        Append(result_input, nonce_bytes);
+        Append(result_input, params_bytes);
+        Append(result_input, context.schedule_digest);
+        Append(result_input, context.dataset_digest);
+        Append(result_input, encoded_registers);
+        Append(result_input, encoded_accumulator);
+        Append(result_input, memory_commitment);
+        result.status = "exact_complete";
+        result.has_execution = true;
+        result.execution_result = {
+            Sha3_384(result_input), state.registers, context.schedule_digest,
+            context.dataset_digest, memory_commitment,
+        };
+    }
+    result.canonical_reads = arena.canonical_reads;
+    result.cache_hits = arena.cache_hits;
+    result.initial_zero_reads = arena.initial_zero_reads;
+    result.materialized_misses = arena.materialized_misses;
+    result.writes = arena.writes;
+    result.evictions = arena.evictions;
+    result.regeneration_calls = regenerator.calls;
+    result.regeneration_cache_hits = regenerator.cache_hits;
+    result.regeneration_completed_values = regenerator.completed_values;
+    result.regeneration_iterations = regenerator.iterations;
+    result.maximum_depth = regenerator.maximum_depth;
+    result.memo_peak_entries = regenerator.memo_peak_entries;
+    result.memo_evictions = regenerator.memo_evictions;
+    result.memo_probes = regenerator.memo_probes;
+    result.memo_shifted_bytes = regenerator.memo_shifted_bytes;
+    result.transcript_commitment = Sha3_384(transcript_input);
+    return result;
+}
+
 PackedReconstructionResult ProbePackedReconstruction(
     const EpochContext& context,
     const Bytes& header,
@@ -4268,6 +4482,115 @@ void PrintRecursiveRegeneration(
               << Hex(r.transcript_commitment) << "\"\n}\n";
 }
 
+void PrintRepeatedRecursiveRegeneration(
+    const Bytes& seed,
+    const Bytes& header,
+    std::uint64_t nonce,
+    const Params& params)
+{
+    const RepeatedRecursiveRegenerationResult r =
+        ProbeRepeatedRecursiveRegeneration(PrepareEpoch(seed, params), header, nonce);
+    const RecursiveLayout& l = r.layout;
+    auto print_boundary = [](const RecursiveBoundary& b) {
+        std::cout << "{\"consumer\": " << b.consumer
+                  << ", \"slot\": " << static_cast<unsigned>(b.slot)
+                  << ", \"word\": " << b.word
+                  << ", \"value\": " << b.value
+                  << ", \"regeneration_calls\": " << b.regeneration_calls
+                  << ", \"regeneration_cache_hits\": " << b.regeneration_cache_hits
+                  << ", \"regeneration_completed_values\": " << b.regeneration_completed_values
+                  << ", \"regeneration_iterations\": " << b.regeneration_iterations
+                  << ", \"maximum_depth\": " << b.maximum_depth
+                  << ", \"memo_peak_entries\": " << b.memo_peak_entries
+                  << ", \"memo_evictions\": " << b.memo_evictions
+                  << ", \"memo_probes\": " << b.memo_probes
+                  << ", \"memo_shifted_bytes\": " << b.memo_shifted_bytes
+                  << ", \"commitment\": \"" << Hex(b.commitment) << "\"}";
+    };
+    std::cout << "{\n"
+              << "  \"format\": \"soveroot-pow-v1-repeated-recursive-regeneration-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS REPEATED RECURSIVE REGENERATION; no completed proof, throughput, or gate result\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes
+              << ", \"scratchpad_bytes\": " << params.scratchpad_bytes
+              << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"status\": \"" << r.status << "\",\n"
+              << "  \"layout\": {\"budget_bytes\": " << l.budget_bytes
+              << ", \"fixed_state_reserve_bytes\": " << l.fixed_state_reserve_bytes
+              << ", \"arena_bytes\": " << l.arena_bytes
+              << ", \"write_bitmap_bytes\": " << l.write_bitmap_bytes
+              << ", \"primary_cache_capacity\": " << l.primary_cache_capacity
+              << ", \"primary_cache_bytes\": " << l.primary_cache_bytes
+              << ", \"frame_bytes\": " << l.frame_bytes
+              << ", \"frame_capacity\": " << l.frame_capacity
+              << ", \"frame_reserve_bytes\": " << l.frame_reserve_bytes
+              << ", \"memo_entry_bytes\": " << l.memo_entry_bytes
+              << ", \"memo_capacity\": " << l.memo_capacity
+              << ", \"memo_bytes\": " << l.memo_bytes
+              << ", \"unused_arena_bytes\": " << l.unused_arena_bytes
+              << ", \"admitted_bytes\": " << l.admitted_bytes << "},\n"
+              << "  \"primary_numerator\": " << r.primary_numerator << ",\n"
+              << "  \"primary_denominator\": " << r.primary_denominator << ",\n"
+              << "  \"work_limit\": " << r.work_limit << ",\n"
+              << "  \"completed_iterations\": " << r.completed_iterations << ",\n"
+              << "  \"canonical_reads\": " << r.canonical_reads << ",\n"
+              << "  \"cache_hits\": " << r.cache_hits << ",\n"
+              << "  \"initial_zero_reads\": " << r.initial_zero_reads << ",\n"
+              << "  \"materialized_misses\": " << r.materialized_misses << ",\n"
+              << "  \"writes\": " << r.writes << ",\n"
+              << "  \"evictions\": " << r.evictions << ",\n"
+              << "  \"reconstruction_attempts\": " << r.reconstruction_attempts << ",\n"
+              << "  \"reconstructed_misses\": " << r.reconstructed_misses << ",\n"
+              << "  \"regeneration_calls\": " << r.regeneration_calls << ",\n"
+              << "  \"regeneration_cache_hits\": " << r.regeneration_cache_hits << ",\n"
+              << "  \"regeneration_completed_values\": " << r.regeneration_completed_values << ",\n"
+              << "  \"regeneration_iterations\": " << r.regeneration_iterations << ",\n"
+              << "  \"maximum_depth\": " << r.maximum_depth << ",\n"
+              << "  \"memo_peak_entries\": " << r.memo_peak_entries << ",\n"
+              << "  \"memo_evictions\": " << r.memo_evictions << ",\n"
+              << "  \"memo_probes\": " << r.memo_probes << ",\n"
+              << "  \"memo_shifted_bytes\": " << r.memo_shifted_bytes << ",\n"
+              << "  \"first_reconstruction\": ";
+    if (r.has_first) print_boundary(r.first_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"last_reconstruction\": ";
+    if (r.has_last) print_boundary(r.last_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"exhaustion\": ";
+    if (r.has_exhaustion) {
+        const RepeatedRecursiveExhaustion& e = r.exhaustion;
+        std::cout << "{\"reason\": \"" << e.reason
+                  << "\", \"consumer\": " << e.consumer
+                  << ", \"slot\": " << static_cast<unsigned>(e.slot)
+                  << ", \"word\": " << e.word
+                  << ", \"stop_iteration\": " << e.stop_iteration
+                  << ", \"attempted_depth\": " << e.attempted_depth
+                  << ", \"regeneration_iterations\": " << e.regeneration_iterations
+                  << ", \"state_commitment\": \"" << Hex(e.state_commitment) << "\"}";
+    } else {
+        std::cout << "null";
+    }
+    std::cout << ",\n  \"transcript_commitment\": \""
+              << Hex(r.transcript_commitment) << "\",\n"
+              << "  \"execution_result\": ";
+    if (r.has_execution) {
+        std::cout << "{\"digest\": \"" << Hex(r.execution_result.digest)
+                  << "\", \"registers\": [";
+        for (std::size_t i{0}; i < r.execution_result.registers.size(); ++i) {
+            if (i != 0) std::cout << ", ";
+            std::ostringstream encoded;
+            encoded << std::hex << std::setfill('0') << std::setw(16)
+                    << r.execution_result.registers[i];
+            std::cout << "\"" << encoded.str() << "\"";
+        }
+        std::cout << "], \"schedule_digest\": \"" << Hex(r.execution_result.schedule_digest)
+                  << "\", \"dataset_digest\": \"" << Hex(r.execution_result.dataset_digest)
+                  << "\", \"memory_commitment\": \"" << Hex(r.execution_result.memory_commitment)
+                  << "\"}";
+    } else {
+        std::cout << "null";
+    }
+    std::cout << "\n}\n";
+}
+
 void PrintPackedReconstruction(
     const Bytes& seed,
     const Bytes& header,
@@ -4819,6 +5142,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "recursive-regenerate-repeated") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintRepeatedRecursiveRegeneration(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "recursive-regenerate-first") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -4959,6 +5290,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp bounded-reconstruct-indexed-gap SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp checkpoint-screen SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-first SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp recursive-regenerate-repeated SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

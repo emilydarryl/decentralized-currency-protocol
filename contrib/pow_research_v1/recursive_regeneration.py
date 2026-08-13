@@ -132,14 +132,26 @@ class _RegenerationExhausted(Exception):
 
 
 class _RecursiveArena:
-    def __init__(self, scratchpad_bytes: int, budget_bytes: int) -> None:
+    def __init__(
+        self,
+        scratchpad_bytes: int,
+        budget_bytes: int,
+        primary_numerator: int = PRIMARY_NUMERATOR,
+        primary_denominator: int = PRIMARY_DENOMINATOR,
+    ) -> None:
+        if primary_numerator <= 0 or primary_denominator <= 0:
+            raise ValueError("primary allocation ratio must be positive")
+        if primary_numerator > primary_denominator:
+            raise ValueError("primary allocation ratio cannot exceed one")
         self.word_count = scratchpad_bytes // 8
         bitmap_bytes = (self.word_count + 7) // 8
         arena_bytes = budget_bytes - FIXED_STATE_RESERVE_BYTES
         if arena_bytes <= bitmap_bytes + CACHE_ENTRY_BYTES + FRAME_BYTES + MEMO_ENTRY_BYTES:
             raise ValueError("budget cannot hold recursive regeneration structures")
         total_primary_slots = (arena_bytes - bitmap_bytes) // CACHE_ENTRY_BYTES
-        primary_capacity = total_primary_slots * PRIMARY_NUMERATOR // PRIMARY_DENOMINATOR
+        primary_capacity = total_primary_slots * primary_numerator // primary_denominator
+        if primary_capacity == 0:
+            raise ValueError("budget cannot hold one primary entry")
         primary_bytes = primary_capacity * CACHE_ENTRY_BYTES
         auxiliary_bytes = arena_bytes - bitmap_bytes - primary_bytes
         frame_capacity = min(

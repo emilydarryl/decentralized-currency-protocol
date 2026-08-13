@@ -82,6 +82,8 @@ The [time-checkpoint feasibility screen](pow-v1-time-checkpoint-screen.md) evalu
 
 The [first recursive-regeneration pilot](pow-v1-recursive-regeneration.md) now performs that core operation: an exact missing value is reconstructed through recursively requested earlier dependencies using a packed memo and a logical 20-frame reserve inside one half-scratch arena. The standard seed-zero run recovers its first miss after 25,281 replay iterations at depth 3 and then deliberately refuses without a digest at the next miss. Repeated recursive recovery, final exact outputs, allocation tuning, actual stack accounting, and physical-memory measurement remain incomplete.
 
+The [repeated recursive-regeneration pilot](pow-v1-repeated-recursive-regeneration.md) persists that memo across successive misses and screens five primary-cache allocations under a one-million-iteration replay ceiling. The 1/64 baseline recovers 51 misses and reaches iteration 983; the 1/32 split reaches the longest screened prefix at iteration 999. Every allocation exhausts the work ceiling without a digest. Hierarchical replay, exact final outputs, explicit physical stack accounting, and controlled memory measurement remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

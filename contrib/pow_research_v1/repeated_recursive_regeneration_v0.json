@@ -1,0 +1,40 @@
+{
+  "format": "soveroot-pow-v1-repeated-recursive-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS REPEATED RECURSIVE REGENERATION PILOT",
+  "question": "How far can persistent recursive memoization advance exact primary execution under a fixed replay-work limit and the logical half-scratch byte model?",
+  "algorithm": {
+    "primary_execution": "direct-mapped cache plus exact written-word bitmap",
+    "regeneration": "replay machine state from genesis and recursively request missing historical values at strictly earlier stop iterations",
+    "memo_reuse": "retain the four-way set-associative packed memo across successive primary misses",
+    "retry": "retain each exact recovered value in the primary cache and retry the interrupted read without partial state mutation",
+    "termination": "complete exactly or fail closed on work, depth, or packed-key exhaustion"
+  },
+  "byte_accounting": {
+    "fixed_state_reserve_bytes": 512,
+    "primary_entry_bytes": 16,
+    "frame_bytes": 104,
+    "maximum_frames": 20,
+    "memo_entry_bytes": 12,
+    "external_storage_bytes": 0
+  },
+  "limits": {
+    "cumulative_work_limit_iterations": 1000000,
+    "memo_word_bits": 15,
+    "memo_ways": 4,
+    "baseline_primary_allocation": "1/64 of possible 16-byte primary slots"
+  },
+  "allocation_screen": ["1/128", "1/64", "1/32", "1/16", "1/8"],
+  "interpretation": [
+    "multiple exact recoveries demonstrate persistent recursive memo reuse, not a completed reduced-memory proof",
+    "the one-million-iteration ceiling is a deterministic work boundary, not a profitability threshold",
+    "primary-cache and memo capacity interact non-monotonically because each allocation changes both miss locations and memo collisions",
+    "the Python and C++ prototypes reserve logical frame bytes but do not measure compiler or interpreter stack, allocator overhead, or peak resident memory",
+    "exact final outputs, controlled throughput, physical-memory measurements, and a second independent attack model remain required"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "every standard allocation exhausts the replay-work limit before an exact proof and physical peak memory is unmeasured"
+  },
+  "next_use": "reduce recursive replay amplification through checkpoint or hierarchical memo policies without exceeding the frozen half-scratch ceiling"
+}

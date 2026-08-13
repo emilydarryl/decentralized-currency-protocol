@@ -2,7 +2,7 @@
 
 Status: **WORKING DESIGN; NO PRODUCTION NETWORK; NO PROOF-OF-WORK GATE PASSED**
 
-Evidence cutoff: 2026-08-13, source revision `44b75ac3f79e5f9b1d88dad72445c65737833616`
+Evidence cutoff: 2026-08-13, source revision `5c629270024a028a537d97a8ad39f9345bfdeb19`
 
 This is the project-level index for decisions made, evidence collected, claims rejected, and work still required. Detailed specifications remain authoritative within their stated scope. This ledger exists so that a reader does not need private conversations to understand the project.
 
@@ -74,7 +74,7 @@ The first Stage B result now supplies an [optimistic offline cut-set lower bound
 
 The remaining Stage B [offline schedule search](pow-v1-offline-pebbling-schedule.md) is now complete. Across eight standard seeds, its compact layout needs a median 3,424,646 abstract producer replays and a 13,989,059-byte direct action stream; its conservative layout needs 6,419,925 replays and 26,101,215 bytes. These are results for one optimistic graph-only policy, not lower bounds, executable proofs, or claims that no compressed schedule exists.
 
-Stage C now has a fail-closed online probe, first and repeated flat-replay results, packed and paged layouts, an [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md), a [time-checkpoint feasibility screen](pow-v1-time-checkpoint-screen.md), and a [first recursive-regeneration pilot](pow-v1-recursive-regeneration.md). The recursive pilot recovers one exact historical value from nested dependencies within a logically byte-accounted half-scratch arena, then intentionally refuses without a proof at the next miss. The immediate milestone is repeated recursive recovery and allocation tuning. A later exact attacker must still account for every retained value, identity, version, checkpoint, register, queue, physical stack byte, allocator allowance, and peak resident byte within the ceiling.
+Stage C now has a fail-closed online probe, flat replay and dense-layout pilots, a time-checkpoint screen, and first and [repeated recursive regeneration](pow-v1-repeated-recursive-regeneration.md). Persistent memo reuse recovers 51 standard seed-zero misses under a one-million-iteration replay limit, and the five-point allocation screen reaches a longest exact prefix of 999 iterations. Every allocation still refuses without a proof. The immediate milestone is hierarchical replay or checkpointed recursion that reduces amplification. A later exact attacker must still account for every retained value, identity, version, checkpoint, register, queue, physical stack byte, allocator allowance, and peak resident byte within the ceiling.
 
 An offline trace, graph, planner, or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
 

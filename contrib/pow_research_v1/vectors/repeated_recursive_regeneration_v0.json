@@ -1,0 +1,37 @@
+{
+  "format": "soveroot-pow-v1-repeated-recursive-regeneration-vectors-v0",
+  "source_vectors": "v1.json",
+  "primary_numerator": 1,
+  "primary_denominator": 64,
+  "work_limit": 1000000,
+  "layout": {"budget_bytes": 4096, "fixed_state_reserve_bytes": 512, "arena_bytes": 3584, "write_bitmap_bytes": 128, "primary_cache_capacity": 3, "primary_cache_bytes": 48, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "memo_entry_bytes": 12, "memo_capacity": 108, "memo_bytes": 1296, "unused_arena_bytes": 32, "admitted_bytes": 4096},
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes"],
+  "boundary_fields": ["consumer", "slot", "word", "value", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "commitment"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [52, 109, 2, 104, 3, 104, 102, 3, 2, 2000000, 1792208, 207785, 1000000, 14, 80, 69177, 1930729, 0],
+      "first": [39, 0, 24, 10066105664916337243, 15121, 13621, 1500, 7560, 8, 72, 428, 14621, 0, "23c4d6de4daf52cea9b6de6283374ef517427cfa093c6f957ebc6e8586c130402fa2e01d634351a4642a8b736662225b"],
+      "last": [47, 1, 537, 17716306888567174032, 704682, 631545, 73137, 352340, 13, 80, 24299, 680303, 0, "d9c5fd91414ce8e51bc5548bbc65955309d801c51507e9a54de3955860d86ec3643f1ba1f4927949c2b6562ae8fc3f2b"],
+      "exhaustion": ["work_limit", 52, 1, 812, 17, 7, 1000000, "b317d98ff13077637f2c2078326405c655274e926b548ea84587f21704d851f1f1b3b821f2990f4e7d80bbf75be06b37"],
+      "transcript_commitment": "dcad3ab5a68e81d439402e63e876c0a3873b4486986195e07e8dc5de6b006e949646aacfdcae31c8e60e8fa495b05ca8"
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [51, 106, 2, 102, 2, 102, 98, 2, 1, 1999998, 1635609, 364383, 1000000, 14, 72, 121385, 1878529, 0],
+      "first": [39, 1, 19, 6157016928124120505, 289599, 237453, 52146, 144799, 12, 66, 17316, 272217, 0, "28a1c175229ea8eefd040b9daf7f0210d5f81ade424512e8ffd39b49199da2c24d56bb9e97bd29595dc6a2af99866e72"],
+      "last": [39, 1, 19, 6157016928124120505, 289599, 237453, 52146, 144799, 12, 66, 17316, 272217, 0, "28a1c175229ea8eefd040b9daf7f0210d5f81ade424512e8ffd39b49199da2c24d56bb9e97bd29595dc6a2af99866e72"],
+      "exhaustion": ["work_limit", 51, 1, 749, 9, 6, 1000000, "df45547978e19253772516bb27ca19511bfc3c25a0ab4df58a39b603ee504c0c461d7f841b996b0f158359bcf6a80b86"],
+      "transcript_commitment": "53597496a5861b176fe0b739965ad1ffcc1a869dc71e8b199ca50c771d51b3adf76bd3635686d03574cd5d6e3ff079b9"
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [61, 125, 1, 122, 2, 122, 119, 2, 1, 1999998, 1603872, 396119, 1000000, 16, 78, 131957, 1867949, 0],
+      "first": [47, 1, 454, 2273550289372204709, 1847557, 1481659, 365898, 923778, 16, 78, 121888, 1725591, 0, "9a28e7c636248657e9b35a220ce0d1ac1e1658b1e8a0192510126aa5c64840ffdae366e2f68c8c21261b9de81dde4199"],
+      "last": [47, 1, 454, 2273550289372204709, 1847557, 1481659, 365898, 923778, 16, 78, 121888, 1725591, 0, "9a28e7c636248657e9b35a220ce0d1ac1e1658b1e8a0192510126aa5c64840ffdae366e2f68c8c21261b9de81dde4199"],
+      "exhaustion": ["work_limit", 61, 0, 51, 21, 7, 1000000, "4122e9f920e249988f8384b2ee75d6a36a7700945b98c4694964822d651b1893fb38af183bf4b35d64845f6b86700449"],
+      "transcript_commitment": "cc5bccce570e7ffd351d85110829f1c5370fac5f648752d96669a94bfff1238ed4b161463c2056c10ecb0206495530b2"
+    }
+  ]
+}

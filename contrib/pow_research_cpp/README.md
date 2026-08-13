@@ -169,6 +169,15 @@ python3 contrib/pow_research_cpp/render_recursive_regeneration_report_v1.py \
   --matrix build/pow-v1-recursive-regeneration.json \
   --method contrib/pow_research_v1/recursive_regeneration_v0.json \
   --label "local" --output build/pow-v1-recursive-regeneration.md
+
+python3 test/pow_research/run_cpp_repeated_recursive_regeneration_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/repeated_recursive_regeneration_v1.py \
+  --profile standard --seeds 1 --output build/pow-v1-repeated-recursive-regeneration.json
+python3 contrib/pow_research_cpp/render_repeated_recursive_regeneration_report_v1.py \
+  --matrix build/pow-v1-repeated-recursive-regeneration.json \
+  --method contrib/pow_research_v1/repeated_recursive_regeneration_v0.json \
+  --label "local" --output build/pow-v1-repeated-recursive-regeneration.md
 ```
 
 The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.
