@@ -1,0 +1,45 @@
+{
+  "format": "soveroot-pow-v1-packed-checkpoint-reconstruction-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS PACKED CHECKPOINT RECONSTRUCTION METHOD",
+  "question": "Can bitmap-ranked packed replay checkpoints extend exact bounded reconstruction within the same half-scratch arena?",
+  "arena": {
+    "budget_fraction": "1/2 of declared scratchpad",
+    "allocation_count": 1,
+    "fixed_state_reserve_bytes": 512,
+    "canonical_write_bitmap": "one bit per logical scratch word",
+    "primary_cache_fraction": "1/4 of bytes remaining after bitmaps and rank directory",
+    "replay_membership": "one bit per logical scratch word",
+    "rank_directory": "16-bit Fenwick tree over 256-word chunks",
+    "replay_values": "eight-byte values in ascending logical-word order"
+  },
+  "policy": [
+    "stop before state mutation at every missing materialized read",
+    "clear only the reserved replay membership bitmap and rank directory",
+    "replay canonically from iteration zero while storing distinct values in word order",
+    "use bitmap rank to find a word's packed value and shift later values on first insertion",
+    "require replayed registers and accumulator to match the live state",
+    "retain the recovered value in the primary cache and retry",
+    "refuse without output when the packed value area fills"
+  ],
+  "accounting": [
+    "successful and attempted replay iterations",
+    "rank-directory and bitmap probes",
+    "bytes shifted by packed insertions",
+    "maximum packed values and reconstruction depth",
+    "first, last, transcript, and exhaustion commitments"
+  ],
+  "limitations": [
+    "the packed array shifts later values on each first insertion, causing substantial byte movement",
+    "every reconstruction still replays from iteration zero",
+    "there are no durable time checkpoints or recursive eviction recovery",
+    "the 512-byte fixed reserve is logical rather than measured process high water",
+    "the deterministic screen is not a throughput benchmark or lower bound",
+    "the standard pilot does not reach an exact proof output"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "capacity and exact prefix improve, but the evaluator still exhausts before a proof and physical memory is unmeasured"
+  },
+  "next_use": "replace shifting packed insertion with a byte-accounted indexed or block-gap layout, or add bounded time checkpoints"
+}
