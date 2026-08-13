@@ -1,0 +1,38 @@
+{
+  "format": "soveroot-pow-v1-offline-pebbling-schedule-vectors-v0",
+  "tuple_fields": ["canonical_read_misses", "replayed_producers", "maximum_replay_depth", "schedule_bytes", "schedule_commitment"],
+  "profiles": {
+    "smoke": {
+      "budget_bytes": 4096,
+      "mix_iterations": 1024,
+      "cases": [
+        {
+          "seed_index": 0,
+          "graph_commitment": "1d6c204caeb0a51eeed433ada7645b2c6b26e67055ba25e3843e1e6a3f98618e97aedf893c6aa04b53538d358dedfca8",
+          "compact": [132, 331, 5, 2584, "e9493766e78833424e127bce5f7a63d7eeb98f5c6df49b36c5bb3761d4f3b1d9a9a2b4ae23863edfdb1f3c006f26d390"],
+          "conservative": [236, 719, 7, 5072, "d7a4853aa5c4d045bd947394173bb1346e85151ac18cbc24283155fed210ac6bf9eba8f1a71cee5d58dafd63a8538fc8"]
+        },
+        {
+          "seed_index": 1,
+          "graph_commitment": "3af422ca0bd7ef522553d9af791df7ca241028a03fa77b2e10c589e11f935f14938e798fd9f4a3a96bd5326ad10ad82f",
+          "compact": [127, 318, 8, 2487, "d56f4fa73ac4ea1ba5b421486b05d07548fed31f5bc76fa6001f4243672dc6eaee1c34cf7886e4f0063e8c4129dd7a48"],
+          "conservative": [245, 768, 8, 5349, "a29c0c568a50a41b0b1ac83f39f3e4dc1fd653803c14adfc748d461141071b9f7b676b81ad19ff8b33028f9edcaaa872"]
+        }
+      ]
+    },
+    "standard": {
+      "budget_bytes": 131072,
+      "mix_iterations": 98304,
+      "cases": [
+        {"seed_index": 0, "graph_commitment": "e7abc748fb9c88bf66767ca532915fefb93700c8d6efe92a695d4b22b5310cf4df66ae99ff8032c5082f802c866a44d9", "compact": [32098, 3346603, 29, 13675366, "9103944b472f9aa1b97c7f884ff781ef174ba59d57f437f3ce19c857f09e43d4fbfc2b624cea6c2e0fde7cd81e0627ed"], "conservative": [46778, 6296444, 32, 25606850, "6c4297cdb82a3454492e5f6d40eed23f76dbc3f2e6067ad2a96ebed3a8157a7fe90cbfac4164572ce0a133836fb1fc27"]},
+        {"seed_index": 1, "graph_commitment": "3e2d051eeae07ef92ef16dcdfc46df0bce00a6cee77c58cb5cd5352541971ba2e9d5149672f9be7a04e7b82df6d0b7bb", "compact": [32347, 3394645, 28, 13869775, "e47c4fce6d3813d559bdede60fca25cbb3145592fc624efc3e175c70d5748e8a092100290af459d8ce06d5354cc153c0"], "conservative": [46776, 6319951, 29, 25700860, "5ee72a3f42697579a3bcfbecc700731b1cc661af2ffb7bb9e2b0b2190dcdac433a622602dc6aa7b340d97f068cc04617"]},
+        {"seed_index": 2, "graph_commitment": "b9f5e3e14f93937f7ac92b3e957e2f02a0004c6c95db49b0a28558ceba805df4c696e491429a2517b33e340ce275f469", "compact": [32227, 3394320, 28, 13867395, "c259cc692f38e264f4deaeb5f764689f2b6f29300fbcdc7e1c4e06c83bc8c542c4ff7284c690a07a081c53931d6a165b"], "conservative": [46716, 6313562, 28, 25674764, "099ab6d991dc2795fc791eaa104937d9b4fac0b0370962f1213e4e8eefdf639edfd706e489b3e00d2e505207234068b5"]},
+        {"seed_index": 3, "graph_commitment": "8ca669017a77237bef9fc88f6c4bbb822e67a3dede8ca63ca9e6f6978b0eecdba0ef402baa829c7db981c42b7d31ad4e", "compact": [32352, 3420285, 26, 13972380, "c65d564642e0e4bcb431e3f78946fa2f62f56f894b3cd0e1a91534166fabf4b0d1954ee6cd8fdadefd2ab41290876a7b"], "conservative": [46895, 6367108, 28, 25890559, "16f3feabdd98d91b3c1bc400e60ee40dcc017bbb05132045812452846a3319bf9b52a783db8a6f6c38228997a3ac54b4"]},
+        {"seed_index": 4, "graph_commitment": "6d6a359d418ed01cbda80cabb58ff850785b6c1403ef20eeb1120f1c96fd6c17d63bd9540a5eeebd2b19908fef72a868", "compact": [32075, 3471070, 26, 14173027, "df2dfe65d4813c95c7d33e326ac9c53f8b402a01134ea3f13bde639779e8f378e3e87cdfdb28665193fca5b087bcc60a"], "conservative": [46803, 6564238, 28, 26678251, "68284bbf2603c05a20e6d9a26ddc9a0f7b583bcc295f3bbbfbda9dba4a8eaf609dedd2167086adf335fef05db353f3aa"]},
+        {"seed_index": 5, "graph_commitment": "ff7108eaf29e239164d6fcd5a9f5782d65bc842304e3959531d41d78bcc228a9e7afc4732b4632b39857e5a58ac8d441", "compact": [32425, 3620196, 27, 14772681, "6d7a52df786776d54da8109da72c788c120e4fde97852ad4377756c0c9b67ad29f9e0c1b2d89b1842516adc4cc4a7060"], "conservative": [46695, 6649954, 29, 27020143, "a0b3199508c224bd7606e3ed836cd00b5a004a68ea2143023b8055e6d205201882d6469b6538f66ec4ee237fc1fcce67"]},
+        {"seed_index": 6, "graph_commitment": "4373f0359c94d3e181907e2a02be7a8d46964b3d58f459805f9fe36d7fc3d8719e3b8ebbe3700acf35f0216b521b9d3c", "compact": [32182, 3429007, 26, 14005738, "fd5473b9ff60b50beb536cd6d543bf78340cbb012ac0da43d4542490abe3f56a5c6c0da1f5b0429ecd47408f17d580df"], "conservative": [46759, 6472742, 30, 26311871, "baf38685c95d8b6c7c0bbe8141137d8e32458fe18b753e4eca9fbb1a8adcbd772f3d780bd7a1bccf012f4315d83014e8"]},
+        {"seed_index": 7, "graph_commitment": "d72587a532a981c5ab04293285fe2b0dc3814bb28ad5c6a6a6bbde71cda9acd285f6d838073ba391e45b20888877eae3", "compact": [32081, 3556030, 27, 14512921, "146259d4a85487096b28f113c5c756251cca0f025f8c4dc5d5f98f92a62fb9da2cc6220e29bfd00a420394b5b9d0d2e4"], "conservative": [46440, 6530862, 29, 26541480, "d115b5244a8aa4c236b077d6a42b2fe8f822e2c94bfbd953895c6c8010c3cb9e2516b1fabf502e623bd1bec3f5559e1c"]}
+      ]
+    }
+  }
+}

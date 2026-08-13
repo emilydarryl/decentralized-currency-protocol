@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-12",
-  "evidence_cutoff_revision": "584cc5f8b94534827f88b8fa7d689189fa25d2c0",
+  "evidence_cutoff_revision": "a08f85998ad8fa20cd90306f2b82090a5b087210",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -92,13 +92,24 @@
       "id": "pow_v1_budgeted_cache",
       "pull_request": 24,
       "conclusion": "Metadata-aware caches leave material misses even for an unattainable oracle, but miss counts are not executable recomputation proofs."
+    },
+    {
+      "id": "pow_v1_versioned_graph",
+      "pull_request": 26,
+      "conclusion": "Independent implementations commit to exact scratch read-from generations and expose byte-accounted graph layouts; this is offline structure, not an attack."
+    },
+    {
+      "id": "pow_v1_pebbling_lower_bound",
+      "pull_request": 27,
+      "conclusion": "An optimistic cut-set argument establishes nonzero replay floors under half-scratch value capacity but is not an executable schedule."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_offline_pebbling_schedule_search",
+    "id": "pow_v1_online_bounded_evaluator_prototype",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
-    "required_outcome": "Search graph-only pebbling schedules and report recomputed nodes, dependency depth, peak retained values, and encoded schedule bytes before attempting an online evaluator."
+    "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
+    "required_outcome": "Design a compact online rule and historical-state reconstruction, then reproduce exact outputs while charging all attack state inside the half-scratch ceiling."
   }
 }

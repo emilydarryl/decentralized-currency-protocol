@@ -42,4 +42,4 @@ Fixed per-seed bounds are preserved in [`pebbling_lower_bound_v0.json`](../contr
 
 The first Stage B result supplies a deterministic floor for reviewing later schedules. It neither passes nor rejects the time-memory gate and supplies no throughput estimate.
 
-The next Stage B step is to search graph-only pebbling schedules, count their recomputed nodes, dependency depth, peak retained values, and encoded schedule bytes, and compare them with this floor. Only after that should Stage C attempt an exact online evaluator that fits all attack state inside the half-memory ceiling without reading the graph, a trace, an oracle schedule, external storage, or a full transient scratchpad.
+The follow-on [graph-only schedule search](pow-v1-offline-pebbling-schedule.md) now counts recomputed nodes, dependency depth, peak retained and transient values, and encoded schedule bytes against this floor. Stage C must attempt an exact online evaluator that fits all attack state inside the half-memory ceiling without reading the graph, a trace, an oracle schedule, external storage, or a full transient scratchpad.
