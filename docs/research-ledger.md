@@ -68,9 +68,11 @@ Every gate must pass independently. A favorable cache statistic, slow naive atta
 
 ## Immediate next experiment
 
-Stage A of the [v1 bounded-pebbling plan](pow-v1-bounded-pebbling-plan.md) now has an exact, independently implemented [versioned scratch-dependency graph](pow-v1-versioned-graph.md), fixed smoke and standard commitments, and packed and conservative byte models. The graph is an offline diagnostic approximately 61 times larger than the standard half-scratch budget even under its optimistic layout, so it cannot be retained by an eligible attacker.
+Stage A of the [v1 bounded-pebbling plan](pow-v1-bounded-pebbling-plan.md) has an exact, independently implemented [versioned scratch-dependency graph](pow-v1-versioned-graph.md), fixed smoke and standard commitments, and packed and conservative byte models. The graph is an offline diagnostic approximately 61 times larger than the standard half-scratch budget even under its optimistic layout, so it cannot be retained by an eligible attacker.
 
-The immediate next milestone is the Stage B offline pebbling lower bound. It must use the committed graph to explore schedules under explicit byte costs while labeling future knowledge and planner memory separately. A later online attacker must reproduce canonical outputs while accounting for retained values, identifiers, versions, checkpoints, register state, work queues, stack, allocator overhead, and peak resident memory within an explicit budget.
+The first Stage B result now supplies an [optimistic offline cut-set lower bound](pow-v1-pebbling-lower-bound.md). At the strongest standard-profile cuts, the median lower bound is 6,984 additional producer executions for compact 16-byte entries and 9,715 for conservative 24-byte entries. This is deliberately weaker than a real attack: it grants perfect future knowledge, zero-byte control state, and free dependency and machine-state reconstruction.
+
+The immediate next milestone is the remaining Stage B offline schedule search, with recomputation depth and encoded schedule bytes reported explicitly. Stage C must then produce an exact online attacker that reproduces canonical outputs while accounting for retained values, identities, versions, checkpoints, register state, work queues, stack, allocator overhead, and peak resident memory within an explicit budget, without loading the offline graph or oracle schedule.
 
 An offline trace, graph, planner, or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
 

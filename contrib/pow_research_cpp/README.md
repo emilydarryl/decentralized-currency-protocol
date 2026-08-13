@@ -81,6 +81,19 @@ python3 contrib/pow_research_cpp/versioned_graph_v1.py \
 
 The graph uses the full ordinary scratchpad and is much larger than the attack budget. It is deterministic input for offline planning, not a valid reduced-memory proof or gate result.
 
+The Stage B cut-set lower bound scans that graph under compact and conservative value-entry costs:
+
+```bash
+python3 contrib/pow_research_cpp/pebbling_lower_bound_v1.py \
+  --profile standard --output build/pow-v1-pebbling-lower-bound.json
+python3 contrib/pow_research_cpp/render_pebbling_lower_bound_report_v1.py \
+  --matrix build/pow-v1-pebbling-lower-bound.json \
+  --method contrib/pow_research_v1/pebbling_lower_bound_v0.json \
+  --label "local" --output build/pow-v1-pebbling-lower-bound.md
+```
+
+The planner is deliberately more powerful than any executable miner: it sees the full future graph and charges zero bytes for its schedule and control state. Its result is only a lower bound on replay work.
+
 The standard matrix changes one parameter family at a time around a named baseline and measures eight deterministic seeds. It preserves raw per-attempt nanosecond samples, separates epoch preparation from nonce evaluation, reports an explicit working-set estimate, and summarizes cross-seed spread in parts per million. Published comparisons must use the same source revision, profile, compiler flags, power mode, and thermal conditions.
 
 Each C++ attempt also reports four observational phases: input/register setup, scratchpad initialization, VM execution, and final hashing. These timers do not alter v0 semantics or outputs. Their purpose is to detect when setup or finalization masks the workload the experiment intends to study.

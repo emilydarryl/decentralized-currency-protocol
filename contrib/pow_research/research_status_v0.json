@@ -95,9 +95,10 @@
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_offline_pebbling_lower_bound",
+    "id": "pow_v1_offline_pebbling_schedule_search",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
-    "required_outcome": "Derive and evaluate offline pebbling schedules with planner resources and future knowledge disclosed separately from executable attack state."
+    "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
+    "required_outcome": "Search graph-only pebbling schedules and report recomputed nodes, dependency depth, peak retained values, and encoded schedule bytes before attempting an online evaluator."
   }
 }

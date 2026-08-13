@@ -30,6 +30,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 - [pow-v1-dependency-batch-screen.md](docs/pow-v1-dependency-batch-screen.md) defines exact dependency tracing and the predeclared 4,096-attempt batch-amortization diagnostic.
 - [pow-v1-bounded-pebbling-plan.md](docs/pow-v1-bounded-pebbling-plan.md) predeclares the exact byte-accounted, no-spill attack required to assess the half-memory gate.
 - [pow-v1-versioned-graph.md](docs/pow-v1-versioned-graph.md) documents the exact read-from graph, deterministic commitments, and byte models completed for bounded-pebbling Stage A.
+- [pow-v1-pebbling-lower-bound.md](docs/pow-v1-pebbling-lower-bound.md) documents the optimistic offline cut-set bound completed for bounded-pebbling Stage B.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.

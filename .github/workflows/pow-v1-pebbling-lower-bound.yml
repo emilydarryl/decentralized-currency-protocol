@@ -1,0 +1,67 @@
+name: PoW v1 offline pebbling lower bound
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Graph profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+      seeds:
+        description: Deterministic seed count (1-128)
+        required: true
+        default: "8"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  lower-bound:
+    name: Optimistic cut-set lower bound
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Verify research tests
+        shell: bash
+        run: python3 -m unittest test.pow_research.test_versioned_graph_v1 test.pow_research.test_pebbling_lower_bound_v1
+
+      - name: Collect lower-bound matrix
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/pebbling_lower_bound_v1.py \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build-pow-v1-pebbling-lower-bound.json
+          python3 -m json.tool build-pow-v1-pebbling-lower-bound.json >/dev/null
+
+      - name: Render lower-bound report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_pebbling_lower_bound_report_v1.py \
+            --matrix build-pow-v1-pebbling-lower-bound.json \
+            --method contrib/pow_research_v1/pebbling_lower_bound_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build-pow-v1-pebbling-lower-bound.md
+
+      - name: Preserve raw matrix and report
+        uses: actions/upload-artifact@v7
+        with:
+          name: pow-v1-pebbling-lower-bound-${{ github.run_id }}
+          path: |
+            build-pow-v1-pebbling-lower-bound.json
+            build-pow-v1-pebbling-lower-bound.md
+          if-no-files-found: error
+          retention-days: 14
