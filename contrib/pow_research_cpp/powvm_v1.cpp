@@ -49,6 +49,8 @@ constexpr char DOMAIN_RECONSTRUCTION[] = "Soveroot/PowResearch/BoundedReconstruc
 constexpr char DOMAIN_REPEATED_TRANSCRIPT[] = "Soveroot/PowResearch/RepeatedReconstruction/v1\0";
 constexpr char DOMAIN_PACKED_RECONSTRUCTION[] = "Soveroot/PowResearch/PackedReconstruction/v1\0";
 constexpr char DOMAIN_PACKED_TRANSCRIPT[] = "Soveroot/PowResearch/PackedTranscript/v1\0";
+constexpr char DOMAIN_PAGED_RECONSTRUCTION[] = "Soveroot/PowResearch/PagedGapReconstruction/v1\0";
+constexpr char DOMAIN_PAGED_TRANSCRIPT[] = "Soveroot/PowResearch/PagedGapTranscript/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -56,6 +58,9 @@ constexpr std::size_t REPLAY_DENOMINATOR{8};
 constexpr std::size_t PACKED_RANK_CHUNK_WORDS{256};
 constexpr std::size_t PACKED_PRIMARY_NUMERATOR{1};
 constexpr std::size_t PACKED_PRIMARY_DENOMINATOR{4};
+constexpr std::size_t PAGED_SLOTS{32};
+constexpr std::size_t PAGED_BYTES{PAGED_SLOTS * 8};
+constexpr std::size_t PAGED_METADATA_BYTES{4};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -288,6 +293,45 @@ struct PackedReconstructionResult {
     PackedExhaustionBoundary exhaustion{};
     ExecutionResult execution_result{};
     PackedLayout layout{};
+    BoundedReconstructionStats stats{};
+};
+
+struct PagedLayout {
+    std::size_t budget_bytes{0}, fixed_state_reserve_bytes{0}, arena_bytes{0};
+    std::size_t canonical_write_bitmap_bytes{0}, primary_cache_capacity{0}, primary_cache_bytes{0};
+    std::size_t replay_bitmap_bytes{0}, rank_directory_bytes{0}, page_slots{0};
+    std::size_t max_pages{0}, page_directory_bytes{0}, page_count_bytes{0};
+    std::size_t replay_value_slots{0}, replay_value_bytes{0}, unused_arena_bytes{0}, admitted_bytes{0};
+};
+
+struct PagedBoundary {
+    std::uint64_t consumer{0}, word{0}, value{0}, replayed_iterations{0};
+    std::uint64_t replay_peak_values{0}, replay_peak_pages{0}, replay_rank_probes{0};
+    std::uint64_t replay_directory_probes{0}, replay_shifted_bytes{0};
+    std::uint8_t slot{0};
+    Bytes commitment;
+};
+
+struct PagedExhaustionBoundary {
+    std::uint64_t consumer{0}, word{0}, replay_completed_iterations{0};
+    std::uint64_t replay_occupied_values{0}, replay_allocated_pages{0}, replay_rank_probes{0};
+    std::uint64_t replay_directory_probes{0}, replay_shifted_bytes{0};
+    std::uint8_t slot{0};
+    Bytes state_commitment;
+};
+
+struct PagedReconstructionResult {
+    std::string status{"refused_paged_gap_exhausted"};
+    std::uint64_t completed_iterations{0}, reconstruction_attempts{0}, reconstructed_misses{0};
+    std::uint64_t successful_replayed_iterations{0}, attempted_replay_iterations{0};
+    std::uint64_t cumulative_rank_probes{0}, cumulative_directory_probes{0}, cumulative_shifted_bytes{0};
+    std::uint64_t max_replay_peak_values{0}, max_replay_peak_pages{0}, max_reconstruction_depth{0};
+    bool all_replay_states_matched{true}, has_first{false}, has_exhaustion{false};
+    Bytes transcript_commitment;
+    PagedBoundary first_reconstruction{}, last_reconstruction{};
+    PagedExhaustionBoundary exhaustion{};
+    ExecutionResult execution_result{};
+    PagedLayout layout{};
     BoundedReconstructionStats stats{};
 };
 
@@ -1470,6 +1514,240 @@ private:
     PackedReconstructionArena& m_arena;
 };
 
+class PagedReplayExhausted final : public std::runtime_error {
+public:
+    PagedReplayExhausted() : std::runtime_error("paged replay has no free physical page") {}
+};
+
+class PagedReconstructionArena {
+public:
+    PagedReconstructionArena(std::size_t scratchpad_bytes, std::size_t budget_bytes)
+        : m_word_count(scratchpad_bytes / 8)
+    {
+        m_layout.budget_bytes = budget_bytes;
+        m_layout.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_layout.arena_bytes = budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_layout.canonical_write_bitmap_bytes = (m_word_count + 7) / 8;
+        m_layout.replay_bitmap_bytes = m_layout.canonical_write_bitmap_bytes;
+        m_rank_chunks = (m_word_count + PACKED_RANK_CHUNK_WORDS - 1) / PACKED_RANK_CHUNK_WORDS;
+        m_layout.rank_directory_bytes = (m_rank_chunks + 1) * 2;
+        const std::size_t base = m_layout.arena_bytes - 2 * m_layout.canonical_write_bitmap_bytes - m_layout.rank_directory_bytes;
+        m_layout.primary_cache_bytes = base * PACKED_PRIMARY_NUMERATOR / PACKED_PRIMARY_DENOMINATOR;
+        m_layout.primary_cache_bytes -= m_layout.primary_cache_bytes % BOUNDED_CACHE_ENTRY_BYTES;
+        m_layout.primary_cache_capacity = m_layout.primary_cache_bytes / BOUNDED_CACHE_ENTRY_BYTES;
+        const std::size_t replay_budget = base - m_layout.primary_cache_bytes;
+        m_layout.page_slots = PAGED_SLOTS;
+        m_layout.max_pages = replay_budget / (PAGED_BYTES + PAGED_METADATA_BYTES);
+        m_layout.page_directory_bytes = m_layout.max_pages * 2;
+        m_layout.page_count_bytes = m_layout.max_pages * 2;
+        m_layout.replay_value_slots = m_layout.max_pages * PAGED_SLOTS;
+        m_layout.replay_value_bytes = m_layout.max_pages * PAGED_BYTES;
+        m_layout.unused_arena_bytes = replay_budget - m_layout.page_directory_bytes - m_layout.page_count_bytes - m_layout.replay_value_bytes;
+        m_layout.admitted_bytes = budget_bytes;
+        if (m_layout.primary_cache_capacity == 0 || m_layout.max_pages == 0) {
+            throw std::invalid_argument("budget cannot hold paged replay and primary cache");
+        }
+        m_primary_offset = m_layout.canonical_write_bitmap_bytes;
+        m_replay_bitmap_offset = m_primary_offset + m_layout.primary_cache_bytes;
+        m_rank_offset = m_replay_bitmap_offset + m_layout.replay_bitmap_bytes;
+        m_order_offset = m_rank_offset + m_layout.rank_directory_bytes;
+        m_count_offset = m_order_offset + m_layout.page_directory_bytes;
+        m_values_offset = m_count_offset + m_layout.page_count_bytes;
+        m_arena.resize(m_layout.arena_bytes, 0);
+        for (std::size_t slot{0}; slot < m_layout.primary_cache_capacity; ++slot) {
+            WriteLE64(m_arena.data() + PrimaryOffset(slot), EmptyTag());
+        }
+        m_stats.budget_bytes = budget_bytes;
+        m_stats.fixed_state_reserve_bytes = BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        m_stats.arena_bytes = m_layout.arena_bytes;
+        m_stats.write_bitmap_bytes = m_layout.canonical_write_bitmap_bytes;
+        m_stats.cache_entry_bytes = BOUNDED_CACHE_ENTRY_BYTES;
+        m_stats.primary_cache_capacity = m_layout.primary_cache_capacity;
+        m_stats.primary_cache_bytes = m_layout.primary_cache_bytes;
+        m_stats.replay_capacity = m_layout.replay_value_slots;
+        m_stats.replay_workspace_bytes = m_layout.replay_bitmap_bytes + m_layout.rank_directory_bytes + m_layout.page_directory_bytes + m_layout.page_count_bytes + m_layout.replay_value_bytes;
+        m_stats.unused_arena_bytes = m_layout.unused_arena_bytes;
+        m_stats.admitted_bytes = budget_bytes;
+    }
+
+    void SetConsumer(std::uint64_t consumer) { m_consumer = consumer; m_slot = 0; }
+    std::uint64_t Read(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        const std::uint8_t slot = m_slot++;
+        ++m_stats.canonical_reads;
+        const std::size_t offset = PrimaryOffset(word % m_layout.primary_cache_capacity);
+        if (ReadLE64(m_arena.data() + offset) == word) { ++m_stats.cache_hits; return ReadLE64(m_arena.data() + offset + 8); }
+        if ((m_arena[word / 8] & (std::uint8_t{1} << (word & 7))) == 0) { ++m_stats.initial_zero_reads; return 0; }
+        ++m_stats.materialized_misses;
+        throw BoundedReadMiss{0, m_consumer, slot, word};
+    }
+    void Write(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        StorePrimary(word, value);
+        m_arena[word / 8] |= std::uint8_t{1} << (word & 7);
+        ++m_stats.writes;
+    }
+    void Retain(std::uint64_t word, std::uint64_t value) { StorePrimary(static_cast<std::size_t>(word), value); }
+    void ResetReplay()
+    {
+        std::fill(m_arena.begin() + static_cast<std::ptrdiff_t>(m_replay_bitmap_offset),
+                  m_arena.begin() + static_cast<std::ptrdiff_t>(m_values_offset), std::uint8_t{0});
+        m_logical_pages = m_allocated_pages = m_distinct = 0;
+        m_peak_values = m_peak_pages = m_rank_probes = m_directory_probes = m_shifted_bytes = 0;
+    }
+    std::uint64_t ReplayRead(std::uint64_t selector)
+    {
+        const std::size_t word = Word(selector);
+        if (!Present(word)) return 0;
+        const Location location = Locate(Rank(word), false);
+        return ReadLE64(m_arena.data() + PageOffset(location.page, location.local));
+    }
+    std::uint64_t ReplayReadExact(std::uint64_t word)
+    {
+        const std::size_t exact = static_cast<std::size_t>(word);
+        if (!Present(exact)) throw std::logic_error("materialized word is absent from paged replay state");
+        const Location location = Locate(Rank(exact), false);
+        return ReadLE64(m_arena.data() + PageOffset(location.page, location.local));
+    }
+    void ReplayWrite(std::uint64_t selector, std::uint64_t value)
+    {
+        const std::size_t word = Word(selector);
+        const bool present = Present(word);
+        const std::size_t rank = Rank(word);
+        Location location = m_logical_pages == 0 ? AllocateFirst() : Locate(rank, true);
+        if (present) { WriteLE64(m_arena.data() + PageOffset(location.page, location.local), value); return; }
+        std::size_t count = Count(location.page);
+        if (count == PAGED_SLOTS) { location = Split(location); count = Count(location.page); }
+        const std::size_t move_bytes = (count - location.local) * 8;
+        if (move_bytes != 0) {
+            auto first = m_arena.begin() + static_cast<std::ptrdiff_t>(PageOffset(location.page, location.local));
+            auto last = first + static_cast<std::ptrdiff_t>(move_bytes);
+            std::copy_backward(first, last, last + 8);
+            m_shifted_bytes += move_bytes;
+        }
+        WriteLE64(m_arena.data() + PageOffset(location.page, location.local), value);
+        SetCount(location.page, count + 1);
+        m_arena[m_replay_bitmap_offset + word / 8] |= std::uint8_t{1} << (word & 7);
+        RankAdd(word);
+        ++m_distinct;
+        m_peak_values = std::max(m_peak_values, m_distinct);
+    }
+    const PagedLayout& Layout() const { return m_layout; }
+    const BoundedReconstructionStats& Stats() const { return m_stats; }
+    std::uint64_t Distinct() const { return m_distinct; }
+    std::uint64_t AllocatedPages() const { return m_allocated_pages; }
+    std::uint64_t PeakValues() const { return m_peak_values; }
+    std::uint64_t PeakPages() const { return m_peak_pages; }
+    std::uint64_t RankProbes() const { return m_rank_probes; }
+    std::uint64_t DirectoryProbes() const { return m_directory_probes; }
+    std::uint64_t ShiftedBytes() const { return m_shifted_bytes; }
+
+private:
+    struct Location { std::size_t position, page, local; };
+    static constexpr std::uint64_t EmptyTag() { return std::numeric_limits<std::uint64_t>::max(); }
+    std::size_t Word(std::uint64_t selector) const { return static_cast<std::size_t>(selector) & (m_word_count - 1); }
+    std::size_t PrimaryOffset(std::size_t slot) const { return m_primary_offset + slot * BOUNDED_CACHE_ENTRY_BYTES; }
+    std::size_t PageOffset(std::size_t page, std::size_t slot = 0) const { return m_values_offset + (page * PAGED_SLOTS + slot) * 8; }
+    std::uint16_t U16(std::size_t offset) const { return static_cast<std::uint16_t>(m_arena[offset]) | static_cast<std::uint16_t>(m_arena[offset + 1] << 8); }
+    void SetU16(std::size_t offset, std::uint16_t value) { m_arena[offset] = static_cast<std::uint8_t>(value); m_arena[offset + 1] = static_cast<std::uint8_t>(value >> 8); }
+    std::size_t Order(std::size_t position) { ++m_directory_probes; return U16(m_order_offset + position * 2); }
+    std::size_t Count(std::size_t page) { ++m_directory_probes; return U16(m_count_offset + page * 2); }
+    void SetCount(std::size_t page, std::size_t count) { SetU16(m_count_offset + page * 2, static_cast<std::uint16_t>(count)); }
+    bool Present(std::size_t word) const { return (m_arena[m_replay_bitmap_offset + word / 8] & (std::uint8_t{1} << (word & 7))) != 0; }
+    std::size_t Rank(std::size_t word)
+    {
+        const std::size_t chunk = word / PACKED_RANK_CHUNK_WORDS;
+        std::size_t total{0};
+        for (std::size_t index{chunk}; index > 0; index -= index & (~index + 1)) { total += U16(m_rank_offset + index * 2); ++m_rank_probes; }
+        const std::size_t first_byte = chunk * PACKED_RANK_CHUNK_WORDS / 8;
+        const std::size_t final_byte = word / 8;
+        for (std::size_t byte{first_byte}; byte < final_byte; ++byte) { total += std::popcount(m_arena[m_replay_bitmap_offset + byte]); ++m_rank_probes; }
+        const std::uint8_t mask = static_cast<std::uint8_t>((std::uint16_t{1} << (word & 7)) - 1);
+        total += std::popcount(static_cast<std::uint8_t>(m_arena[m_replay_bitmap_offset + final_byte] & mask));
+        ++m_rank_probes;
+        return total;
+    }
+    void RankAdd(std::size_t word)
+    {
+        for (std::size_t index{word / PACKED_RANK_CHUNK_WORDS + 1}; index <= m_rank_chunks; index += index & (~index + 1)) {
+            SetU16(m_rank_offset + index * 2, static_cast<std::uint16_t>(U16(m_rank_offset + index * 2) + 1));
+            ++m_rank_probes;
+        }
+    }
+    Location Locate(std::size_t rank, bool for_insert)
+    {
+        std::size_t cumulative{0};
+        for (std::size_t position{0}; position < m_logical_pages; ++position) {
+            const std::size_t page = Order(position), count = Count(page);
+            if (rank < cumulative + count) return {position, page, rank - cumulative};
+            cumulative += count;
+        }
+        if (for_insert && m_logical_pages != 0 && rank == cumulative) {
+            const std::size_t position = m_logical_pages - 1, page = Order(position);
+            return {position, page, Count(page)};
+        }
+        throw std::logic_error("paged replay rank is outside occupied values");
+    }
+    Location AllocateFirst()
+    {
+        if (m_allocated_pages == m_layout.max_pages) throw PagedReplayExhausted{};
+        const std::size_t page = m_allocated_pages++;
+        m_logical_pages = 1;
+        SetU16(m_order_offset, static_cast<std::uint16_t>(page));
+        SetCount(page, 0);
+        m_peak_pages = std::max(m_peak_pages, m_allocated_pages);
+        return {0, page, 0};
+    }
+    Location Split(Location location)
+    {
+        if (m_allocated_pages == m_layout.max_pages) throw PagedReplayExhausted{};
+        const std::size_t new_page = m_allocated_pages++, split = PAGED_SLOTS / 2, moved = PAGED_SLOTS - split;
+        std::copy_n(m_arena.begin() + static_cast<std::ptrdiff_t>(PageOffset(location.page, split)), moved * 8,
+                    m_arena.begin() + static_cast<std::ptrdiff_t>(PageOffset(new_page)));
+        m_shifted_bytes += moved * 8;
+        SetCount(location.page, split); SetCount(new_page, moved);
+        const std::size_t insert_position = location.position + 1;
+        const std::size_t directory_move = (m_logical_pages - insert_position) * 2;
+        if (directory_move != 0) {
+            auto first = m_arena.begin() + static_cast<std::ptrdiff_t>(m_order_offset + insert_position * 2);
+            auto last = first + static_cast<std::ptrdiff_t>(directory_move);
+            std::copy_backward(first, last, last + 2);
+            m_shifted_bytes += directory_move;
+        }
+        SetU16(m_order_offset + insert_position * 2, static_cast<std::uint16_t>(new_page));
+        ++m_logical_pages;
+        m_peak_pages = std::max(m_peak_pages, m_allocated_pages);
+        if (location.local >= split) return {insert_position, new_page, location.local - split};
+        return location;
+    }
+    void StorePrimary(std::size_t word, std::uint64_t value)
+    {
+        const std::size_t offset = PrimaryOffset(word % m_layout.primary_cache_capacity);
+        const std::uint64_t previous = ReadLE64(m_arena.data() + offset);
+        if (previous != EmptyTag() && previous != word) ++m_stats.evictions;
+        WriteLE64(m_arena.data() + offset, word); WriteLE64(m_arena.data() + offset + 8, value);
+    }
+    std::size_t m_word_count, m_rank_chunks{0}, m_primary_offset{0}, m_replay_bitmap_offset{0};
+    std::size_t m_rank_offset{0}, m_order_offset{0}, m_count_offset{0}, m_values_offset{0};
+    std::uint64_t m_consumer{0}, m_logical_pages{0}, m_allocated_pages{0}, m_distinct{0};
+    std::uint64_t m_peak_values{0}, m_peak_pages{0}, m_rank_probes{0}, m_directory_probes{0}, m_shifted_bytes{0};
+    std::uint8_t m_slot{0};
+    Bytes m_arena;
+    PagedLayout m_layout;
+    BoundedReconstructionStats m_stats;
+};
+
+class PagedReplayView {
+public:
+    explicit PagedReplayView(PagedReconstructionArena& arena) : m_arena(arena) {}
+    std::uint64_t Read(std::uint64_t selector) { return m_arena.ReplayRead(selector); }
+    void Write(std::uint64_t selector, std::uint64_t value) { m_arena.ReplayWrite(selector, value); }
+private:
+    PagedReconstructionArena& m_arena;
+};
+
 class StaticHalfSpillScratchpad {
 public:
     StaticHalfSpillScratchpad(
@@ -2480,6 +2758,89 @@ PackedReconstructionResult ProbePackedReconstruction(
     return result;
 }
 
+PagedReconstructionResult ProbePagedReconstruction(const EpochContext& context, const Bytes& header, std::uint64_t nonce)
+{
+    Validate(context.seed, context.params);
+    if (header.empty() || header.size() > MAX_HEADER_BYTES) throw std::invalid_argument("header size is outside the v1 research envelope");
+    const Bytes params_bytes = EncodeParams(context.params), header_digest = Sha3_384(header);
+    Bytes nonce_bytes; AppendLE64(nonce_bytes, nonce);
+    MachineState state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+    const std::uint64_t total_iterations = context.params.passes * (context.params.scratchpad_bytes / 8);
+    PagedReconstructionArena arena(context.params.scratchpad_bytes, context.params.scratchpad_bytes / 2);
+    PagedReconstructionResult result{};
+    Bytes transcript = DomainBytes(DOMAIN_PAGED_TRANSCRIPT);
+    auto commitment = [&](const BoundedReadMiss& miss, const std::uint64_t* value) {
+        Bytes encoded = DomainBytes(DOMAIN_PAGED_RECONSTRUCTION);
+        Append(encoded, context.seed); Append(encoded, header_digest); Append(encoded, nonce_bytes); Append(encoded, params_bytes);
+        AppendLE64(encoded, miss.consumer); encoded.push_back(miss.slot); AppendLE64(encoded, miss.word);
+        for (const auto item : state.registers) AppendLE64(encoded, item);
+        AppendLE64(encoded, state.accumulator); if (value) AppendLE64(encoded, *value);
+        return Sha3_384(encoded);
+    };
+    auto reconstruct = [&](const BoundedReadMiss& miss) {
+        ++result.reconstruction_attempts; result.max_reconstruction_depth = 1;
+        arena.ResetReplay(); PagedReplayView replay{arena};
+        MachineState replay_state = InitializeMachineState(context, header_digest, nonce_bytes, params_bytes);
+        std::uint64_t completed{0};
+        try {
+            for (std::uint64_t i{0}; i < std::min(miss.consumer, total_iterations); ++i) { ExecuteMixIteration(context, replay, replay_state, i); ++completed; }
+        } catch (const PagedReplayExhausted&) {
+            result.attempted_replay_iterations += completed;
+            result.cumulative_rank_probes += arena.RankProbes(); result.cumulative_directory_probes += arena.DirectoryProbes();
+            result.cumulative_shifted_bytes += arena.ShiftedBytes();
+            result.max_replay_peak_values = std::max(result.max_replay_peak_values, arena.PeakValues());
+            result.max_replay_peak_pages = std::max(result.max_replay_peak_pages, arena.PeakPages());
+            result.has_exhaustion = true;
+            auto& out = result.exhaustion;
+            out.consumer = miss.consumer; out.slot = miss.slot; out.word = miss.word; out.replay_completed_iterations = completed;
+            out.replay_occupied_values = arena.Distinct(); out.replay_allocated_pages = arena.AllocatedPages();
+            out.replay_rank_probes = arena.RankProbes(); out.replay_directory_probes = arena.DirectoryProbes();
+            out.replay_shifted_bytes = arena.ShiftedBytes(); out.state_commitment = commitment(miss, nullptr);
+            return false;
+        }
+        result.attempted_replay_iterations += completed; result.successful_replayed_iterations += completed;
+        result.all_replay_states_matched = result.all_replay_states_matched && replay_state.registers == state.registers && replay_state.accumulator == state.accumulator;
+        if (!result.all_replay_states_matched) throw std::logic_error("paged replay machine state does not match the live prefix");
+        const std::uint64_t value = arena.ReplayReadExact(miss.word);
+        result.cumulative_rank_probes += arena.RankProbes(); result.cumulative_directory_probes += arena.DirectoryProbes();
+        result.cumulative_shifted_bytes += arena.ShiftedBytes();
+        result.max_replay_peak_values = std::max(result.max_replay_peak_values, arena.PeakValues());
+        result.max_replay_peak_pages = std::max(result.max_replay_peak_pages, arena.PeakPages());
+        PagedBoundary boundary{};
+        boundary.consumer = miss.consumer; boundary.slot = miss.slot; boundary.word = miss.word; boundary.value = value;
+        boundary.replayed_iterations = completed; boundary.replay_peak_values = arena.PeakValues(); boundary.replay_peak_pages = arena.PeakPages();
+        boundary.replay_rank_probes = arena.RankProbes(); boundary.replay_directory_probes = arena.DirectoryProbes();
+        boundary.replay_shifted_bytes = arena.ShiftedBytes(); boundary.commitment = commitment(miss, &value);
+        Append(transcript, boundary.commitment);
+        if (!result.has_first) { result.has_first = true; result.first_reconstruction = boundary; }
+        result.last_reconstruction = boundary; ++result.reconstructed_misses; arena.Retain(miss.word, value); return true;
+    };
+    bool stopped{false};
+    for (std::uint64_t i{0}; i < total_iterations; ++i) {
+        while (true) { arena.SetConsumer(i); try { ExecuteMixIteration(context, arena, state, i); break; } catch (const BoundedReadMiss& miss) { if (!reconstruct(miss)) { stopped = true; break; } } }
+        if (stopped) break;
+        ++result.completed_iterations;
+    }
+    std::array<std::uint64_t, FINAL_SAMPLE_WORDS> samples{};
+    if (!stopped) {
+        std::uint64_t selector = state.accumulator ^ state.registers[0] ^ state.registers[4];
+        for (std::size_t i{0}; i < FINAL_SAMPLE_WORDS; ++i) {
+            selector = std::rotl(selector ^ state.registers[i & 7], static_cast<int>((i + 1) & 63)) + 0x9E3779B97F4A7C15ULL + i;
+            while (true) { arena.SetConsumer(total_iterations + i); try { samples[i] = arena.Read(selector); break; } catch (const BoundedReadMiss& miss) { if (!reconstruct(miss)) { stopped = true; break; } } }
+            if (stopped) break;
+            selector ^= samples[i];
+        }
+    }
+    if (!stopped) {
+        Bytes regs, acc, sample_bytes; for (const auto value : state.registers) AppendLE64(regs, value); AppendLE64(acc, state.accumulator); for (const auto value : samples) AppendLE64(sample_bytes, value);
+        Bytes memory_input = DomainBytes(DOMAIN_COMMITMENT); Append(memory_input, params_bytes); Append(memory_input, regs); Append(memory_input, acc); Append(memory_input, sample_bytes);
+        const Bytes memory_commitment = Sha3_384(memory_input);
+        Bytes result_input = DomainBytes(DOMAIN_RESULT); Append(result_input, context.seed); Append(result_input, header_digest); Append(result_input, nonce_bytes); Append(result_input, params_bytes); Append(result_input, context.schedule_digest); Append(result_input, context.dataset_digest); Append(result_input, regs); Append(result_input, acc); Append(result_input, memory_commitment);
+        result.status = "exact_complete"; result.execution_result = {Sha3_384(result_input), state.registers, context.schedule_digest, context.dataset_digest, memory_commitment};
+    }
+    result.transcript_commitment = Sha3_384(transcript); result.layout = arena.Layout(); result.stats = arena.Stats(); return result;
+}
+
 Bytes ParseHex(std::string_view text)
 {
     if (text.size() % 2 != 0) throw std::invalid_argument("hex input must have even length");
@@ -2810,6 +3171,28 @@ void PrintPackedReconstruction(
     } else {
         std::cout << ",\n  \"digest\": null,\n  \"memory_commitment\": null\n";
     }
+    std::cout << "}\n";
+}
+
+void PrintPagedReconstruction(const Bytes& seed, const Bytes& header, std::uint64_t nonce, const Params& params)
+{
+    const PagedReconstructionResult r = ProbePagedReconstruction(PrepareEpoch(seed, params), header, nonce);
+    const auto& l = r.layout; const auto& s = r.stats;
+    auto boundary = [](const PagedBoundary& b) { std::cout << "{\"consumer\": " << b.consumer << ", \"slot\": " << static_cast<unsigned>(b.slot) << ", \"word\": " << b.word << ", \"value\": " << b.value << ", \"replayed_iterations\": " << b.replayed_iterations << ", \"replay_peak_values\": " << b.replay_peak_values << ", \"replay_peak_pages\": " << b.replay_peak_pages << ", \"replay_rank_probes\": " << b.replay_rank_probes << ", \"replay_directory_probes\": " << b.replay_directory_probes << ", \"replay_shifted_bytes\": " << b.replay_shifted_bytes << ", \"commitment\": \"" << Hex(b.commitment) << "\"}"; };
+    std::cout << "{\n  \"format\": \"soveroot-pow-v1-paged-gap-reconstruction-v0\",\n"
+              << "  \"warning\": \"NON-CONSENSUS PAGED GAP; no completed proof, throughput, or gate result\",\n"
+              << "  \"status\": \"" << r.status << "\",\n"
+              << "  \"params\": {\"dataset_bytes\": " << params.dataset_bytes << ", \"scratchpad_bytes\": " << params.scratchpad_bytes << ", \"passes\": " << params.passes << "},\n"
+              << "  \"nonce\": " << nonce << ",\n"
+              << "  \"layout\": {\"budget_bytes\": " << l.budget_bytes << ", \"fixed_state_reserve_bytes\": " << l.fixed_state_reserve_bytes << ", \"arena_bytes\": " << l.arena_bytes << ", \"canonical_write_bitmap_bytes\": " << l.canonical_write_bitmap_bytes << ", \"primary_cache_capacity\": " << l.primary_cache_capacity << ", \"primary_cache_bytes\": " << l.primary_cache_bytes << ", \"replay_bitmap_bytes\": " << l.replay_bitmap_bytes << ", \"rank_directory_bytes\": " << l.rank_directory_bytes << ", \"page_slots\": " << l.page_slots << ", \"max_pages\": " << l.max_pages << ", \"page_directory_bytes\": " << l.page_directory_bytes << ", \"page_count_bytes\": " << l.page_count_bytes << ", \"replay_value_slots\": " << l.replay_value_slots << ", \"replay_value_bytes\": " << l.replay_value_bytes << ", \"unused_arena_bytes\": " << l.unused_arena_bytes << ", \"admitted_bytes\": " << l.admitted_bytes << "},\n"
+              << "  \"completed_iterations\": " << r.completed_iterations << ",\n  \"canonical_reads\": " << s.canonical_reads << ",\n  \"cache_hits\": " << s.cache_hits << ",\n  \"initial_zero_reads\": " << s.initial_zero_reads << ",\n  \"materialized_misses\": " << s.materialized_misses << ",\n  \"writes\": " << s.writes << ",\n  \"evictions\": " << s.evictions << ",\n"
+              << "  \"reconstruction_attempts\": " << r.reconstruction_attempts << ",\n  \"reconstructed_misses\": " << r.reconstructed_misses << ",\n  \"successful_replayed_iterations\": " << r.successful_replayed_iterations << ",\n  \"attempted_replay_iterations\": " << r.attempted_replay_iterations << ",\n  \"cumulative_rank_probes\": " << r.cumulative_rank_probes << ",\n  \"cumulative_directory_probes\": " << r.cumulative_directory_probes << ",\n  \"cumulative_shifted_bytes\": " << r.cumulative_shifted_bytes << ",\n  \"max_replay_peak_values\": " << r.max_replay_peak_values << ",\n  \"max_replay_peak_pages\": " << r.max_replay_peak_pages << ",\n  \"max_reconstruction_depth\": " << r.max_reconstruction_depth << ",\n  \"all_replay_states_matched\": " << (r.all_replay_states_matched ? "true" : "false") << ",\n  \"transcript_commitment\": \"" << Hex(r.transcript_commitment) << "\",\n  \"first_reconstruction\": ";
+    if (r.has_first) boundary(r.first_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"last_reconstruction\": "; if (r.has_first) boundary(r.last_reconstruction); else std::cout << "null";
+    std::cout << ",\n  \"exhaustion\": ";
+    if (r.has_exhaustion) { const auto& e = r.exhaustion; std::cout << "{\"consumer\": " << e.consumer << ", \"slot\": " << static_cast<unsigned>(e.slot) << ", \"word\": " << e.word << ", \"replay_completed_iterations\": " << e.replay_completed_iterations << ", \"replay_occupied_values\": " << e.replay_occupied_values << ", \"replay_allocated_pages\": " << e.replay_allocated_pages << ", \"replay_rank_probes\": " << e.replay_rank_probes << ", \"replay_directory_probes\": " << e.replay_directory_probes << ", \"replay_shifted_bytes\": " << e.replay_shifted_bytes << ", \"state_commitment\": \"" << Hex(e.state_commitment) << "\"}"; } else std::cout << "null";
+    if (r.status == "exact_complete") std::cout << ",\n  \"digest\": \"" << Hex(r.execution_result.digest) << "\",\n  \"memory_commitment\": \"" << Hex(r.execution_result.memory_commitment) << "\"\n";
+    else std::cout << ",\n  \"digest\": null,\n  \"memory_commitment\": null\n";
     std::cout << "}\n";
 }
 
@@ -3145,6 +3528,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-paged") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintPagedReconstruction(seed, header, nonce, params);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "bounded-reconstruct-packed") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -3249,6 +3640,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp bounded-reconstruct-one SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-repeated SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp bounded-reconstruct-packed SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp bounded-reconstruct-paged SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

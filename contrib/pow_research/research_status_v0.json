@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-13",
-  "evidence_cutoff_revision": "b8ac2c1cc7b4e8a7415087b0b55aef300e297080",
+  "evidence_cutoff_revision": "9811900a986737e09850e0e470936b4413e5de34",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -122,10 +122,15 @@
       "id": "pow_v1_repeated_bounded_reconstruction",
       "pull_request": 31,
       "conclusion": "Repeated exact reconstruction recovers 109 to 137 missing values before the flat sparse replay table fills; every standard case refuses without a proof output."
+    },
+    {
+      "id": "pow_v1_packed_checkpoint_reconstruction",
+      "pull_request": 32,
+      "conclusion": "Bitmap-ranked packing extends the exact prefix but incurs 180.8 GB of charged insertion movement on standard seed zero; no proof output is reached."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_low_movement_packed_checkpoint",
+    "id": "pow_v1_page_count_indexed_gap_rebalancing",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
@@ -134,6 +139,7 @@
     "stage_c_first_reconstruction": "One missing value and matching historical machine state are reconstructed by sparse replay inside the preallocated arena; execution then refuses at the next miss without output.",
     "stage_c_repeated_reconstruction": "Repeated exact replay recovers successive misses until the sparse table fills, with cumulative work, depth, transcript, and exhaustion boundaries independently committed; no proof output is reached.",
     "stage_c_packed_checkpoint": "Bitmap-ranked packed replay more than doubles retained-value capacity and extends the exact prefix, but sorted insertion creates prohibitive charged byte movement; no proof output is reached.",
-    "required_outcome": "Implement a byte-accounted block-gap, indexed-packed, or bounded time-checkpoint layout that reduces update work, then require exact final outputs and measured physical memory."
+    "stage_c_paged_gap": "Fixed-size replay pages reduce charged insertion movement by approximately 986 times on standard seed zero, but fragmentation and linear page lookup prevent completion; no proof output is reached.",
+    "required_outcome": "Implement a byte-accounted page-count index and bounded gap rebalancing, then require exact final outputs and measured physical memory."
   }
 }

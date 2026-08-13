@@ -1,0 +1,65 @@
+{
+  "format": "soveroot-pow-v1-paged-gap-reconstruction-vectors-v0",
+  "source_vectors": "v1.json",
+  "layout": {
+    "budget_bytes": 4096,
+    "fixed_state_reserve_bytes": 512,
+    "arena_bytes": 3584,
+    "canonical_write_bitmap_bytes": 128,
+    "primary_cache_capacity": 51,
+    "primary_cache_bytes": 816,
+    "replay_bitmap_bytes": 128,
+    "rank_directory_bytes": 10,
+    "page_slots": 32,
+    "max_pages": 9,
+    "page_directory_bytes": 18,
+    "page_count_bytes": 18,
+    "replay_value_slots": 288,
+    "replay_value_bytes": 2304,
+    "unused_arena_bytes": 162,
+    "admitted_bytes": 4096
+  },
+  "counter_fields": [
+    "completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads",
+    "materialized_misses", "writes", "evictions", "reconstruction_attempts",
+    "reconstructed_misses", "successful_replayed_iterations", "attempted_replay_iterations",
+    "cumulative_rank_probes", "cumulative_directory_probes", "cumulative_shifted_bytes",
+    "max_replay_peak_values", "max_replay_peak_pages"
+  ],
+  "reconstruction_fields": [
+    "consumer", "slot", "word", "value", "replayed_iterations", "replay_peak_values",
+    "replay_peak_pages", "replay_rank_probes", "replay_directory_probes",
+    "replay_shifted_bytes", "commitment"
+  ],
+  "exhaustion_fields": [
+    "consumer", "slot", "word", "replay_completed_iterations", "replay_occupied_values",
+    "replay_allocated_pages", "replay_rank_probes", "replay_directory_probes",
+    "replay_shifted_bytes", "state_commitment"
+  ],
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [97, 212, 13, 189, 10, 194, 138, 10, 9, 665, 761, 22258, 11908, 128284, 179, 9],
+      "transcript_commitment": "1161f3b1270d7a06d8c08fbd06f0671ab9c31ca5e75528999ac9d2993e34ec5726e9b02dc1b360fa114a777479b7fb58",
+      "first": [47, 1, 537, 17716306888567174032, 47, 93, 4, 1234, 496, 7746, "25690e1f5ff17219f8ed8da8090bb867332903534b7e3a9cde80f28431c14eea1ad265b01888c86f52deb588c87d61c0"],
+      "last": [95, 1, 130, 5651171493019657191, 95, 178, 9, 2896, 1696, 15996, "9a75a25a2d2d4ad7385f1531346159e479b96afbdd8594cd6fa9dec7e096f29f14cd64eccf6a293ea2eb2f2a15c5fb0f"],
+      "exhaustion": [97, 1, 7, 96, 179, 9, 2958, 1752, 16044, "c39f8de1996ff72757e9f88d22d638b1c7cd7c6f5c013bc038080cbc87dc71800c2c84efc3e76e59b2ec6d8a6103607b"]
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [98, 216, 16, 188, 12, 196, 143, 12, 11, 770, 865, 22999, 12732, 124192, 177, 9],
+      "transcript_commitment": "cc667cec888dffcebb0f60ccfaf411be4676bd5fa40d1da7511aa97de307eae7aab964caddc1969a82d51a8ba28840cf",
+      "first": [39, 1, 19, 6157016928124120505, 39, 76, 4, 933, 365, 5338, "a05b73ef9a0255ff539a81248c47a3c9a1b123c7d919e461062daf1c1bebda7dcb66a2945bb095d64a9fe3c679bc299a"],
+      "last": [92, 0, 65, 3718981627654374904, 92, 172, 8, 2555, 1557, 12560, "e760ef1dea334e2c3726cf2ee1d74f347f9d81b2f43e26f4307cad8a4ab6426594230ffe86daf34c5984cabaa877e1dc"],
+      "exhaustion": [98, 0, 14, 95, 177, 9, 2678, 1652, 12858, "cd0e89af1359962d889e533395daed9107c07f0e0663f910c5814f5eb416c1389fba3b8b90d681b6539268eb684c4c9f"]
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [97, 210, 13, 187, 10, 194, 143, 10, 9, 668, 762, 22428, 12018, 127604, 177, 9],
+      "transcript_commitment": "ea2a572b84c7f0a56e65ffe7c1b7c1c6bb407bb030ef69568d9128b9038de7e0cf66166bc669ab9de298e257ceac426a",
+      "first": [47, 1, 454, 2273550289372204709, 47, 93, 4, 1242, 496, 7178, "503a68f0e3d9bbf943991a104bc0466dd8499fe7f0658d210e4fb6dffff5a521195745dc4a410f855702c71bfaac4474"],
+      "last": [91, 1, 376, 7831100019215371208, 91, 173, 9, 2789, 1605, 15382, "a43754342e3c772d6064a575075d4c0ad1337d9f0e267c4707c83b97463c081bdcb38201f9f7abb639f6ad70329730ba"],
+      "exhaustion": [97, 1, 45, 94, 177, 9, 2879, 1696, 15598, "a58fc15388fdeba506ef908063a26e3006b2a8f81e6994327778a5f7ba198652dfac53b59d82e36a18ee0187642a38ae"]
+    }
+  ]
+}
