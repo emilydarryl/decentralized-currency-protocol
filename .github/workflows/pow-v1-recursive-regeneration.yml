@@ -1,0 +1,77 @@
+name: PoW v1 recursive value regeneration
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Regeneration profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+      seeds:
+        description: Deterministic seed count (1-8)
+        required: true
+        default: "1"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  regeneration:
+    name: First recursive value regeneration
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PROFILE: ${{ inputs.profile }}
+      SEEDS: ${{ inputs.seeds }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Compile standalone v1 research executable
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+
+      - name: Verify independent recursive-regeneration boundaries
+        shell: bash
+        run: |
+          python3 -m unittest test.pow_research.test_recursive_regeneration_v1
+          python3 test/pow_research/run_cpp_recursive_regeneration_vectors_v1.py \
+            --binary build/powvm_v1_cpp
+
+      - name: Collect recursive-regeneration matrix
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/recursive_regeneration_v1.py \
+            --profile "$PROFILE" \
+            --seeds "$SEEDS" \
+            --source-revision "$GITHUB_SHA" \
+            --output build/pow-v1-recursive-regeneration.json
+          python3 -m json.tool build/pow-v1-recursive-regeneration.json >/dev/null
+
+      - name: Render recursive-regeneration report
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/render_recursive_regeneration_report_v1.py \
+            --matrix build/pow-v1-recursive-regeneration.json \
+            --method contrib/pow_research_v1/recursive_regeneration_v0.json \
+            --label "GitHub Ubuntu shared runner $GITHUB_RUN_ID" \
+            --output build/pow-v1-recursive-regeneration.md
+
+      - name: Preserve raw matrix and report
+        uses: actions/upload-artifact@v7
+        with:
+          name: pow-v1-recursive-regeneration-${{ github.run_id }}
+          path: |
+            build/pow-v1-recursive-regeneration.json
+            build/pow-v1-recursive-regeneration.md
+          if-no-files-found: error
+          retention-days: 14

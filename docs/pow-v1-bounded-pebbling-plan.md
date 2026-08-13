@@ -80,6 +80,8 @@ The [indexed-gap pilot](pow-v1-indexed-gap-reconstruction.md) adds a byte-accoun
 
 The [time-checkpoint feasibility screen](pow-v1-time-checkpoint-screen.md) evaluates 17 cuts using full snapshots, immutable snapshot-plus-delta storage, and an optimistic one-store staged model with exact future knowledge. On standard seed zero, every optimistic cut requires 155,490 bytes, 18.63% above the 131,072-byte ceiling; every naive cut also fails. A single no-regeneration checkpoint therefore does not solve the capacity failure. The next Stage C implementation must recursively regenerate exact values with its cache, identity metadata, work stack, transient values, and control state charged inside one preallocated arena.
 
+The [first recursive-regeneration pilot](pow-v1-recursive-regeneration.md) now performs that core operation: an exact missing value is reconstructed through recursively requested earlier dependencies using a packed memo and a logical 20-frame reserve inside one half-scratch arena. The standard seed-zero run recovers its first miss after 25,281 replay iterations at depth 3 and then deliberately refuses without a digest at the next miss. Repeated recursive recovery, final exact outputs, allocation tuning, actual stack accounting, and physical-memory measurement remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
