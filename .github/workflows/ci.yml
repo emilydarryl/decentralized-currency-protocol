@@ -86,6 +86,7 @@ jobs:
           python3 test/pow_research/run_cpp_indexed_gap_reconstruction_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_time_checkpoint_screen_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_recursive_regeneration_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_repeated_recursive_regeneration_vectors_v1.py --binary build/powvm_v1_cpp
           python3 contrib/pow_research_cpp/pebbling_lower_bound_v1.py \
             --profile smoke --seeds 1 --output build/pow-v1-pebbling-lower-bound-smoke.json
           python3 contrib/pow_research_cpp/render_pebbling_lower_bound_report_v1.py \
