@@ -1,0 +1,48 @@
+{
+  "format": "soveroot-pow-v1-indexed-gap-reconstruction-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS INDEXED-GAP RECONSTRUCTION METHOD",
+  "question": "Can a byte-accounted page-count index and bounded neighbor rebalancing improve paged replay utilization without restoring global shifts?",
+  "arena": {
+    "budget_fraction": "1/2 of declared scratchpad",
+    "allocation_count": 1,
+    "fixed_state_reserve_bytes": 512,
+    "canonical_write_bitmap": "one bit per logical scratch word",
+    "primary_cache_fraction": "1/4 of bytes remaining after bitmaps and global rank directory",
+    "replay_membership": "one bit per logical scratch word",
+    "global_rank_directory": "16-bit Fenwick tree over 256-word chunks",
+    "page_layout": "32 values per 256-byte physical page",
+    "page_metadata": "16-bit logical page directory and count per physical page",
+    "page_count_index": "16-bit Fenwick tree over logical page positions"
+  },
+  "policy": [
+    "locate ranked values through the page-count Fenwick tree",
+    "when a target page is full, move one boundary value into the adjacent page with the larger gap",
+    "split 16/16 only when both adjacent logical pages are full or absent",
+    "rebuild the page-count index after logical-directory insertion",
+    "require replayed registers and accumulator to match the live state",
+    "retain recovered values in the primary cache and retry",
+    "refuse without output when a split needs a physical page after all pages are allocated"
+  ],
+  "accounting": [
+    "successful and attempted replay iterations",
+    "global rank probes, page-index probes, and directory probes",
+    "neighbor rebalances and all shifted bytes",
+    "maximum occupied values and allocated pages",
+    "first, last, transcript, and exhaustion commitments"
+  ],
+  "limitations": [
+    "neighbor-only rebalancing cannot use gaps beyond the two adjacent pages",
+    "page-index rebuilds after splits add metadata work",
+    "every reconstruction still replays from iteration zero",
+    "there are no durable time checkpoints or recursive eviction recovery",
+    "the 512-byte fixed reserve is logical rather than measured process high water",
+    "the deterministic screen is not a throughput benchmark or lower bound",
+    "the standard pilot does not reach an exact proof output"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "indexing and utilization improve, but the evaluator still exhausts before a proof and physical memory is unmeasured"
+  },
+  "next_use": "measure the standard boundary, then consider a wider bounded rebalance window or time checkpoints"
+}

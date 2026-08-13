@@ -1,0 +1,66 @@
+{
+  "format": "soveroot-pow-v1-indexed-gap-reconstruction-vectors-v0",
+  "source_vectors": "v1.json",
+  "layout": {
+    "budget_bytes": 4096,
+    "fixed_state_reserve_bytes": 512,
+    "arena_bytes": 3584,
+    "canonical_write_bitmap_bytes": 128,
+    "primary_cache_capacity": 51,
+    "primary_cache_bytes": 816,
+    "replay_bitmap_bytes": 128,
+    "rank_directory_bytes": 10,
+    "page_slots": 32,
+    "max_pages": 9,
+    "page_directory_bytes": 18,
+    "page_count_bytes": 18,
+    "page_index_bytes": 20,
+    "replay_value_slots": 288,
+    "replay_value_bytes": 2304,
+    "unused_arena_bytes": 142,
+    "admitted_bytes": 4096
+  },
+  "counter_fields": [
+    "completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses",
+    "writes", "evictions", "reconstruction_attempts", "reconstructed_misses",
+    "successful_replayed_iterations", "attempted_replay_iterations", "cumulative_rank_probes",
+    "cumulative_index_probes", "cumulative_directory_probes", "cumulative_rebalances",
+    "cumulative_shifted_bytes", "max_replay_peak_values", "max_replay_peak_pages"
+  ],
+  "reconstruction_fields": [
+    "consumer", "slot", "word", "value", "replayed_iterations", "replay_peak_values",
+    "replay_peak_pages", "replay_rank_probes", "replay_index_probes", "replay_directory_probes",
+    "replay_rebalances", "replay_shifted_bytes", "commitment"
+  ],
+  "exhaustion_fields": [
+    "consumer", "slot", "word", "replay_completed_iterations", "replay_occupied_values",
+    "replay_allocated_pages", "replay_rank_probes", "replay_index_probes", "replay_directory_probes",
+    "replay_rebalances", "replay_shifted_bytes", "state_commitment"
+  ],
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [154, 354, 40, 285, 29, 308, 253, 29, 28, 3045, 3195, 101837, 36746, 28164, 2140, 772000, 264, 9],
+      "transcript_commitment": "948494e03917c436d5013a00f40bf55300741804adb2462e960149a0ba172f691bb1afd7624757175dd7708bc172fbe4",
+      "first": [47, 1, 537, 17716306888567174032, 47, 93, 3, 1234, 497, 338, 18, 8744, "b1d51fd420c00a98e15a95d02491b1cacdc7e8c6ef9f6951d0905da170ba3ca38e69ff67f57d7c0de235dca2fcc87f20"],
+      "last": [150, 0, 138, 10214233833992985231, 150, 263, 9, 5146, 1776, 1364, 110, 38098, "d6607ca23ff278a5887bf89eb4f9e6bb7427f8feab96658befa801b599c518850f758b2722005d1c51638ca56fd37723"],
+      "exhaustion": [154, 0, 116, 150, 264, 9, 5172, 1787, 1377, 111, 38154, "3c01ce9c66f0496373678eda039d749a61f757cfebc760932cdbf2a441f4da3f640beb72517297fa2f1055dc5ab0bd31"]
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [149, 350, 40, 280, 30, 298, 247, 30, 29, 2879, 3027, 87944, 36040, 26489, 1862, 715440, 266, 9],
+      "transcript_commitment": "bc2123e047e42e16b04f34acec52a78839004ce2e5dc506ccae290ff8843edbacae6a6b0c7707a870540843ee18a635b",
+      "first": [39, 1, 19, 6157016928124120505, 39, 76, 3, 933, 412, 282, 16, 6528, "f958d87f71d98b74871d9dc3f2a71282bb951ce269c2b69503152767aea8fbfaf0287651b4d4e68e3538881390d16957"],
+      "last": [146, 1, 9, 15411226984382142063, 146, 262, 9, 4660, 1812, 1274, 86, 33808, "bfc37d44a5a34fc2c820ee75e7c0662191e80f0805afd47c2543f55c60d282b2ec85764530f796b27aaaa94b107c6495"],
+      "exhaustion": [149, 1, 697, 148, 266, 9, 4765, 1843, 1309, 90, 34960, "46a6ebe0715a375fda1dea17ed630b111aacf888a5f3602e5e8e7f82593093ad7b10300b1ce68e0e6d8d50d36cabc2d2"]
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [140, 326, 41, 257, 28, 280, 233, 28, 27, 2832, 2971, 94751, 34463, 26204, 1911, 666324, 249, 9],
+      "transcript_commitment": "f5393df0219f74fd112f0051a635297f8861ce9248776dc304fe451d7772cb07346efdee94f832ff4f81bc7b3df16a9d",
+      "first": [47, 1, 454, 2273550289372204709, 47, 93, 3, 1242, 493, 335, 17, 8264, "350f36e58b08959658b579b043d2799b8b0db5b0be30a7e763f1e4a69533c13f63d0811786b47b9ab3da1df1f319a6c1"],
+      "last": [139, 0, 23, 13294411590805006746, 139, 248, 9, 4712, 1689, 1268, 96, 31974, "df28cb9371b3cd948d840129a94e7c8b8ed41ed51dc0d1069567fd0a8160e971920f10eb2abeafd1d3c92097904d6034"],
+      "exhaustion": [140, 1, 70, 139, 249, 9, 4748, 1699, 1281, 97, 32134, "18130c3af06857e8e3e9bc88cf4151c39e36dcb8f4e35e7daa57632214f76e3a75816f93a9ca5a100f0255d0db674b17"]
+    }
+  ]
+}
