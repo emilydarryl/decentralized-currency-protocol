@@ -138,15 +138,24 @@ class _RecursiveArena:
         budget_bytes: int,
         primary_numerator: int = PRIMARY_NUMERATOR,
         primary_denominator: int = PRIMARY_DENOMINATOR,
+        reserved_tail_bytes: int = 0,
     ) -> None:
         if primary_numerator <= 0 or primary_denominator <= 0:
             raise ValueError("primary allocation ratio must be positive")
         if primary_numerator > primary_denominator:
             raise ValueError("primary allocation ratio cannot exceed one")
+        if reserved_tail_bytes < 0:
+            raise ValueError("reserved tail bytes cannot be negative")
         self.word_count = scratchpad_bytes // 8
         bitmap_bytes = (self.word_count + 7) // 8
         arena_bytes = budget_bytes - FIXED_STATE_RESERVE_BYTES
-        if arena_bytes <= bitmap_bytes + CACHE_ENTRY_BYTES + FRAME_BYTES + MEMO_ENTRY_BYTES:
+        if arena_bytes <= (
+            bitmap_bytes
+            + CACHE_ENTRY_BYTES
+            + FRAME_BYTES
+            + MEMO_ENTRY_BYTES
+            + reserved_tail_bytes
+        ):
             raise ValueError("budget cannot hold recursive regeneration structures")
         total_primary_slots = (arena_bytes - bitmap_bytes) // CACHE_ENTRY_BYTES
         primary_capacity = total_primary_slots * primary_numerator // primary_denominator
@@ -156,13 +165,15 @@ class _RecursiveArena:
         auxiliary_bytes = arena_bytes - bitmap_bytes - primary_bytes
         frame_capacity = min(
             MAXIMUM_FRAME_CAPACITY,
-            (auxiliary_bytes - MEMO_ENTRY_BYTES) // FRAME_BYTES,
+            (auxiliary_bytes - MEMO_ENTRY_BYTES - reserved_tail_bytes) // FRAME_BYTES,
         )
         if frame_capacity == 0:
             raise ValueError("budget cannot hold one regeneration frame")
         frame_reserve_bytes = frame_capacity * FRAME_BYTES
         memo_capacity = (
-            (auxiliary_bytes - frame_reserve_bytes) // MEMO_ENTRY_BYTES // MEMO_WAYS
+            (auxiliary_bytes - frame_reserve_bytes - reserved_tail_bytes)
+            // MEMO_ENTRY_BYTES
+            // MEMO_WAYS
         ) * MEMO_WAYS
         if memo_capacity == 0:
             raise ValueError("budget cannot hold one regeneration memo entry")

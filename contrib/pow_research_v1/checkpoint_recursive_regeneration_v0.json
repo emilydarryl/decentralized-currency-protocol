@@ -1,0 +1,54 @@
+{
+  "format": "soveroot-pow-v1-checkpoint-recursive-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS CHECKPOINT REGENERATION REJECTION PILOT",
+  "question": "Can compact exact machine-state checkpoints reduce recursive replay amplification without exceeding the half-scratch byte ceiling?",
+  "algorithm": {
+    "checkpoint": "store the eight 64-bit VM registers and 64-bit accumulator before a fixed-stride iteration in an 80-byte entry",
+    "resume": "select the newest retained checkpoint strictly earlier than the requested stop, recursively recover the requested word at that checkpoint, then replay the suffix",
+    "safety": "strictly decreasing stop iterations keep recursion acyclic; exact values are retained only after successful recovery",
+    "termination": "complete exactly or fail closed on work, depth, or packed-key exhaustion"
+  },
+  "selected_configuration": {
+    "primary_allocation": "1/32 of possible 16-byte primary slots",
+    "checkpoint_entries": 4,
+    "checkpoint_entry_bytes": 80,
+    "checkpoint_stride": 8,
+    "checkpoint_bytes": 320,
+    "cumulative_work_limit_iterations": 1000000
+  },
+  "standard_seed_zero_screen": [
+    {"primary": "1/64", "entries": 4, "stride": 64, "completed_iterations": 784},
+    {"primary": "1/64", "entries": 8, "stride": 64, "completed_iterations": 784},
+    {"primary": "1/64", "entries": 16, "stride": 64, "completed_iterations": 712},
+    {"primary": "1/64", "entries": 16, "stride": 128, "completed_iterations": 784},
+    {"primary": "1/64", "entries": 16, "stride": 256, "completed_iterations": 784},
+    {"primary": "1/64", "entries": 32, "stride": 128, "completed_iterations": 792},
+    {"primary": "1/32", "entries": 4, "stride": 8, "completed_iterations": 892},
+    {"primary": "1/32", "entries": 4, "stride": 16, "completed_iterations": 859},
+    {"primary": "1/32", "entries": 4, "stride": 128, "completed_iterations": 744},
+    {"primary": "1/32", "entries": 4, "stride": 256, "completed_iterations": 784},
+    {"primary": "1/32", "entries": 8, "stride": 16, "completed_iterations": 596},
+    {"primary": "1/32", "entries": 16, "stride": 32, "completed_iterations": 596},
+    {"primary": "1/32", "entries": 16, "stride": 256, "completed_iterations": 796},
+    {"primary": "1/32", "entries": 32, "stride": 256, "completed_iterations": 784}
+  ],
+  "comparison": {
+    "best_checkpoint_completed_iterations": 892,
+    "best_existing_no_checkpoint_completed_iterations": 999,
+    "checkpoint_delta_iterations": -107,
+    "checkpoint_relative_change_percent": -10.7
+  },
+  "interpretation": [
+    "machine-state checkpoints reduce some register replay but do not contain the requested historical scratch value",
+    "recovering that value at the checkpoint creates another recursive dependency and increases recursion depth",
+    "checkpoint entries also displace memo entries inside the same fixed memory budget",
+    "all screened configurations exhausted one million regeneration iterations without producing a proof",
+    "this checkpoint policy is rejected for PoW v1; the negative result is retained to prevent repeated work"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "the best checkpoint configuration regressed exact progress and every run failed closed before a proof"
+  },
+  "next_use": "investigate dependency-aware hierarchical summaries that accelerate both machine state and historical scratch-value recovery"
+}
