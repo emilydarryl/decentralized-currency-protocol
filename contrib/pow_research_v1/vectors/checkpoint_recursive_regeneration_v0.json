@@ -1,0 +1,17 @@
+{
+  "format": "soveroot-pow-v1-checkpoint-recursive-regeneration-vectors-v0",
+  "source_vectors": "v1.json",
+  "primary_numerator": 1,
+  "primary_denominator": 32,
+  "checkpoint_capacity": 4,
+  "checkpoint_stride": 8,
+  "work_limit": 1000000,
+  "layout": {"budget_bytes": 4096, "fixed_state_reserve_bytes": 512, "arena_bytes": 3584, "write_bitmap_bytes": 128, "primary_cache_capacity": 6, "primary_cache_bytes": 96, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "checkpoint_entry_bytes": 80, "checkpoint_capacity": 4, "checkpoint_bytes": 320, "checkpoint_stride": 8, "memo_entry_bytes": 12, "memo_capacity": 80, "memo_bytes": 960, "unused_arena_bytes": 0, "admitted_bytes": 4096},
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {"name": "zero-seed-zero-nonce", "counters": [39, 79, 0, 78, 1, 78, 72, 1, 0, 2130696, 1719143, 411542, 1000000, 18, 78, 224228, 2167766, 224317, 130699, 77885, 0, 897268], "exhaustion": ["work_limit", 39, 0, 24, 9, 11, 1000000, "64f3785afcf666d8452a97f8fbd9fac490a965fd6cd889f12c05a683377abaa3b45e62b4bfc5851f09f3dc6faeeea97d"], "transcript_commitment": "a3cb24efa6aa68d6a1589376f32febca0027bd9a00dfc609cfe43253ab07a900b636924b4cd17a48d4595c6567da1dae"},
+    {"name": "incrementing-seed", "counters": [39, 80, 1, 78, 1, 78, 71, 1, 0, 2129470, 1785503, 343956, 1000000, 18, 78, 200882, 2187434, 200971, 129473, 67291, 0, 803884], "exhaustion": ["work_limit", 39, 1, 19, 22, 11, 1000000, "cfb58ed7ab17a62f202ca3822ca80bff108c193ba98bd25535c3ae06f31391b44d692a91ad0f8a56069414bed545be34"], "transcript_commitment": "a3cb24efa6aa68d6a1589376f32febca0027bd9a00dfc609cfe43253ab07a900b636924b4cd17a48d4595c6567da1dae"},
+    {"name": "high-bit-pattern", "counters": [47, 96, 0, 95, 1, 94, 88, 1, 0, 2150549, 1879486, 271055, 1000000, 17, 74, 190639, 2260920, 190721, 150550, 67825, 0, 762884], "exhaustion": ["work_limit", 47, 1, 454, 16, 8, 1000000, "ed8abd7f731c7032dbed4ff9a1bcc0a2c707c8fb83d825b81dd2a4984fe93da7d67ad78bc029a8718aee2398c2c7ea5d"], "transcript_commitment": "a3cb24efa6aa68d6a1589376f32febca0027bd9a00dfc609cfe43253ab07a900b636924b4cd17a48d4595c6567da1dae"}
+  ]
+}

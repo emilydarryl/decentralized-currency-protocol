@@ -50,7 +50,9 @@ Hash power still matters. Concentrated miners can censor transactions temporaril
 
 Imagine a mining job as an open-book exam with 98,304 steps. A normal miner keeps the whole notebook available. We are deliberately building a cheating miner that keeps only half the allowed memory and tries to recreate missing pages whenever it needs them.
 
-The first version recreated one missing value correctly. The latest version reused its notes and recreated 51 missing values correctly. It performed 1,000,000 replayed calculations but advanced the real job only to step 983. Another tested memory split reached step 999. None of the tested versions finished the job or produced a valid proof.
+The first version recreated one missing value correctly. The next version reused its notes and recreated 51 missing values correctly. It performed 1,000,000 replayed calculations but advanced the real job only to step 983. Another tested memory split reached step 999. None of the tested versions finished the job or produced a valid proof.
+
+We then tried giving the half-memory miner small bookmarks containing the calculation's internal state. The best bookmark version reached only step 892 under the same work limit—107 steps fewer than the best version without bookmarks. A bookmark helps restore the calculator's state, but it does not contain the discarded notebook page the miner actually needs. Recreating that page adds another layer of work, and the bookmarks also consume space that could have held useful notes. We therefore rejected this particular checkpoint design.
 
 That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and the prototypes have not measured every byte used by the program's real call stack and allocator.
 
@@ -71,7 +73,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The next experiment will make the half-memory attacker smarter by organizing its saved information hierarchically or combining small checkpoints with recursive recovery. We should try hard to defeat our own design before asking anyone to trust it.
+The next experiment will organize saved information around actual data dependencies, so a summary helps recover both the calculator's state and the missing notebook page. We should try hard to defeat our own design before asking anyone to trust it.
 
 If an exact half-memory miner eventually finishes, we will measure its actual memory and speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
 
@@ -88,4 +90,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest recursive-regeneration result](pow-v1-repeated-recursive-regeneration.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest checkpoint-regeneration result](pow-v1-checkpoint-recursive-regeneration.md), and [research ledger](research-ledger.md).
