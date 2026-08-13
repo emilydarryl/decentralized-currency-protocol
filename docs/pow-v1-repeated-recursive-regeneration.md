@@ -4,6 +4,12 @@ Status: **NON-CONSENSUS REPEATED REGENERATION PILOT; TIME-MEMORY GATE NOT ASSESS
 
 This Stage C milestone extends the first recursive value recovery across every successive primary-cache miss until a fixed cumulative replay-work limit is exhausted. The packed four-way memo persists across recoveries, all values are regenerated from exact earlier dependencies, and the evaluator fails closed without a digest when it cannot finish another recovery.
 
+## Plain-language summary
+
+We intentionally made a miner use only half the normal scratch memory. When it needed information it had discarded, it tried to reconstruct that information by repeating earlier work. It correctly recovered 51 missing values, but spent one million replayed calculations and advanced only 983 of the standard workload's 98,304 steps. A different memory split reached step 999. Neither miner finished or produced a valid proof.
+
+This is a promising sign that saving memory may be expensive, but it is not proof that the mining design is decentralized or resistant to specialized hardware. A smarter attack may exist, and real process memory has not yet been fully measured. For the larger nontechnical picture, read [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md).
+
 The machine-readable method is [`repeated_recursive_regeneration_v0.json`](../contrib/pow_research_v1/repeated_recursive_regeneration_v0.json). Fixed independent Python/C++ boundaries are in [`vectors/repeated_recursive_regeneration_v0.json`](../contrib/pow_research_v1/vectors/repeated_recursive_regeneration_v0.json).
 
 ## Standard seed-zero allocation screen

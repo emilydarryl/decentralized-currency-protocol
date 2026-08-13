@@ -16,9 +16,14 @@ AI agents are users of the currency, not the protocol's identity, governors, or 
 
 The project does not claim that decentralization, anonymity, or quantum safety can be guaranteed forever. It defines testable controls, documents residual risks, and refuses guarantees the protocol cannot verify.
 
+## New to the project?
+
+Start with [Mining Decentralization in Plain English](docs/mining-decentralization-in-plain-english.md). It explains the problem, the proposed hardware and pool safeguards, what the latest experiment actually showed, and what remains unfinished without requiring a mining or programming background.
+
 ## Documents
 
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
+- [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.

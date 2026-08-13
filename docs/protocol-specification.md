@@ -347,6 +347,12 @@ Price oracles, identity registries, AI inference, subjective service quality, an
 
 ## 11. Mining decentralization profile
 
+### Plain-language overview
+
+Soveroot uses several complementary safeguards because no single rule can prevent mining concentration. The proof-of-work research tries to keep broadly available hardware economically relevant. The official Stratum V2 profile lets miners construct their own blocks instead of accepting a pool operator's transaction choices. Decentralized share accounting aims to provide smoother payouts without a central template authority. Finally, independently operated nodes—not miners or pools—decide whether blocks obey consensus.
+
+These controls reduce particular concentration pressures; they do not guarantee equal mining power. Large operators may still have cheaper electricity, capital, cooling, chip access, or many disguised identities. A longer explanation and the current evidence are in [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md).
+
 ### 11.1 No pool identity cap
 
 Consensus MUST NOT attempt to enforce a maximum percentage for a pool identity. A real-world organization can create unlimited keys, addresses, servers, and labels. Identity caps would be Sybil-vulnerable or require a permissioned identity authority.

@@ -35,6 +35,8 @@ No document or benchmark in this repository establishes production safety, anony
 
 ## What the PoW evidence says
 
+In plain language, we are trying to attack our own mining design using a miner that keeps only half the normal scratch memory. The latest attacker correctly reconstructs discarded information many times, but one million replayed calculations advance it through only about 1% of the standard workload and it never produces a valid proof. This is encouraging evidence, not a passed test: smarter attacks, complete physical-memory measurements, and hardware comparisons remain outstanding. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the full nontechnical explanation.
+
 The v0 candidate was dominated by initialization and finalization, so the workload was redesigned as v1. The v1 software screens advanced the candidate to adversarial testing, not to consensus integration.
 
 | Milestone | Preserved result | What it establishes | What it does not establish |
