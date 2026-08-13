@@ -150,7 +150,7 @@
     },
     {
       "id": "pow_v1_repeated_recursive_regeneration",
-      "pull_request": null,
+      "pull_request": 37,
       "conclusion": "Persistent recursive memo reuse recovers 51 standard seed-zero misses under a one-million-iteration replay ceiling; every screened allocation refuses without an exact proof and physical memory remains unmeasured."
     }
   ],
