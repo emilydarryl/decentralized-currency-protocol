@@ -167,11 +167,16 @@
       "id": "pow_v1_dependency_bundle_regeneration",
       "pull_request": 41,
       "conclusion": "Twelve 120-byte direct-dependency bundles displace 32 memo entries yet advance the standard seed-zero prefix from a matched 951 baseline to 1006, seven beyond the prior global record; the partial holdout is mixed and incomplete, total call/probe work is not bounded, and no proof is produced."
+    },
+    {
+      "id": "pow_v1_total_operation_bound",
+      "pull_request": 42,
+      "conclusion": "A five-million-unit ceiling jointly charges recursive calls, replay iterations, memo probes, and checkpoint-entry probes; all eight standard seeds stop exactly at the bound with prefixes from 480 to 999 and no proof, so the replay-only bundle advantage is not preserved."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_total_operation_bound",
-    "document": "docs/pow-v1-dependency-bundle-regeneration.md",
+    "id": "pow_v1_physical_memory_accounting",
+    "document": "docs/pow-v1-operation-bounded-dependency-bundle-regeneration.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
@@ -187,6 +192,7 @@
     "stage_c_checkpoint_recursive_regeneration": "Fourteen byte-accounted compact checkpoint allocations are screened; the best reaches iteration 892 versus 999 without checkpoints, so this policy is rejected without assessing a gate.",
     "stage_c_target_checkpoint_regeneration": "Target-aware 88-byte checkpoints improve the 1/128 allocation from iteration 719 to 999 with bounded depth, but only tie the best prior prefix and fail closed without a proof.",
     "stage_c_dependency_bundle_regeneration": "Twelve 120-byte four-value bundles advance the seed-zero prefix to 1006 while displacing 32 memo entries, but a partial holdout is mixed and exposes unbounded call/probe work beyond the replay counter; no proof output is reached.",
-    "required_outcome": "Add a deterministic total-operation ceiling covering replay iterations, recursive calls, memo probes, and checkpoint probes; complete the holdout; then require exact final outputs, explicit physical stack accounting, and measured process memory."
+    "stage_c_total_operation_bound": "One five-million-unit ceiling charges replay iterations, recursive calls, memo probes, and checkpoint probes; all eight standard seeds terminate at the bound with prefixes from 480 to 999 and no proof, rejecting the replay-only bundle advantage without assessing a gate.",
+    "required_outcome": "Account explicitly for physical recursion-stack bytes and allocator allowances, measure process peak resident memory on controlled hosts, continue adversarial attack search, and still require exact final outputs before any time-memory gate assessment."
   }
 }

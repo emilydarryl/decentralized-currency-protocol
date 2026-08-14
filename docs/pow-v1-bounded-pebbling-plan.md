@@ -84,6 +84,8 @@ The [first recursive-regeneration pilot](pow-v1-recursive-regeneration.md) now p
 
 The [repeated recursive-regeneration pilot](pow-v1-repeated-recursive-regeneration.md) persists that memo across successive misses and screens five primary-cache allocations under a one-million-iteration replay ceiling. The 1/64 baseline recovers 51 misses and reaches iteration 983; the 1/32 split reaches the longest screened prefix at iteration 999. Every allocation exhausts the work ceiling without a digest. Hierarchical replay, exact final outputs, explicit physical stack accounting, and controlled memory measurement remain incomplete.
 
+The [total-operation-bounded bundle pilot](pow-v1-operation-bounded-dependency-bundle-regeneration.md) closes a later control gap by charging recursive calls, replay iterations, memo probes, and checkpoint-entry probes against one five-million-unit ceiling. All eight standard seeds terminate exactly at the bound without a proof. Prefixes range from 480 to 999, so the earlier replay-only seed-zero bundle record of 1,006 does not survive the combined accounting. Explicit physical stack, allocator, and resident-memory accounting remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

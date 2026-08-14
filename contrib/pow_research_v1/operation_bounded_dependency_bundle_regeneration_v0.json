@@ -1,0 +1,54 @@
+{
+  "format": "soveroot-pow-v1-operation-bounded-dependency-bundle-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS TOTAL-OPERATION-BOUNDED PILOT",
+  "question": "Does the direct-dependency bundle attack retain its apparent advantage when recursive calls and table probes consume the same deterministic work allowance as replay iterations?",
+  "algorithm": {
+    "base": "the frozen four-value, twelve-entry dependency-bundle regenerator",
+    "charged_operations": [
+      "every recursive value_at call",
+      "every replayed VM iteration",
+      "every memo get or put probe",
+      "every checkpoint-table entry probe"
+    ],
+    "ordering": "charge immediately before the corresponding counter increments; refuse before an operation that would exceed the ceiling",
+    "invariant": "total_operations equals recursive_calls plus replay_iterations plus memo_probes plus checkpoint_probes",
+    "safety": "operation exhaustion emits no proof and uses a distinct transcript domain"
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "primary_allocation": "1/128 of possible 16-byte primary slots",
+    "checkpoint_entries": 12,
+    "dependency_bundle_width": 4,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_stride": 8,
+    "checkpoint_bytes": 1440,
+    "replay_iteration_safety_limit": 1000000,
+    "total_operation_limit": 5000000,
+    "predeclared_seed_count": 8
+  },
+  "standard_holdout": [
+    {"seed_index": 0, "completed_iterations": 999, "reconstructed_misses": 53, "recursive_calls": 1991227, "replay_iterations": 995588, "memo_probes": 1989233, "checkpoint_probes": 23952, "total_operations": 5000000, "maximum_depth": 3, "checkpoint_hits": 2, "transcript_commitment": "057f50d38a61e589c9647f53e03112ab78e2443cddbceaa12dc24f5b35e07fd31be6275abd65ee2d05d0bfc5b83a2f13"},
+    {"seed_index": 1, "completed_iterations": 952, "reconstructed_misses": 54, "recursive_calls": 1986756, "replay_iterations": 993351, "memo_probes": 1985465, "checkpoint_probes": 34428, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 790, "transcript_commitment": "f6f55e792f87c5e09bc14aead90970734149dd12a0f02cd6845c193f606a414306b4a9c20ad0ae1b03fbebdb567febe9"},
+    {"seed_index": 2, "completed_iterations": 946, "reconstructed_misses": 41, "recursive_calls": 1986531, "replay_iterations": 993246, "memo_probes": 1984535, "checkpoint_probes": 35688, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 490, "transcript_commitment": "02fb21e55ec51c7c0911cd0398ed0994180342ba5cfe284fb46df1a6fe84de850c6113b0e439e87769b297628523d8e9"},
+    {"seed_index": 3, "completed_iterations": 480, "reconstructed_misses": 1585142, "recursive_calls": 2305646, "replay_iterations": 360252, "memo_probes": 2304822, "checkpoint_probes": 29280, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 808, "transcript_commitment": "5617da8f3a115455955521cec37c31e07c2e7739455d45e513e0f88ee3ad13acdea99715f5d6f974194013b15256de94"},
+    {"seed_index": 4, "completed_iterations": 779, "reconstructed_misses": 30, "recursive_calls": 1985804, "replay_iterations": 992887, "memo_probes": 1983149, "checkpoint_probes": 38160, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 264, "transcript_commitment": "0bbbd501a9a6885d8da534c77628fc102ab2b2b1d4741d80edeb59655dd4a0c32b2d1ee1cd62edba45d3ab331f0fa1ac"},
+    {"seed_index": 5, "completed_iterations": 715, "reconstructed_misses": 22, "recursive_calls": 1981411, "replay_iterations": 990695, "memo_probes": 1979378, "checkpoint_probes": 48516, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 1007, "transcript_commitment": "2c8808441fd6405d61fde6def8f5d8e414b34e83124fabccabca4dc959dcd9539b2ac2c6c16d4a8775ab59b273cec4da"},
+    {"seed_index": 6, "completed_iterations": 968, "reconstructed_misses": 51, "recursive_calls": 1985607, "replay_iterations": 992778, "memo_probes": 1984547, "checkpoint_probes": 37068, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 1016, "transcript_commitment": "1a533704832bcf3e027c69f84e8c6496fb2a5c4fffc4bda7913cb7292beeba68eaa5860629cec16d5aff7926565c27a9"},
+    {"seed_index": 7, "completed_iterations": 887, "reconstructed_misses": 42, "recursive_calls": 1982890, "replay_iterations": 991424, "memo_probes": 1981970, "checkpoint_probes": 43716, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 1363, "transcript_commitment": "2d96ce2a28799a1f9e8cd2aa1dd6deba579a28f87bd9313a1ac6d4c34a1202cea6c63e1daf1f1cbe19c13f3d35ce959c"}
+  ],
+  "summary": {
+    "minimum_completed_iterations": 480,
+    "median_completed_iterations": 916.5,
+    "maximum_completed_iterations": 999,
+    "completed_proofs": 0,
+    "seed_zero_replay_only_bundle_prefix": 1006,
+    "seed_zero_total_operation_bounded_prefix": 999,
+    "interpretation": "the fixed total ceiling closes the unbounded call/probe gap, removes the seed-zero record advantage, and exposes severe seed-dependent cache thrashing"
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "all cases refuse without a proof; physical stack, allocator overhead, peak resident memory, throughput, and a second independent attack model remain unmeasured"
+  },
+  "next_use": "add explicit physical stack and allocator accounting, then measure process peak resident memory on controlled hosts before any time-memory claim"
+}

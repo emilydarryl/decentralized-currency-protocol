@@ -243,12 +243,15 @@ class _RecursiveRegenerator:
         header_digest: bytes,
         nonce_bytes: bytes,
         work_limit: int,
+        operation_limit: int | None = None,
     ) -> None:
         self.owner = owner
         self.context = context
         self.header_digest = header_digest
         self.nonce_bytes = nonce_bytes
         self.work_limit = work_limit
+        self.operation_limit = operation_limit
+        self.total_operations = 0
         self.calls = self.cache_hits = self.completed_values = self.iterations = 0
         self.maximum_depth = self.memo_entries = self.memo_peak_entries = self.memo_evictions = 0
         self.memo_probes = self.memo_shifted_bytes = 0
@@ -266,7 +269,16 @@ class _RecursiveRegenerator:
         slot = set_index * MEMO_WAYS + way
         return self.owner.memo_offset + slot * MEMO_ENTRY_BYTES
 
-    def _memo_get(self, stop: int, word: int) -> int | None:
+    def _charge_operation(self, stop: int, word: int, depth: int) -> None:
+        if (
+            self.operation_limit is not None
+            and self.total_operations >= self.operation_limit
+        ):
+            raise _RegenerationExhausted("operation_limit", stop, word, depth)
+        self.total_operations += 1
+
+    def _memo_get(self, stop: int, word: int, depth: int) -> int | None:
+        self._charge_operation(stop, word, depth)
         self.memo_probes += 1
         key = self._memo_key(stop, word)
         set_index = self._memo_set(key)
@@ -278,7 +290,8 @@ class _RecursiveRegenerator:
                 return value
         return None
 
-    def _memo_put(self, stop: int, word: int, value: int) -> None:
+    def _memo_put(self, stop: int, word: int, value: int, depth: int) -> None:
+        self._charge_operation(stop, word, depth)
         self.memo_probes += 1
         key = self._memo_key(stop, word)
         set_index = self._memo_set(key)
@@ -302,6 +315,7 @@ class _RecursiveRegenerator:
         struct.pack_into("<IQ", self.owner.arena, offset, key, value & MASK64)
 
     def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self._charge_operation(stop, target_word, depth)
         self.calls += 1
         if stop == 0:
             self.completed_values += 1
@@ -309,7 +323,7 @@ class _RecursiveRegenerator:
         self.maximum_depth = max(self.maximum_depth, depth)
         if depth > self.owner.layout.frame_capacity:
             raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
-        cached = self._memo_get(stop, target_word)
+        cached = self._memo_get(stop, target_word, depth)
         if cached is not None:
             return cached
         registers, accumulator = _initial_machine_state(
@@ -320,6 +334,7 @@ class _RecursiveRegenerator:
         for iteration in range(stop):
             if self.iterations >= self.work_limit:
                 raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self._charge_operation(stop, target_word, depth)
             self.iterations += 1
             pass_index = iteration // word_count
             word_index = iteration & (word_count - 1)
@@ -362,7 +377,7 @@ class _RecursiveRegenerator:
             registers[neighbor] = _u64(
                 registers[neighbor] ^ _rol64(_u64(dataset_word + first_scratch), second_scratch)
             )
-        self._memo_put(stop, target_word, target_value)
+        self._memo_put(stop, target_word, target_value, depth)
         self.completed_values += 1
         return target_value
 
