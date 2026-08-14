@@ -88,6 +88,8 @@ The [total-operation-bounded bundle pilot](pow-v1-operation-bounded-dependency-b
 
 The [physical-memory accounting pilot](pow-v1-physical-memory-accounting.md) deducts a 40,960-byte native-stack reserve and 4,096-byte allocator allowance before sizing the attack arena, replaces a recovery-dependent C++ transcript vector with a fixed rolling digest, validates compiler-reported recursive frame size, and records whole-process Linux RSS. The complete eight-seed prefixes range from 641 to 853 and no proof is produced. Shared-runner RSS is diagnostic only; a preallocated iterative work stack, exact final outputs, and controlled physical-host measurements remain incomplete.
 
+The next predeclared pilot replaces recursive calls with twenty packed 104-byte frames stored in the existing arena frame reserve. It removes the native-stack reserve, retains the allocator allowance, and freezes eight standard holdout seeds plus three short cross-language vectors in [`iterative_work_stack_regeneration_v0.json`](../contrib/pow_research_v1/iterative_work_stack_regeneration_v0.json) before execution.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

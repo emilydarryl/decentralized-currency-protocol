@@ -1,0 +1,75 @@
+{
+  "format": "soveroot-pow-v1-iterative-work-stack-regeneration-method-v0",
+  "version": "0.1",
+  "status": "PREDECLARED NON-CONSENSUS ITERATIVE ATTACK PILOT",
+  "question": "How far does the operation-bounded dependency-bundle attacker progress when every suspended regeneration frame is stored in a fixed arena-resident work stack and native recursion is forbidden?",
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 126464,
+    "explicit_frame_bytes": 104,
+    "explicit_frame_capacity": 20,
+    "explicit_work_stack_bytes_inside_arena": 2080,
+    "native_recursion_bytes": 0,
+    "rolling_transcript_state_bytes": 48,
+    "transcript_growth_bytes": 0,
+    "accounted_bytes": 131072
+  },
+  "frame_encoding": {
+    "byte_order": "little",
+    "bytes": 104,
+    "fields": [
+      "target_word:u32",
+      "stop_iteration:u32",
+      "current_iteration:u32",
+      "depth:u16",
+      "phase:u8",
+      "reserved:u8",
+      "target_value:u64",
+      "registers:8xu64",
+      "accumulator:u64",
+      "first_scratch:u64"
+    ],
+    "phases": ["enter", "need_first_dependency", "have_first_dependency", "have_second_dependency"]
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "primary_allocation": "1/128 of possible 16-byte primary slots after allocator reserve",
+    "primary_cache_capacity": 59,
+    "memo_capacity": 9824,
+    "checkpoint_entries": 12,
+    "dependency_bundle_width": 4,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_stride": 8,
+    "total_operation_limit": 5000000,
+    "predeclared_seed_count": 8
+  },
+  "fixed_vector_policy": {
+    "profile": "standard",
+    "operation_limit": 100,
+    "seed_indices": [0, 1, 2],
+    "require_python_cpp_exact_match": true
+  },
+  "holdout_policy": {
+    "seed_indices": [0, 1, 2, 3, 4, 5, 6, 7],
+    "reported_metrics": [
+      "completed_iterations",
+      "reconstructed_misses",
+      "logical_value_requests",
+      "replay_iterations",
+      "memo_probes",
+      "checkpoint_probes",
+      "total_operations",
+      "maximum_explicit_stack_depth",
+      "checkpoint_hits",
+      "transcript_commitment",
+      "canonical_proof_completed"
+    ],
+    "selection_rule": "No parameter changes after any holdout result is observed; retain all eight rows, including unfavorable outcomes."
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "The screen must first establish exact independent boundaries. A gate assessment still requires canonical proofs, total measured attack memory on controlled hosts, and a second independently reviewed attack model."
+  }
+}
