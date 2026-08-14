@@ -1,0 +1,23 @@
+{
+  "format": "soveroot-pow-v1-frontier-pebbling-attacker-vectors-v0",
+  "profile": "standard",
+  "seed_generation": "benchmark_matrix_v1.seed_for(index)",
+  "seed_indices": [0, 1, 2],
+  "nonce": 0,
+  "primary_numerator": 1,
+  "primary_denominator": 128,
+  "frontier_capacity": 9944,
+  "frontier_candidate_count": 2,
+  "work_limit": 1000000,
+  "operation_limit": 1000,
+  "layout": {"budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "arena_bytes": 126464, "write_bitmap_bytes": 4096, "primary_cache_capacity": 59, "primary_cache_bytes": 944, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "checkpoint_entry_bytes": 0, "checkpoint_capacity": 0, "checkpoint_bytes": 0, "checkpoint_stride": 1, "memo_entry_bytes": 12, "memo_capacity": 9944, "memo_bytes": 119328, "unused_arena_bytes": 16, "admitted_bytes": 131072},
+  "iterative_memory_accounting": {"total_budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "allocator_allowance_bytes": 4096, "arena_allocation_bytes": 126464, "explicit_frame_bytes": 104, "explicit_frame_capacity": 20, "explicit_work_stack_bytes_inside_arena": 2080, "native_recursion_bytes": 0, "rolling_transcript_state_bytes": 48, "transcript_growth_bytes": 0, "accounted_bytes": 131072},
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes"],
+  "operation_fields": ["recursive_calls", "replay_iterations", "memo_probes", "checkpoint_probes", "total"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {"seed_index": 0, "counters": [159, 320, 0, 319, 1, 318, 259, 1, 0, 301, 228, 70, 151, 3, 22, 0, 548, 0, 0, 0, 0, 0, 0], "operations": [301, 151, 548, 0, 1000], "exhaustion": ["operation_limit", 159, 1, 59, 5, 3, 151, "b02ef3f788e0e652b66b12985c1e2fcb2bf37eb8b0a4713d03396dd052edce7feab094a016dc6deabe360da3408cef49"], "frontier_metrics": {"frontier_capacity": 9944, "frontier_probes": 548, "frontier_hits": 228, "frontier_admissions": 22, "frontier_replacements": 0, "frontier_rejections": 0}, "transcript_commitment": "eaa0fdf79671adbc90ac8b3c1ba088bec311ab4a4ab6f287be20db3bb93022bdf20899942a106ca5328f44caeb0341cc"},
+    {"seed_index": 1, "counters": [175, 351, 0, 350, 1, 350, 291, 1, 0, 301, 228, 70, 151, 3, 22, 0, 548, 0, 0, 0, 0, 0, 0], "operations": [301, 151, 548, 0, 1000], "exhaustion": ["operation_limit", 175, 0, 33, 5, 3, 151, "61d98838d3c5a6ed3c5467c42ad2fa3083188f19b16ed7e742594173e993601dd60bcb0913b14b98206e5f272e2dac10"], "frontier_metrics": {"frontier_capacity": 9944, "frontier_probes": 548, "frontier_hits": 228, "frontier_admissions": 22, "frontier_replacements": 0, "frontier_rejections": 0}, "transcript_commitment": "eaa0fdf79671adbc90ac8b3c1ba088bec311ab4a4ab6f287be20db3bb93022bdf20899942a106ca5328f44caeb0341cc"},
+    {"seed_index": 2, "counters": [209, 420, 3, 416, 1, 418, 357, 1, 0, 301, 228, 70, 151, 3, 22, 0, 548, 0, 0, 0, 0, 0, 0], "operations": [301, 151, 548, 0, 1000], "exhaustion": ["operation_limit", 209, 1, 6663, 5, 3, 151, "5d79041ba836654dd5c1ab954248585f89f1e34d873feda10ca3dd44de5b3bd00ec726a2731157a7373a1772a1b8634d"], "frontier_metrics": {"frontier_capacity": 9944, "frontier_probes": 548, "frontier_hits": 228, "frontier_admissions": 22, "frontier_replacements": 0, "frontier_rejections": 0}, "transcript_commitment": "eaa0fdf79671adbc90ac8b3c1ba088bec311ab4a4ab6f287be20db3bb93022bdf20899942a106ca5328f44caeb0341cc"}
+  ]
+}

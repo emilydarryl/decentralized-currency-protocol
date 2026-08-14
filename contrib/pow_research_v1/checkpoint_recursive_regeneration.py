@@ -26,6 +26,7 @@ from .powvm import (
 )
 from .recursive_regeneration import (
     DEFAULT_WORK_LIMIT,
+    EMPTY_MEMO_KEY,
     FRAME_BYTES,
     RecursiveBoundary,
     _RecursiveArena,
@@ -53,6 +54,9 @@ DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION = (
 )
 DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION = (
     b"Soveroot/PowResearch/HierarchicalCheckpointLadderRegeneration/v1\x00"
+)
+DOMAIN_FRONTIER_PEBBLING_REGENERATION = (
+    b"Soveroot/PowResearch/FrontierPebblingRegeneration/v1\x00"
 )
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
@@ -221,6 +225,7 @@ class CheckpointRegenerationResult:
     physical_memory_accounting: PhysicalMemoryAccounting | None = None
     iterative_memory_accounting: IterativeMemoryAccounting | None = None
     hierarchical_checkpoint_levels: list[dict[str, int]] | None = None
+    frontier_metrics: dict[str, int] | None = None
 
     def to_dict(self) -> dict[str, object]:
         document = asdict(self)
@@ -236,6 +241,8 @@ class CheckpointRegenerationResult:
             document.pop("iterative_memory_accounting")
         if self.hierarchical_checkpoint_levels is None:
             document.pop("hierarchical_checkpoint_levels")
+        if self.frontier_metrics is None:
+            document.pop("frontier_metrics")
         return document
 
 
@@ -1188,6 +1195,121 @@ class _HierarchicalCheckpointLadderRegenerator(
             self.checkpoint_captures += 1
 
 
+class _FrontierPebblingRegenerator(_IterativeDependencyBundleRegenerator):
+    """Retain costly completed values in a two-choice arena frontier."""
+
+    def __init__(
+        self,
+        owner: _RecursiveArena,
+        context: EpochContext,
+        header_digest: bytes,
+        nonce_bytes: bytes,
+        work_limit: int,
+        operation_limit: int | None = None,
+    ) -> None:
+        _RecursiveRegenerator.__init__(
+            self, owner, context, header_digest, nonce_bytes, work_limit,
+            operation_limit,
+        )
+        self.checkpoint_lookups = self.checkpoint_hits = 0
+        self.checkpoint_captures = self.checkpoint_replacements = 0
+        self.checkpoint_probes = 0
+        self.frontier_probes = self.frontier_hits = 0
+        self.frontier_admissions = self.frontier_replacements = 0
+        self.frontier_rejections = 0
+
+    def _frontier_candidates(self, key: int) -> tuple[int, int]:
+        capacity = self.owner.layout.memo_capacity
+        first = ((key * 0x9E3779B1) & 0xFFFFFFFF) % capacity
+        spread = (
+            (((key ^ (key >> 16)) * 0x85EBCA6B) & 0xFFFFFFFF)
+            % (capacity - 1)
+        )
+        return first, (first + 1 + spread) % capacity
+
+    def _frontier_offset(self, slot: int) -> int:
+        return self.owner.memo_offset + slot * self.owner.layout.memo_entry_bytes
+
+    def _memo_get(self, stop: int, word: int, depth: int) -> int | None:
+        key = self._memo_key(stop, word)
+        found: int | None = None
+        for slot in self._frontier_candidates(key):
+            self._charge_operation(stop, word, depth)
+            self.memo_probes += 1
+            self.frontier_probes += 1
+            stored_key, value = struct.unpack_from(
+                "<IQ", self.owner.arena, self._frontier_offset(slot)
+            )
+            if found is None and stored_key == key:
+                found = value
+        if found is not None:
+            self.cache_hits += 1
+            self.frontier_hits += 1
+        return found
+
+    def _memo_put(self, stop: int, word: int, value: int, depth: int) -> None:
+        key = self._memo_key(stop, word)
+        candidates = self._frontier_candidates(key)
+        stored: list[int] = []
+        for slot in candidates:
+            self._charge_operation(stop, word, depth)
+            self.memo_probes += 1
+            self.frontier_probes += 1
+            stored.append(
+                struct.unpack_from(
+                    "<I", self.owner.arena, self._frontier_offset(slot)
+                )[0]
+            )
+
+        selected: int | None = None
+        for index, stored_key in enumerate(stored):
+            if stored_key == key:
+                selected = index
+                break
+        if selected is None:
+            for index, stored_key in enumerate(stored):
+                if stored_key == EMPTY_MEMO_KEY:
+                    selected = index
+                    self.memo_entries += 1
+                    self.memo_peak_entries = max(
+                        self.memo_peak_entries, self.memo_entries
+                    )
+                    self.frontier_admissions += 1
+                    break
+        if selected is None:
+            first_stop = stored[0] >> 15
+            second_stop = stored[1] >> 15
+            selected = 0 if first_stop <= second_stop else 1
+            if stop <= (stored[selected] >> 15):
+                self.frontier_rejections += 1
+                return
+            self.memo_evictions += 1
+            self.frontier_replacements += 1
+
+        struct.pack_into(
+            "<IQ",
+            self.owner.arena,
+            self._frontier_offset(candidates[selected]),
+            key,
+            value & MASK64,
+        )
+
+    def _checkpoint_find(
+        self, target_word: int, stop: int, depth: int
+    ) -> tuple[int, int, list[int], int] | None:
+        return None
+
+    def _checkpoint_put(
+        self,
+        anchor_word: int,
+        stop: int,
+        candidates: list[tuple[int, int]],
+        registers: list[int],
+        accumulator: int,
+    ) -> None:
+        return None
+
+
 def reconstruct_repeatedly_with_checkpoints(
     context: EpochContext,
     header: bytes,
@@ -1206,6 +1328,7 @@ def reconstruct_repeatedly_with_checkpoints(
     _rolling_transcript: bool = False,
     _iterative_work_stack: bool = False,
     _hierarchical_checkpoint_ladder: bool = False,
+    _frontier_pebbling: bool = False,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -1218,14 +1341,14 @@ def reconstruct_repeatedly_with_checkpoints(
         raise ValueError("work_limit must be positive")
     if _operation_limit is not None and _operation_limit <= 0:
         raise ValueError("operation_limit must be positive")
-    if checkpoint_capacity <= 0:
+    if checkpoint_capacity <= 0 and not _frontier_pebbling:
         raise ValueError("checkpoint_capacity must be positive")
     if checkpoint_stride <= 0:
         raise ValueError("checkpoint_stride must be positive")
     dependency_bundles = _dependency_bundle_width > 1
     if dependency_bundles and not _target_aware:
         raise ValueError("dependency bundles require target-aware checkpoints")
-    if _iterative_work_stack and not dependency_bundles:
+    if _iterative_work_stack and not dependency_bundles and not _frontier_pebbling:
         raise ValueError("iterative work stack requires dependency bundles")
     if _hierarchical_checkpoint_ladder and not _iterative_work_stack:
         raise ValueError("hierarchical checkpoint ladder requires iterative work stack")
@@ -1234,7 +1357,12 @@ def reconstruct_repeatedly_with_checkpoints(
         and checkpoint_capacity != HIERARCHICAL_CHECKPOINT_CAPACITY
     ):
         raise ValueError("hierarchical checkpoint capacity must match frozen levels")
+    if _frontier_pebbling and checkpoint_capacity != 0:
+        raise ValueError("frontier pebbling forbids machine-state checkpoints")
+    if _frontier_pebbling and dependency_bundles:
+        raise ValueError("frontier pebbling forbids dependency bundles")
     checkpoint_entry_bytes = (
+        0 if _frontier_pebbling else
         _dependency_bundle_offsets(_dependency_bundle_width)[2]
         if dependency_bundles else
         TARGET_CHECKPOINT_ENTRY_BYTES if _target_aware else CHECKPOINT_ENTRY_BYTES
@@ -1265,7 +1393,12 @@ def reconstruct_repeatedly_with_checkpoints(
         base.memo_entry_bytes, base.memo_capacity, base.memo_bytes,
         base.unused_arena_bytes - checkpoint_bytes, base.admitted_bytes,
     )
-    if dependency_bundles:
+    if _frontier_pebbling:
+        regenerator = _FrontierPebblingRegenerator(
+            arena, context, header_digest, nonce_bytes, work_limit,
+            _operation_limit,
+        )
+    elif dependency_bundles:
         regenerator_class = (
             _HierarchicalCheckpointLadderRegenerator
             if _hierarchical_checkpoint_ladder else
@@ -1291,6 +1424,8 @@ def reconstruct_repeatedly_with_checkpoints(
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
+        DOMAIN_FRONTIER_PEBBLING_REGENERATION
+        if _frontier_pebbling else
         DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION
         if dependency_bundles and _hierarchical_checkpoint_ladder else
         DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION
@@ -1396,6 +1531,8 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
+        "refused_frontier_pebbling_exhausted"
+        if _frontier_pebbling else
         "refused_hierarchical_checkpoint_ladder_exhausted"
         if dependency_bundles and _hierarchical_checkpoint_ladder else
         "refused_iterative_work_stack_dependency_bundle_exhausted"
@@ -1505,6 +1642,17 @@ def reconstruct_repeatedly_with_checkpoints(
                 in HIERARCHICAL_CHECKPOINT_LEVELS
             ]
             if _hierarchical_checkpoint_ladder else None
+        ),
+        (
+            {
+                "frontier_capacity": layout.memo_capacity,
+                "frontier_probes": regenerator.frontier_probes,
+                "frontier_hits": regenerator.frontier_hits,
+                "frontier_admissions": regenerator.frontier_admissions,
+                "frontier_replacements": regenerator.frontier_replacements,
+                "frontier_rejections": regenerator.frontier_rejections,
+            }
+            if _frontier_pebbling else None
         ),
     )
 
@@ -1704,4 +1852,35 @@ def reconstruct_repeatedly_with_hierarchical_checkpoint_ladder(
         _rolling_transcript=True,
         _iterative_work_stack=True,
         _hierarchical_checkpoint_ladder=True,
+    )
+
+
+def reconstruct_repeatedly_with_frontier_pebbling(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    operation_limit: int = DEFAULT_TOTAL_OPERATION_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+) -> CheckpointRegenerationResult:
+    """Run the frozen two-choice cost-aware value-frontier attacker."""
+
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=0,
+        checkpoint_stride=1,
+        _operation_limit=operation_limit,
+        _external_reserve_bytes=ITERATIVE_EXTERNAL_RESERVE_BYTES,
+        _rolling_transcript=True,
+        _iterative_work_stack=True,
+        _frontier_pebbling=True,
     )
