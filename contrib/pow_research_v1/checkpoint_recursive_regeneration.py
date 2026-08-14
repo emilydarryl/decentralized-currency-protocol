@@ -35,7 +35,11 @@ from .repeated_recursive_regeneration import RepeatedRecursiveExhaustion
 
 
 DOMAIN_CHECKPOINT_REGENERATION = b"Soveroot/PowResearch/CheckpointRegeneration/v1\x00"
+DOMAIN_TARGET_CHECKPOINT_REGENERATION = (
+    b"Soveroot/PowResearch/TargetCheckpointRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
+TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
 DEFAULT_CHECKPOINT_CAPACITY = 4
 DEFAULT_CHECKPOINT_STRIDE = 8
@@ -259,6 +263,154 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
         return target_value
 
 
+class _TargetCheckpointRegenerator(_RecursiveRegenerator):
+    """Checkpoint machine state together with one exact target-word value."""
+
+    def __init__(
+        self,
+        owner: _RecursiveArena,
+        context: EpochContext,
+        header_digest: bytes,
+        nonce_bytes: bytes,
+        work_limit: int,
+        checkpoint_capacity: int,
+        checkpoint_stride: int,
+    ) -> None:
+        super().__init__(owner, context, header_digest, nonce_bytes, work_limit)
+        self.checkpoint_capacity = checkpoint_capacity
+        self.checkpoint_stride = checkpoint_stride
+        self.checkpoint_offset = owner.memo_offset + owner.layout.memo_bytes
+        self.checkpoint_lookups = self.checkpoint_hits = 0
+        self.checkpoint_captures = self.checkpoint_replacements = 0
+        self.checkpoint_probes = 0
+        for slot in range(checkpoint_capacity):
+            struct.pack_into(
+                "<I", owner.arena,
+                self.checkpoint_offset + slot * TARGET_CHECKPOINT_ENTRY_BYTES,
+                EMPTY_CHECKPOINT_STOP,
+            )
+
+    def _checkpoint_find(
+        self, target_word: int, stop: int
+    ) -> tuple[int, int, list[int], int] | None:
+        self.checkpoint_lookups += 1
+        self.checkpoint_probes += 1
+        slot = target_word % self.checkpoint_capacity
+        offset = self.checkpoint_offset + slot * TARGET_CHECKPOINT_ENTRY_BYTES
+        stored_stop, stored_word = struct.unpack_from("<II", self.owner.arena, offset)
+        if (
+            stored_stop == EMPTY_CHECKPOINT_STOP
+            or stored_word != target_word
+            or stored_stop >= stop
+        ):
+            return None
+        self.checkpoint_hits += 1
+        values = struct.unpack_from("<10Q", self.owner.arena, offset + 8)
+        return stored_stop, values[0], list(values[1:9]), values[9]
+
+    def _checkpoint_put(
+        self,
+        target_word: int,
+        target_value: int,
+        stop: int,
+        registers: list[int],
+        accumulator: int,
+    ) -> None:
+        if stop == 0 or stop % self.checkpoint_stride:
+            return
+        slot = target_word % self.checkpoint_capacity
+        offset = self.checkpoint_offset + slot * TARGET_CHECKPOINT_ENTRY_BYTES
+        stored_stop, stored_word = struct.unpack_from("<II", self.owner.arena, offset)
+        if (
+            stored_stop != EMPTY_CHECKPOINT_STOP
+            and (stored_stop != stop or stored_word != target_word)
+        ):
+            self.checkpoint_replacements += 1
+        struct.pack_into(
+            "<II10Q", self.owner.arena, offset, stop, target_word,
+            target_value & MASK64, *registers, accumulator & MASK64,
+        )
+        self.checkpoint_captures += 1
+
+    def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self.calls += 1
+        if stop == 0:
+            self.completed_values += 1
+            return 0
+        self.maximum_depth = max(self.maximum_depth, depth)
+        if depth > self.owner.layout.frame_capacity:
+            raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
+        cached = self._memo_get(stop, target_word)
+        if cached is not None:
+            return cached
+
+        checkpoint = self._checkpoint_find(target_word, stop)
+        if checkpoint is None:
+            start = 0
+            registers, accumulator = _initial_machine_state(
+                self.context, self.header_digest, self.nonce_bytes
+            )
+            target_value = 0
+        else:
+            start, target_value, registers, accumulator = checkpoint
+
+        word_count = self.owner.word_count
+        for iteration in range(start, stop):
+            if self.iterations >= self.work_limit:
+                raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self.iterations += 1
+            pass_index = iteration // word_count
+            word_index = iteration & (word_count - 1)
+            lane = iteration & 7
+            entry = self.context.schedule[iteration & 63]
+            x = registers[lane]
+            y = registers[(lane + 1) & 7]
+            z = registers[(lane + 3) & 7]
+            first_selector = x ^ _rol64(y, iteration) ^ accumulator ^ entry.immediate
+            first_word = first_selector & (word_count - 1)
+            first_scratch = self.value_at(first_word, iteration, depth + 1)
+            dataset_selector = first_scratch ^ z ^ _rol64(accumulator, lane + pass_index) ^ iteration
+            dataset_word = _read_u64(self.context.dataset, dataset_selector)
+            second_selector = (
+                dataset_word
+                ^ registers[(lane + 5) & 7]
+                ^ _rol64(_u64(first_scratch + accumulator), entry.immediate)
+            )
+            second_word = second_selector & (word_count - 1)
+            second_scratch = self.value_at(second_word, iteration, depth + 1)
+            mixed_value = _execute_operation(
+                entry.opcode, x, y, first_scratch, second_scratch,
+                dataset_word, entry.immediate,
+            )
+            accumulator = _u64(
+                _rol64(
+                    accumulator ^ mixed_value ^ dataset_word,
+                    first_scratch ^ second_scratch ^ entry.immediate,
+                )
+                + first_scratch + entry.immediate + iteration
+            )
+            first_write = mixed_value ^ accumulator ^ second_scratch
+            second_write = second_scratch ^ _rol64(
+                _u64(mixed_value + accumulator), dataset_word
+            )
+            if word_index == target_word:
+                target_value = first_write & MASK64
+            if second_word == target_word:
+                target_value = second_write & MASK64
+            registers[lane] = _u64(mixed_value + accumulator + first_scratch)
+            neighbor = (lane + 2) & 7
+            registers[neighbor] = _u64(
+                registers[neighbor]
+                ^ _rol64(_u64(dataset_word + first_scratch), second_scratch)
+            )
+            self._checkpoint_put(
+                target_word, target_value, iteration + 1, registers, accumulator
+            )
+        self._memo_put(stop, target_word, target_value)
+        self.completed_values += 1
+        return target_value
+
+
 def reconstruct_repeatedly_with_checkpoints(
     context: EpochContext,
     header: bytes,
@@ -270,6 +422,7 @@ def reconstruct_repeatedly_with_checkpoints(
     primary_denominator: int = 32,
     checkpoint_capacity: int = DEFAULT_CHECKPOINT_CAPACITY,
     checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+    _target_aware: bool = False,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -284,7 +437,10 @@ def reconstruct_repeatedly_with_checkpoints(
         raise ValueError("checkpoint_capacity must be positive")
     if checkpoint_stride <= 0:
         raise ValueError("checkpoint_stride must be positive")
-    checkpoint_bytes = checkpoint_capacity * CHECKPOINT_ENTRY_BYTES
+    checkpoint_entry_bytes = (
+        TARGET_CHECKPOINT_ENTRY_BYTES if _target_aware else CHECKPOINT_ENTRY_BYTES
+    )
+    checkpoint_bytes = checkpoint_capacity * checkpoint_entry_bytes
     budget = context.params.scratchpad_bytes // 2 if budget_bytes is None else budget_bytes
     if budget <= 0 or budget > context.params.scratchpad_bytes:
         raise ValueError("budget_bytes must be in (0, scratchpad_bytes]")
@@ -305,11 +461,14 @@ def reconstruct_repeatedly_with_checkpoints(
         base.budget_bytes, base.fixed_state_reserve_bytes, base.arena_bytes,
         base.write_bitmap_bytes, base.primary_cache_capacity, base.primary_cache_bytes,
         base.frame_bytes, base.frame_capacity, base.frame_reserve_bytes,
-        CHECKPOINT_ENTRY_BYTES, checkpoint_capacity, checkpoint_bytes, checkpoint_stride,
+        checkpoint_entry_bytes, checkpoint_capacity, checkpoint_bytes, checkpoint_stride,
         base.memo_entry_bytes, base.memo_capacity, base.memo_bytes,
         base.unused_arena_bytes - checkpoint_bytes, base.admitted_bytes,
     )
-    regenerator = _CheckpointRegenerator(
+    regenerator_class = (
+        _TargetCheckpointRegenerator if _target_aware else _CheckpointRegenerator
+    )
+    regenerator = regenerator_class(
         arena, context, header_digest, nonce_bytes, work_limit,
         checkpoint_capacity, checkpoint_stride,
     )
@@ -317,7 +476,11 @@ def reconstruct_repeatedly_with_checkpoints(
     first: CheckpointBoundary | None = None
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
-    transcript = hashlib.sha3_384(DOMAIN_CHECKPOINT_REGENERATION)
+    domain = (
+        DOMAIN_TARGET_CHECKPOINT_REGENERATION
+        if _target_aware else DOMAIN_CHECKPOINT_REGENERATION
+    )
+    transcript = hashlib.sha3_384(domain)
 
     def boundary_for(miss: _MaterializedMiss, value: int, commitment: str) -> CheckpointBoundary:
         return CheckpointBoundary(
@@ -335,7 +498,7 @@ def reconstruct_repeatedly_with_checkpoints(
         nonlocal attempts, successful, first, last, exhaustion
         attempts += 1
         state_commitment = _boundary_commitment(
-            DOMAIN_CHECKPOINT_REGENERATION, context, header_digest, nonce_bytes,
+            domain, context, header_digest, nonce_bytes,
             registers, accumulator, miss.consumer, miss.slot, miss.word,
         )
         try:
@@ -347,7 +510,7 @@ def reconstruct_repeatedly_with_checkpoints(
             )
             return False
         commitment = _boundary_commitment(
-            DOMAIN_CHECKPOINT_REGENERATION, context, header_digest, nonce_bytes,
+            domain, context, header_digest, nonce_bytes,
             registers, accumulator, miss.consumer, miss.slot, miss.word, value,
         )
         boundary = boundary_for(miss, value, commitment)
@@ -402,7 +565,10 @@ def reconstruct_repeatedly_with_checkpoints(
             samples.append(sampled)
             selector = _u64(selector ^ sampled)
 
-    status = "refused_checkpoint_regeneration_exhausted"
+    status = (
+        "refused_target_checkpoint_regeneration_exhausted"
+        if _target_aware else "refused_checkpoint_regeneration_exhausted"
+    )
     if not stopped:
         params_bytes = context.params.encode()
         encoded_registers = struct.pack("<8Q", *registers)
@@ -437,4 +603,32 @@ def reconstruct_repeatedly_with_checkpoints(
         regenerator.checkpoint_captures, regenerator.checkpoint_replacements,
         regenerator.checkpoint_probes, first, last, exhaustion,
         transcript.hexdigest(), execution_result,
+    )
+
+
+def reconstruct_repeatedly_with_target_checkpoints(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    checkpoint_capacity: int = DEFAULT_CHECKPOINT_CAPACITY,
+    checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+) -> CheckpointRegenerationResult:
+    """Recover misses using checkpoints bound to one exact target-word value."""
+
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=checkpoint_capacity,
+        checkpoint_stride=checkpoint_stride,
+        _target_aware=True,
     )

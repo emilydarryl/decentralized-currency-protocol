@@ -54,6 +54,8 @@ The first version recreated one missing value correctly. The next version reused
 
 We then tried giving the half-memory miner small bookmarks containing the calculation's internal state. The best bookmark version reached only step 892 under the same work limit—107 steps fewer than the best version without bookmarks. A bookmark helps restore the calculator's state, but it does not contain the discarded notebook page the miner actually needs. Recreating that page adds another layer of work, and the bookmarks also consume space that could have held useful notes. We therefore rejected this particular checkpoint design.
 
+The next version made each bookmark remember one exact notebook value as well as the calculator's state. That removed the extra layer of work. On a sparse memory split that previously reached only step 719, the improved bookmarks reached step 999—a gain of 280 steps. However, step 999 was already the best result from the ordinary recursive attacker. The smarter bookmarks improved a weak setup but did not move the overall record, and they still did not finish the 98,304-step job.
+
 That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and the prototypes have not measured every byte used by the program's real call stack and allocator.
 
 ## Where we are now
@@ -73,7 +75,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The next experiment will organize saved information around actual data dependencies, so a summary helps recover both the calculator's state and the missing notebook page. We should try hard to defeat our own design before asking anyone to trust it.
+The next experiment will try compact bundles containing several related dependency values instead of only one. The challenge is to save enough replay work to justify every byte removed from the general memo. We should try hard to defeat our own design before asking anyone to trust it.
 
 If an exact half-memory miner eventually finishes, we will measure its actual memory and speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
 
@@ -90,4 +92,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest checkpoint-regeneration result](pow-v1-checkpoint-recursive-regeneration.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest target-checkpoint result](pow-v1-target-checkpoint-regeneration.md), and [research ledger](research-ledger.md).

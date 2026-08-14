@@ -47,6 +47,7 @@ Start with [Mining Decentralization in Plain English](docs/mining-decentralizati
 - [pow-v1-recursive-regeneration.md](docs/pow-v1-recursive-regeneration.md) documents the first exact recursive scratch-value recovery inside a byte-accounted logical half-scratch arena.
 - [pow-v1-repeated-recursive-regeneration.md](docs/pow-v1-repeated-recursive-regeneration.md) documents persistent memo reuse across successive recursive recoveries and a five-point primary-cache allocation screen.
 - [pow-v1-checkpoint-recursive-regeneration.md](docs/pow-v1-checkpoint-recursive-regeneration.md) records why compact machine-state checkpoints made the best screened half-memory attack worse and were rejected.
+- [pow-v1-target-checkpoint-regeneration.md](docs/pow-v1-target-checkpoint-regeneration.md) tests checkpoints that bind machine state to one exact historical scratch value, improving a weak allocation without extending the global attack record.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
