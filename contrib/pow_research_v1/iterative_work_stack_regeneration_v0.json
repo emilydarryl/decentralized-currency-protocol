@@ -52,6 +52,7 @@
     "require_python_cpp_exact_match": true
   },
   "holdout_policy": {
+    "nonce": 0,
     "seed_indices": [0, 1, 2, 3, 4, 5, 6, 7],
     "reported_metrics": [
       "completed_iterations",
