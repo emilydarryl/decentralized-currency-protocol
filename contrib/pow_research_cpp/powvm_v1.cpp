@@ -58,6 +58,7 @@ constexpr char DOMAIN_RECURSIVE_REGENERATION[] = "Soveroot/PowResearch/Recursive
 constexpr char DOMAIN_REPEATED_RECURSIVE_REGENERATION[] = "Soveroot/PowResearch/RepeatedRecursiveRegeneration/v1\0";
 constexpr char DOMAIN_CHECKPOINT_REGENERATION[] = "Soveroot/PowResearch/CheckpointRegeneration/v1\0";
 constexpr char DOMAIN_TARGET_CHECKPOINT_REGENERATION[] = "Soveroot/PowResearch/TargetCheckpointRegeneration/v1\0";
+constexpr char DOMAIN_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/DependencyBundleRegeneration/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -80,9 +81,15 @@ constexpr std::uint64_t RECURSIVE_WORK_LIMIT{1'000'000};
 constexpr std::uint32_t RECURSIVE_EMPTY_MEMO_KEY{std::numeric_limits<std::uint32_t>::max()};
 constexpr std::size_t CHECKPOINT_ENTRY_BYTES{80};
 constexpr std::size_t TARGET_CHECKPOINT_ENTRY_BYTES{88};
+constexpr std::size_t DEPENDENCY_BUNDLE_WIDTH{4};
+constexpr std::size_t DEPENDENCY_BUNDLE_VALUE_OFFSET{16};
+constexpr std::size_t DEPENDENCY_BUNDLE_STATE_OFFSET{48};
+constexpr std::size_t DEPENDENCY_BUNDLE_ENTRY_BYTES{120};
 constexpr std::size_t CHECKPOINT_CAPACITY{4};
+constexpr std::size_t DEPENDENCY_BUNDLE_CAPACITY{12};
 constexpr std::size_t CHECKPOINT_STRIDE{8};
 constexpr std::uint32_t EMPTY_CHECKPOINT_STOP{std::numeric_limits<std::uint32_t>::max()};
+constexpr std::uint16_t EMPTY_BUNDLE_WORD{std::numeric_limits<std::uint16_t>::max()};
 
 struct Params {
     std::size_t dataset_bytes;
@@ -619,6 +626,11 @@ std::uint32_t ReadLE32(const std::uint8_t* data)
     return value;
 }
 
+std::uint16_t ReadLE16(const std::uint8_t* data)
+{
+    return std::uint16_t{data[0]} | (std::uint16_t{data[1]} << 8);
+}
+
 void AppendLE64(Bytes& output, std::uint64_t value)
 {
     for (unsigned i{0}; i < 8; ++i) output.push_back(static_cast<std::uint8_t>(value >> (8 * i)));
@@ -632,6 +644,12 @@ void WriteLE64(std::uint8_t* output, std::uint64_t value)
 void WriteLE32(std::uint8_t* output, std::uint32_t value)
 {
     for (unsigned i{0}; i < 4; ++i) output[i] = static_cast<std::uint8_t>(value >> (8 * i));
+}
+
+void WriteLE16(std::uint8_t* output, std::uint16_t value)
+{
+    output[0] = static_cast<std::uint8_t>(value);
+    output[1] = static_cast<std::uint8_t>(value >> 8);
 }
 
 void KeccakF(std::array<std::uint64_t, 25>& state)
@@ -1568,7 +1586,8 @@ public:
         std::size_t primary_denominator = RECURSIVE_PRIMARY_DENOMINATOR,
         std::size_t checkpoint_capacity = 0,
         std::size_t checkpoint_stride = 0,
-        bool target_checkpoints = false)
+        bool target_checkpoints = false,
+        bool dependency_bundles = false)
         : m_word_count(scratchpad_bytes / 8)
     {
         if (primary_numerator == 0 || primary_denominator == 0 ||
@@ -1584,7 +1603,7 @@ public:
         m_layout.write_bitmap_bytes = (m_word_count + 7) / 8;
         if (m_layout.arena_bytes <=
             m_layout.write_bitmap_bytes + BOUNDED_CACHE_ENTRY_BYTES +
-                RECURSIVE_FRAME_BYTES + RECURSIVE_MEMO_ENTRY_BYTES) {
+                RECURSIVE_FRAME_BYTES + RECURSIVE_MEMO_ENTRY_BYTES * RECURSIVE_MEMO_WAYS) {
             throw std::invalid_argument("budget cannot hold recursive regeneration structures");
         }
         const std::size_t total_primary_slots =
@@ -1599,8 +1618,9 @@ public:
             m_layout.primary_cache_capacity * BOUNDED_CACHE_ENTRY_BYTES;
         const std::size_t auxiliary_bytes =
             m_layout.arena_bytes - m_layout.write_bitmap_bytes - m_layout.primary_cache_bytes;
-        m_layout.checkpoint_entry_bytes = target_checkpoints
-            ? TARGET_CHECKPOINT_ENTRY_BYTES : CHECKPOINT_ENTRY_BYTES;
+        m_layout.checkpoint_entry_bytes = dependency_bundles
+            ? DEPENDENCY_BUNDLE_ENTRY_BYTES
+            : (target_checkpoints ? TARGET_CHECKPOINT_ENTRY_BYTES : CHECKPOINT_ENTRY_BYTES);
         m_layout.checkpoint_capacity = checkpoint_capacity;
         m_layout.checkpoint_bytes = checkpoint_capacity * m_layout.checkpoint_entry_bytes;
         m_layout.checkpoint_stride = checkpoint_stride;
@@ -1608,13 +1628,15 @@ public:
             throw std::invalid_argument("checkpoint capacity and stride must both be zero or positive");
         }
         if (auxiliary_bytes <=
-            m_layout.checkpoint_bytes + RECURSIVE_FRAME_BYTES + RECURSIVE_MEMO_ENTRY_BYTES) {
+            m_layout.checkpoint_bytes + RECURSIVE_FRAME_BYTES +
+                RECURSIVE_MEMO_ENTRY_BYTES * RECURSIVE_MEMO_WAYS) {
             throw std::invalid_argument("budget cannot hold checkpoints and recursive structures");
         }
         m_layout.frame_bytes = RECURSIVE_FRAME_BYTES;
         m_layout.frame_capacity = std::min(
             RECURSIVE_MAXIMUM_FRAMES,
-            (auxiliary_bytes - RECURSIVE_MEMO_ENTRY_BYTES - m_layout.checkpoint_bytes) /
+            (auxiliary_bytes - RECURSIVE_MEMO_ENTRY_BYTES * RECURSIVE_MEMO_WAYS -
+             m_layout.checkpoint_bytes) /
                 RECURSIVE_FRAME_BYTES);
         if (m_layout.frame_capacity == 0) {
             throw std::invalid_argument("recursive budget cannot hold one frame");
@@ -1857,7 +1879,10 @@ public:
             const std::size_t neighbor = (lane + 2) & (REGISTER_COUNT - 1);
             state.registers[neighbor] ^=
                 std::rotl(dataset_word + first_scratch, static_cast<int>(second_scratch & 63));
-            CheckpointPut(target_word, target_value, iteration + 1, state);
+            CheckpointPut(
+                target_word, target_value, first_word, first_scratch,
+                second_word, word, first_write, second_write,
+                iteration + 1, state);
         }
         MemoPut(stop, target_word, target_value);
         ++completed_values;
@@ -1882,6 +1907,42 @@ private:
         const RecursiveLayout& layout = m_owner.Layout();
         if (layout.checkpoint_capacity == 0) return false;
         ++checkpoint_lookups;
+        if (layout.checkpoint_entry_bytes == DEPENDENCY_BUNDLE_ENTRY_BYTES) {
+            bool found{false};
+            std::size_t selected_offset{0};
+            std::size_t selected_value_index{0};
+            for (std::size_t slot{0}; slot < layout.checkpoint_capacity; ++slot) {
+                ++checkpoint_probes;
+                const std::size_t offset = m_owner.CheckpointOffset(slot);
+                const std::uint32_t stored_stop = ReadLE32(m_owner.Arena().data() + offset);
+                if (stored_stop == EMPTY_CHECKPOINT_STOP || stored_stop >= stop ||
+                    (found && stored_stop <= selected_stop)) continue;
+                for (std::size_t i{0}; i < DEPENDENCY_BUNDLE_WIDTH; ++i) {
+                    if (ReadLE16(m_owner.Arena().data() + offset + 4 + i * 2) == target_word) {
+                        found = true;
+                        selected_stop = stored_stop;
+                        selected_offset = offset;
+                        selected_value_index = i;
+                        break;
+                    }
+                }
+            }
+            if (!found) return false;
+            target_value = ReadLE64(
+                m_owner.Arena().data() + selected_offset +
+                DEPENDENCY_BUNDLE_VALUE_OFFSET + selected_value_index * 8);
+            for (std::size_t lane{0}; lane < REGISTER_COUNT; ++lane) {
+                state.registers[lane] = ReadLE64(
+                    m_owner.Arena().data() + selected_offset +
+                    DEPENDENCY_BUNDLE_STATE_OFFSET + lane * 8);
+            }
+            state.accumulator = ReadLE64(
+                m_owner.Arena().data() + selected_offset +
+                DEPENDENCY_BUNDLE_STATE_OFFSET + REGISTER_COUNT * 8);
+            target_value_restored = true;
+            ++checkpoint_hits;
+            return true;
+        }
         if (layout.checkpoint_entry_bytes == TARGET_CHECKPOINT_ENTRY_BYTES) {
             ++checkpoint_probes;
             const std::size_t slot =
@@ -1930,12 +1991,77 @@ private:
     void CheckpointPut(
         std::uint64_t target_word,
         std::uint64_t target_value,
+        std::uint64_t first_word,
+        std::uint64_t first_scratch,
+        std::uint64_t second_word,
+        std::uint64_t sequential_word,
+        std::uint64_t first_write,
+        std::uint64_t second_write,
         std::uint64_t stop,
         const MachineState& state)
     {
         const RecursiveLayout& layout = m_owner.Layout();
         if (layout.checkpoint_capacity == 0 || stop == 0 ||
             stop % layout.checkpoint_stride != 0) return;
+        const bool dependency_bundles =
+            layout.checkpoint_entry_bytes == DEPENDENCY_BUNDLE_ENTRY_BYTES;
+        if (dependency_bundles) {
+            const std::size_t slot =
+                static_cast<std::size_t>(target_word) % layout.checkpoint_capacity;
+            const std::size_t offset = m_owner.CheckpointOffset(slot);
+            const std::uint32_t stored_stop = ReadLE32(m_owner.Arena().data() + offset);
+            const std::uint16_t stored_anchor = ReadLE16(m_owner.Arena().data() + offset + 4);
+            if (stored_stop != EMPTY_CHECKPOINT_STOP &&
+                (stored_stop != stop || stored_anchor != target_word)) {
+                ++checkpoint_replacements;
+            }
+            std::array<std::uint16_t, DEPENDENCY_BUNDLE_WIDTH> words{};
+            words.fill(EMPTY_BUNDLE_WORD);
+            std::array<std::uint64_t, DEPENDENCY_BUNDLE_WIDTH> values{};
+            std::size_t count{0};
+            const auto add = [&](std::uint64_t word, std::uint64_t value) {
+                for (std::size_t i{0}; i < count; ++i) {
+                    if (words[i] == word) {
+                        values[i] = value;
+                        return;
+                    }
+                }
+                if (count == DEPENDENCY_BUNDLE_WIDTH) return;
+                words[count] = static_cast<std::uint16_t>(word);
+                values[count] = value;
+                ++count;
+            };
+            std::uint64_t first_value = first_scratch;
+            if (first_word == sequential_word) first_value = first_write;
+            if (first_word == second_word) first_value = second_write;
+            add(target_word, target_value);
+            add(first_word, first_value);
+            add(second_word, second_write);
+            add(sequential_word, sequential_word == second_word ? second_write : first_write);
+            WriteLE32(m_owner.Arena().data() + offset, static_cast<std::uint32_t>(stop));
+            for (std::size_t i{0}; i < DEPENDENCY_BUNDLE_WIDTH; ++i) {
+                WriteLE16(m_owner.Arena().data() + offset + 4 + i * 2, words[i]);
+                WriteLE64(
+                    m_owner.Arena().data() + offset +
+                    DEPENDENCY_BUNDLE_VALUE_OFFSET + i * 8,
+                    values[i]);
+            }
+            for (std::size_t i{12}; i < DEPENDENCY_BUNDLE_VALUE_OFFSET; ++i) {
+                m_owner.Arena()[offset + i] = 0;
+            }
+            for (std::size_t lane{0}; lane < REGISTER_COUNT; ++lane) {
+                WriteLE64(
+                    m_owner.Arena().data() + offset +
+                    DEPENDENCY_BUNDLE_STATE_OFFSET + lane * 8,
+                    state.registers[lane]);
+            }
+            WriteLE64(
+                m_owner.Arena().data() + offset +
+                DEPENDENCY_BUNDLE_STATE_OFFSET + REGISTER_COUNT * 8,
+                state.accumulator);
+            ++checkpoint_captures;
+            return;
+        }
         const bool target_aware =
             layout.checkpoint_entry_bytes == TARGET_CHECKPOINT_ENTRY_BYTES;
         const std::size_t slot = target_aware
@@ -3792,7 +3918,8 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     std::size_t primary_denominator = RECURSIVE_PRIMARY_DENOMINATOR,
     std::size_t checkpoint_capacity = 0,
     std::size_t checkpoint_stride = 0,
-    bool target_checkpoints = false)
+    bool target_checkpoints = false,
+    bool dependency_bundles = false)
 {
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) {
@@ -3812,7 +3939,8 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
         primary_denominator,
         checkpoint_capacity,
         checkpoint_stride,
-        target_checkpoints);
+        target_checkpoints,
+        dependency_bundles);
     RecursiveRegenerator regenerator(
         arena, context, header_digest, nonce_bytes, params_bytes, work_limit);
     RepeatedRecursiveRegenerationResult result{};
@@ -3820,21 +3948,25 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     result.primary_denominator = primary_denominator;
     result.work_limit = work_limit;
     result.layout = arena.Layout();
-    if (target_checkpoints) {
+    if (dependency_bundles) {
+        result.status = "refused_dependency_bundle_regeneration_exhausted";
+    } else if (target_checkpoints) {
         result.status = "refused_target_checkpoint_regeneration_exhausted";
     } else if (checkpoint_capacity != 0) {
         result.status = "refused_checkpoint_regeneration_exhausted";
     }
-    Bytes transcript_input = target_checkpoints
-        ? DomainBytes(DOMAIN_TARGET_CHECKPOINT_REGENERATION)
+    Bytes transcript_input = dependency_bundles
+        ? DomainBytes(DOMAIN_DEPENDENCY_BUNDLE_REGENERATION)
+        : target_checkpoints ? DomainBytes(DOMAIN_TARGET_CHECKPOINT_REGENERATION)
         : (checkpoint_capacity == 0
             ? DomainBytes(DOMAIN_REPEATED_RECURSIVE_REGENERATION)
             : DomainBytes(DOMAIN_CHECKPOINT_REGENERATION));
 
     auto boundary_commitment = [&](const BoundedReadMiss& miss,
                                    const std::uint64_t* value) {
-        Bytes encoded = target_checkpoints
-            ? DomainBytes(DOMAIN_TARGET_CHECKPOINT_REGENERATION)
+        Bytes encoded = dependency_bundles
+            ? DomainBytes(DOMAIN_DEPENDENCY_BUNDLE_REGENERATION)
+            : target_checkpoints ? DomainBytes(DOMAIN_TARGET_CHECKPOINT_REGENERATION)
             : (checkpoint_capacity == 0
                 ? DomainBytes(DOMAIN_REPEATED_RECURSIVE_REGENERATION)
                 : DomainBytes(DOMAIN_CHECKPOINT_REGENERATION));
@@ -4666,11 +4798,16 @@ void PrintRepeatedRecursiveRegeneration(
     std::uint64_t nonce,
     const Params& params,
     bool checkpoints = false,
-    bool target_checkpoints = false)
+    bool target_checkpoints = false,
+    bool dependency_bundles = false)
 {
-    const bool has_checkpoints = checkpoints || target_checkpoints;
+    const bool has_checkpoints = checkpoints || target_checkpoints || dependency_bundles;
     const RepeatedRecursiveRegenerationResult r =
-        target_checkpoints
+        dependency_bundles
+        ? ProbeRepeatedRecursiveRegeneration(
+              PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
+              1, 128, DEPENDENCY_BUNDLE_CAPACITY, CHECKPOINT_STRIDE, false, true)
+        : target_checkpoints
         ? ProbeRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
               1, 128, CHECKPOINT_CAPACITY, CHECKPOINT_STRIDE, true)
@@ -4705,14 +4842,18 @@ void PrintRepeatedRecursiveRegeneration(
     };
     std::cout << "{\n"
               << "  \"format\": \""
-              << (target_checkpoints
+              << (dependency_bundles
+                  ? "soveroot-pow-v1-dependency-bundle-regeneration-v0"
+                  : target_checkpoints
                   ? "soveroot-pow-v1-target-checkpoint-regeneration-v0"
                   : (checkpoints
                       ? "soveroot-pow-v1-checkpoint-recursive-regeneration-v0"
                       : "soveroot-pow-v1-repeated-recursive-regeneration-v0"))
               << "\",\n"
               << "  \"warning\": \""
-              << (target_checkpoints
+              << (dependency_bundles
+                  ? "NON-CONSENSUS DEPENDENCY-BUNDLE REGENERATION PILOT; no completed proof or gate result"
+                  : target_checkpoints
                   ? "NON-CONSENSUS TARGET-AWARE CHECKPOINT PILOT; no completed proof or gate result"
                   : (checkpoints
                       ? "NON-CONSENSUS CHECKPOINT REGENERATION REJECTION PILOT; no completed proof or gate result"
@@ -5363,6 +5504,14 @@ void PrintBenchmark(
 int main(int argc, char* argv[])
 {
     try {
+        if (argc == 8 && std::string_view{argv[1]} == "recursive-regenerate-dependency-bundle") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            PrintRepeatedRecursiveRegeneration(seed, header, nonce, params, false, false, true);
+            return 0;
+        }
         if (argc == 8 && std::string_view{argv[1]} == "recursive-regenerate-target-checkpoint") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -5530,6 +5679,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp recursive-regenerate-repeated SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-checkpoint SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-target-checkpoint SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
+                      << "   or: powvm_v1_cpp recursive-regenerate-dependency-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

@@ -153,7 +153,7 @@ class _RecursiveArena:
             bitmap_bytes
             + CACHE_ENTRY_BYTES
             + FRAME_BYTES
-            + MEMO_ENTRY_BYTES
+            + MEMO_ENTRY_BYTES * MEMO_WAYS
             + reserved_tail_bytes
         ):
             raise ValueError("budget cannot hold recursive regeneration structures")
@@ -165,7 +165,9 @@ class _RecursiveArena:
         auxiliary_bytes = arena_bytes - bitmap_bytes - primary_bytes
         frame_capacity = min(
             MAXIMUM_FRAME_CAPACITY,
-            (auxiliary_bytes - MEMO_ENTRY_BYTES - reserved_tail_bytes) // FRAME_BYTES,
+            (
+                auxiliary_bytes - MEMO_ENTRY_BYTES * MEMO_WAYS - reserved_tail_bytes
+            ) // FRAME_BYTES,
         )
         if frame_capacity == 0:
             raise ValueError("budget cannot hold one regeneration frame")
