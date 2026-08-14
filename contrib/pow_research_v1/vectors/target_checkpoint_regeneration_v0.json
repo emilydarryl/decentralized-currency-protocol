@@ -1,0 +1,39 @@
+{
+  "format": "soveroot-pow-v1-target-checkpoint-regeneration-vectors-v0",
+  "source_vectors": "v1.json",
+  "primary_numerator": 1,
+  "primary_denominator": 128,
+  "checkpoint_capacity": 4,
+  "checkpoint_stride": 8,
+  "work_limit": 1000000,
+  "layout": {"budget_bytes": 4096, "fixed_state_reserve_bytes": 512, "arena_bytes": 3584, "write_bitmap_bytes": 128, "primary_cache_capacity": 1, "primary_cache_bytes": 16, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "checkpoint_entry_bytes": 88, "checkpoint_capacity": 4, "checkpoint_bytes": 352, "checkpoint_stride": 8, "memo_entry_bytes": 12, "memo_capacity": 84, "memo_bytes": 1008, "unused_arena_bytes": 0, "admitted_bytes": 4096},
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes"],
+  "boundary_fields": ["consumer", "slot", "word", "value", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes", "commitment"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {
+      "name": "zero-seed-zero-nonce",
+      "counters": [47, 97, 1, 94, 2, 94, 94, 2, 1, 1999995, 1673364, 326622, 1000000, 15, 70, 128356, 1930225, 0, 128435, 29337, 98459, 95683, 128435],
+      "first": [39, 0, 24, 10066105664916337243, 90485, 75861, 14624, 45242, 10, 66, 5656, 87305, 0, 5722, 1271, 4490, 4370, 5722, "fde4d3f350ebc728e10ad3eb32ca4c9f92cceb070e179a4dcd6d6bc380df18e98a7b9bfefa83168a729b0cfbb5cc74d0"],
+      "last": [39, 0, 24, 10066105664916337243, 90485, 75861, 14624, 45242, 10, 66, 5656, 87305, 0, 5722, 1271, 4490, 4370, 5722, "fde4d3f350ebc728e10ad3eb32ca4c9f92cceb070e179a4dcd6d6bc380df18e98a7b9bfefa83168a729b0cfbb5cc74d0"],
+      "exhaustion": ["work_limit", 47, 1, 537, 23, 9, 1000000, "82a7676ae6a4011d141b76f5c5add6a8dcf22adf08bd89d6cb9dfce6ea25a1fe1cdd70112ecc6e6cb41fa463ebd18639"],
+      "transcript_commitment": "e45b8d4bb1c3685e5c9c41f6f6f65c48243785bf1ee1cb3106d3082615cdaa9aa300bf61921b6d1799e460e6b666faa8"
+    },
+    {
+      "name": "incrementing-seed",
+      "counters": [39, 82, 1, 79, 2, 78, 78, 2, 1, 1999997, 1661629, 338359, 1000000, 15, 60, 148665, 1959088, 0, 148734, 53917, 73445, 73441, 148734],
+      "first": [35, 1, 34, 17059265656783347923, 340829, 282470, 58359, 170414, 13, 59, 24910, 332408, 0, 24969, 8274, 12641, 12637, 24969, "5ce9b9406f0960b2e77975348bbd3b908a9d9ad4359f3bc5b36ecade961be08fb52073e74b955c62d49ed6d800b1eef5"],
+      "last": [35, 1, 34, 17059265656783347923, 340829, 282470, 58359, 170414, 13, 59, 24910, 332408, 0, 24969, 8274, 12641, 12637, 24969, "5ce9b9406f0960b2e77975348bbd3b908a9d9ad4359f3bc5b36ecade961be08fb52073e74b955c62d49ed6d800b1eef5"],
+      "exhaustion": ["work_limit", 39, 1, 19, 14, 9, 1000000, "1d0b3910cad289eb7c9e909384809afa15efb4c0cce923c120b4ab71c5582c0aec81107448d5bcc872e7bd6e8c468d26"],
+      "transcript_commitment": "090d0d4d92628402b6a1e6813f528f486b748944309507f875f714bb0380f62a321d7c200aac53a9fb4621e70c40676e"
+    },
+    {
+      "name": "high-bit-pattern",
+      "counters": [47, 96, 0, 95, 1, 94, 93, 1, 0, 1999999, 1667192, 332800, 1000000, 17, 55, 112219, 1891747, 0, 112281, 2018, 75938, 50670, 112281],
+      "first": null,
+      "last": null,
+      "exhaustion": ["work_limit", 47, 1, 454, 6, 7, 1000000, "f9a1d52f7e3d6188638954cab2a36398782e315608e4775f170c186748598656ac047cb4f0fd2e19377d5cecbfd5b347"],
+      "transcript_commitment": "2db2b21bae9647e68778d394a432739ffa99104d7a97bd2086677c3adad22f4032389886326686456b632e49d9738059"
+    }
+  ]
+}

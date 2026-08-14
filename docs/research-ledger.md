@@ -2,7 +2,7 @@
 
 Status: **WORKING DESIGN; NO PRODUCTION NETWORK; NO PROOF-OF-WORK GATE PASSED**
 
-Evidence cutoff: 2026-08-13, source revision `17e8a222425fd12f9b4ea618f8eb8b9c883b20b7`
+Evidence cutoff: 2026-08-14, source revision `a43a50e2366073ea65e09af7f0ec28b2f5511b99`
 
 This is the project-level index for decisions made, evidence collected, claims rejected, and work still required. Detailed specifications remain authoritative within their stated scope. This ledger exists so that a reader does not need private conversations to understand the project.
 
@@ -35,7 +35,7 @@ No document or benchmark in this repository establishes production safety, anony
 
 ## What the PoW evidence says
 
-In plain language, we are trying to attack our own mining design using a miner that keeps only half the normal scratch memory. The strongest current attacker correctly reconstructs discarded information many times, but one million replayed calculations advance it through only about 1% of the standard workload and it never produces a valid proof. A later [checkpoint-assisted experiment](pow-v1-checkpoint-recursive-regeneration.md) reached only iteration 892 versus 999 without checkpoints, so that checkpoint policy was rejected. This is encouraging evidence, not a passed test: smarter attacks, complete physical-memory measurements, and hardware comparisons remain outstanding. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the full nontechnical explanation.
+In plain language, we are trying to attack our own mining design using a miner that keeps only half the normal scratch memory. The strongest current attacker correctly reconstructs discarded information many times, but one million replayed calculations advance it through only about 1% of the standard workload and it never produces a valid proof. State-only [checkpoint-assisted regeneration](pow-v1-checkpoint-recursive-regeneration.md) regressed, while [target-aware checkpoints](pow-v1-target-checkpoint-regeneration.md) improved a weak allocation from iteration 719 to 999 but only tied the existing global record. This is encouraging evidence, not a passed test: smarter attacks, complete physical-memory measurements, and hardware comparisons remain outstanding. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the full nontechnical explanation.
 
 The v0 candidate was dominated by initialization and finalization, so the workload was redesigned as v1. The v1 software screens advanced the candidate to adversarial testing, not to consensus integration.
 
@@ -76,7 +76,7 @@ The first Stage B result now supplies an [optimistic offline cut-set lower bound
 
 The remaining Stage B [offline schedule search](pow-v1-offline-pebbling-schedule.md) is now complete. Across eight standard seeds, its compact layout needs a median 3,424,646 abstract producer replays and a 13,989,059-byte direct action stream; its conservative layout needs 6,419,925 replays and 26,101,215 bytes. These are results for one optimistic graph-only policy, not lower bounds, executable proofs, or claims that no compressed schedule exists.
 
-Stage C now has a fail-closed online probe, flat replay and dense-layout pilots, a time-checkpoint screen, first and [repeated recursive regeneration](pow-v1-repeated-recursive-regeneration.md), and a [checkpoint-assisted rejection pilot](pow-v1-checkpoint-recursive-regeneration.md). Persistent memo reuse reaches a longest exact prefix of 999 iterations. Fourteen compact checkpoint allocations were screened; the best reached only iteration 892 because a machine-state bookmark does not also provide the historical scratch value needed at that bookmark. Every allocation still refuses without a proof. The immediate milestone is dependency-aware hierarchical replay that accelerates both state and value recovery. A later exact attacker must still account for every retained value, identity, version, checkpoint, register, queue, physical stack byte, allocator allowance, and peak resident byte within the ceiling.
+Stage C now has a fail-closed online probe, flat replay and dense-layout pilots, a time-checkpoint screen, first and [repeated recursive regeneration](pow-v1-repeated-recursive-regeneration.md), a [checkpoint-assisted rejection pilot](pow-v1-checkpoint-recursive-regeneration.md), and [target-aware checkpoints](pow-v1-target-checkpoint-regeneration.md). Binding one exact target value to each state checkpoint removes the prior depth penalty and raises the sparse 1/128 allocation from iteration 719 to 999, but only ties the global record. Every allocation still refuses without a proof. The immediate milestone is a compact multi-value dependency bundle that saves more replay work than the memo capacity it displaces. A later exact attacker must still account for every retained value, identity, version, checkpoint, register, queue, physical stack byte, allocator allowance, and peak resident byte within the ceiling.
 
 An offline trace, graph, planner, or oracle may guide the research, but results obtained with future knowledge or unbounded planning memory are lower-bound diagnostics, not executable mining attacks. The time-memory gate stays open until an independently reviewed implementation and controlled physical-host measurements satisfy the frozen policy.
 

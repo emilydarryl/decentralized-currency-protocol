@@ -174,6 +174,8 @@ python3 test/pow_research/run_cpp_repeated_recursive_regeneration_vectors_v1.py 
   --binary build/powvm_v1_cpp
 python3 test/pow_research/run_cpp_checkpoint_recursive_regeneration_vectors_v1.py \
   --binary build/powvm_v1_cpp
+python3 test/pow_research/run_cpp_target_checkpoint_regeneration_vectors_v1.py \
+  --binary build/powvm_v1_cpp
 python3 contrib/pow_research_cpp/repeated_recursive_regeneration_v1.py \
   --profile standard --seeds 1 --output build/pow-v1-repeated-recursive-regeneration.json
 python3 contrib/pow_research_cpp/render_repeated_recursive_regeneration_report_v1.py \

@@ -1,0 +1,55 @@
+{
+  "format": "soveroot-pow-v1-target-checkpoint-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS TARGET-AWARE CHECKPOINT PILOT",
+  "question": "Does binding each machine-state checkpoint to the exact historical scratch value being recovered remove the prior checkpoint recursion penalty?",
+  "algorithm": {
+    "entry": "store stop, target word, exact target value, eight VM registers, and accumulator in one 88-byte entry",
+    "index": "retain the latest checkpoint in the slot target_word modulo checkpoint_capacity",
+    "resume": "on an exact target-tag match at a strictly earlier stop, restore both machine state and target value without a new recursive lookup",
+    "safety": "all restored values are produced by completed exact replay; execution fails closed on work, depth, or packed-key exhaustion"
+  },
+  "selected_configuration": {
+    "primary_allocation": "1/128 of possible 16-byte primary slots",
+    "checkpoint_entries": 4,
+    "checkpoint_entry_bytes": 88,
+    "checkpoint_stride": 8,
+    "checkpoint_bytes": 352,
+    "cumulative_work_limit_iterations": 1000000
+  },
+  "standard_seed_zero_checkpoint_capacity_screen": [
+    {"entries": 4, "stride": 8, "completed_iterations": 999, "recoveries": 53, "checkpoint_hits": 31},
+    {"entries": 16, "stride": 8, "completed_iterations": 844, "recoveries": 31, "checkpoint_hits": 998},
+    {"entries": 64, "stride": 8, "completed_iterations": 885, "recoveries": 37, "checkpoint_hits": 3662},
+    {"entries": 256, "stride": 8, "completed_iterations": 943, "recoveries": 43, "checkpoint_hits": 1208},
+    {"entries": 512, "stride": 8, "completed_iterations": 926, "recoveries": 41, "checkpoint_hits": 5413},
+    {"entries": 256, "stride": 32, "completed_iterations": 983, "recoveries": 46, "checkpoint_hits": 1766}
+  ],
+  "standard_seed_zero_primary_screen": [
+    {"primary": "1/128", "completed_iterations": 999, "recoveries": 53, "checkpoint_hits": 31},
+    {"primary": "1/64", "completed_iterations": 844, "recoveries": 35, "checkpoint_hits": 402},
+    {"primary": "1/32", "completed_iterations": 999, "recoveries": 47, "checkpoint_hits": 17},
+    {"primary": "1/16", "completed_iterations": 785, "recoveries": 12, "checkpoint_hits": 0},
+    {"primary": "1/8", "completed_iterations": 983, "recoveries": 19, "checkpoint_hits": 0}
+  ],
+  "comparison": {
+    "selected_no_checkpoint_completed_iterations": 719,
+    "selected_target_checkpoint_completed_iterations": 999,
+    "selected_delta_iterations": 280,
+    "selected_relative_change_percent": 38.9,
+    "best_existing_global_completed_iterations": 999,
+    "new_global_delta_iterations": 0
+  },
+  "interpretation": [
+    "binding the historical target value to its machine state removes the extra recursive lookup and the depth regression of state-only checkpoints",
+    "four entries improve the previously weak 1/128 allocation from 719 to 999 exact primary iterations",
+    "larger checkpoint tables are not monotonically better because they displace memo entries and alter deterministic collisions",
+    "the selected policy ties but does not exceed the best prior no-checkpoint attack",
+    "all configurations exhaust one million replay iterations without producing a proof"
+  ],
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "target-aware checkpoints improve one allocation but do not extend the global attack frontier or complete an exact proof"
+  },
+  "next_use": "generalize from one target value per checkpoint to compact dependency bundles without sacrificing memo capacity"
+}
