@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-14",
-  "evidence_cutoff_revision": "48ce76482f477249be92eeff26ee872bc5080732",
+  "evidence_cutoff_revision": "bd88968d69063ae00b85418e9e603f1864098ca2",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -182,11 +182,16 @@
       "id": "pow_v1_explicit_iterative_work_stack",
       "pull_request": 44,
       "conclusion": "Twenty packed 104-byte suspended frames now reside inside the preallocated attack arena and native recursive self-calls are forbidden. All eight holdout seeds exhaust exactly five million operations at prefixes from 712 to 952 without a proof; no gate is assessed."
+    },
+    {
+      "id": "pow_v1_hierarchical_checkpoint_ladder",
+      "pull_request": 45,
+      "conclusion": "Four directly addressed checkpoint time scales improve the frozen eight-seed median prefix from 886 to 945.5 and the maximum from 952 to 982. Every case still exhausts exactly five million operations without a proof, so no gate is assessed."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_independent_bounded_attack_search",
-    "document": "docs/pow-v1-iterative-work-stack.md",
+    "id": "pow_v1_second_bounded_attack_family",
+    "document": "docs/pow-v1-hierarchical-checkpoint-ladder.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
@@ -205,6 +210,7 @@
     "stage_c_total_operation_bound": "One five-million-unit ceiling charges replay iterations, recursive calls, memo probes, and checkpoint probes; all eight standard seeds terminate at the bound with prefixes from 480 to 999 and no proof, rejecting the replay-only bundle advantage without assessing a gate.",
     "stage_c_physical_memory_accounting": "The half-scratch budget now deducts a 40960-byte native-stack reserve and 4096-byte allocator allowance before allocating the arena; a rolling transcript has zero recovery-dependent growth, compiler stack-use and whole-process RSS diagnostics are reproducible, prefixes range from 641 to 853, and no gate is assessed.",
     "stage_c_explicit_iterative_work_stack": "Twenty packed 104-byte frames inside the preallocated arena replace native recursive self-calls; all eight frozen cases exhaust exactly five million operations at prefixes from 712 to 952 with no proof, so no gate is assessed.",
-    "required_outcome": "Implement an independently designed bounded attack strategy rather than tuning this replay policy, preserve exact cross-language boundaries and total-operation accounting, and require canonical proof outputs before controlled-host throughput can assess the time-memory gate."
+    "stage_c_hierarchical_checkpoint_ladder": "Four directly addressed time scales use sixty-four arena-resident target-aware bundles; the frozen eight-seed median rises from 886 to 945.5 and the maximum from 952 to 982, but all cases exhaust five million operations without a proof and no gate is assessed.",
+    "required_outcome": "Obtain independent adversarial review and predeclare a second bounded attack family rather than tuning the ladder to the public holdout. Preserve exact cross-language boundaries and total-operation accounting, and require canonical proof outputs before controlled-host throughput can assess the time-memory gate."
   }
 }

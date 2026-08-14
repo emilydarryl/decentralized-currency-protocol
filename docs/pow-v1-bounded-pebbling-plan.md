@@ -92,6 +92,8 @@ The next predeclared pilot replaces recursive calls with twenty packed 104-byte 
 
 That iterative pilot is complete. The next independently structured screen replaces its twelve-entry linear checkpoint scan with a directly addressed four-level ladder. Sixty-four target-aware entries are split across strides 8, 64, 512, and 4,096; every lookup charges exactly four probes, all bytes remain in the same arena, and the fixed vectors and eight nonce-zero holdout seeds are frozen in [`hierarchical_checkpoint_ladder_v0.json`](../contrib/pow_research_v1/hierarchical_checkpoint_ladder_v0.json) before execution.
 
+The [hierarchical checkpoint-ladder pilot](pow-v1-hierarchical-checkpoint-ladder.md) is now complete. It raises the median exact prefix from 886 to 945.5 and the maximum from 952 to 982, but all eight cases still exhaust exactly five million operations without a proof. The policy therefore becomes preserved adversarial evidence, not a gate result. The next attack must freeze a second bounded strategy before results rather than retune this ladder to the public holdout.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
