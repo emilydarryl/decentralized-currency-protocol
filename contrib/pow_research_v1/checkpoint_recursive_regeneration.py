@@ -26,6 +26,7 @@ from .powvm import (
 )
 from .recursive_regeneration import (
     DEFAULT_WORK_LIMIT,
+    FRAME_BYTES,
     RecursiveBoundary,
     _RecursiveArena,
     _RecursiveRegenerator,
@@ -47,6 +48,9 @@ DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION = (
 DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION = (
     b"Soveroot/PowResearch/PhysicallyAccountedDependencyBundleRegeneration/v1\x00"
 )
+DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION = (
+    b"Soveroot/PowResearch/IterativeWorkStackDependencyBundleRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
@@ -65,6 +69,10 @@ ALLOCATOR_ALLOWANCE_BYTES = 4_096
 PHYSICAL_EXTERNAL_RESERVE_BYTES = (
     NATIVE_STACK_RESERVE_BYTES + ALLOCATOR_ALLOWANCE_BYTES
 )
+ITERATIVE_EXTERNAL_RESERVE_BYTES = ALLOCATOR_ALLOWANCE_BYTES
+ITERATIVE_FRAME_STRUCT = struct.Struct("<IIIHBBQ8QQQ")
+if ITERATIVE_FRAME_STRUCT.size != FRAME_BYTES:
+    raise AssertionError("iterative frame encoding must match the arena frame reserve")
 
 
 def _dependency_bundle_offsets(width: int) -> tuple[int, int, int]:
@@ -147,6 +155,21 @@ class PhysicalMemoryAccounting:
 
 
 @dataclass(frozen=True)
+class IterativeMemoryAccounting:
+    total_budget_bytes: int
+    fixed_state_reserve_bytes: int
+    allocator_allowance_bytes: int
+    arena_allocation_bytes: int
+    explicit_frame_bytes: int
+    explicit_frame_capacity: int
+    explicit_work_stack_bytes_inside_arena: int
+    native_recursion_bytes: int
+    rolling_transcript_state_bytes: int
+    transcript_growth_bytes: int
+    accounted_bytes: int
+
+
+@dataclass(frozen=True)
 class CheckpointRegenerationResult:
     status: str
     layout: CheckpointLayout
@@ -184,6 +207,7 @@ class CheckpointRegenerationResult:
     operation_limit: int | None = None
     operation_counts: RegenerationOperationCounts | None = None
     physical_memory_accounting: PhysicalMemoryAccounting | None = None
+    iterative_memory_accounting: IterativeMemoryAccounting | None = None
 
     def to_dict(self) -> dict[str, object]:
         document = asdict(self)
@@ -195,6 +219,8 @@ class CheckpointRegenerationResult:
             document.pop("operation_counts")
         if self.physical_memory_accounting is None:
             document.pop("physical_memory_accounting")
+        if self.iterative_memory_accounting is None:
+            document.pop("iterative_memory_accounting")
         return document
 
 
@@ -726,6 +752,321 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
         return target_value
 
 
+class _IterativeDependencyBundleRegenerator(_DependencyBundleRegenerator):
+    """Regenerate values with an arena-resident stack and no recursive calls."""
+
+    _ENTER = 0
+    _NEED_FIRST = 1
+    _HAVE_FIRST = 2
+    _HAVE_SECOND = 3
+
+    def _frame_offset(self, slot: int) -> int:
+        return self.owner.frame_offset + slot * FRAME_BYTES
+
+    def _write_frame(
+        self,
+        slot: int,
+        target_word: int,
+        stop: int,
+        iteration: int,
+        depth: int,
+        phase: int,
+        target_value: int,
+        registers: list[int],
+        accumulator: int,
+        first_scratch: int,
+    ) -> None:
+        ITERATIVE_FRAME_STRUCT.pack_into(
+            self.owner.arena,
+            self._frame_offset(slot),
+            target_word,
+            stop,
+            iteration,
+            depth,
+            phase,
+            0,
+            target_value & MASK64,
+            *registers,
+            accumulator & MASK64,
+            first_scratch & MASK64,
+        )
+
+    def _read_frame(
+        self, slot: int
+    ) -> tuple[int, int, int, int, int, int, list[int], int, int]:
+        fields = ITERATIVE_FRAME_STRUCT.unpack_from(
+            self.owner.arena, self._frame_offset(slot)
+        )
+        return (
+            fields[0],
+            fields[1],
+            fields[2],
+            fields[3],
+            fields[4],
+            fields[6],
+            list(fields[7:15]),
+            fields[15],
+            fields[16],
+        )
+
+    def _push_enter(self, slot: int, target_word: int, stop: int, depth: int) -> bool:
+        if stop == 0:
+            self._charge_operation(stop, target_word, depth)
+            self.calls += 1
+            self.completed_values += 1
+            return False
+        if slot >= self.owner.layout.frame_capacity:
+            self._charge_operation(stop, target_word, depth)
+            self.calls += 1
+            self.maximum_depth = max(self.maximum_depth, depth)
+            raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
+        self._write_frame(
+            slot, target_word, stop, 0, depth, self._ENTER, 0, [0] * 8, 0, 0
+        )
+        return True
+
+    def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        """Evaluate the logical call graph using packed iterative frames."""
+
+        stack_size = 1
+        if not self._push_enter(0, target_word, stop, depth):
+            return 0
+        returned_value = 0
+        while stack_size:
+            slot = stack_size - 1
+            (
+                frame_target,
+                frame_stop,
+                iteration,
+                frame_depth,
+                phase,
+                target_value,
+                registers,
+                accumulator,
+                first_scratch,
+            ) = self._read_frame(slot)
+
+            if phase == self._ENTER:
+                self._charge_operation(frame_stop, frame_target, frame_depth)
+                self.calls += 1
+                if frame_stop == 0:
+                    self.completed_values += 1
+                    returned_value = 0
+                    stack_size -= 1
+                    continue
+                self.maximum_depth = max(self.maximum_depth, frame_depth)
+                if frame_depth > self.owner.layout.frame_capacity:
+                    raise _RegenerationExhausted(
+                        "frame_capacity", frame_stop, frame_target, frame_depth
+                    )
+                cached = self._memo_get(frame_stop, frame_target, frame_depth)
+                if cached is not None:
+                    returned_value = cached
+                    stack_size -= 1
+                    continue
+                checkpoint = self._checkpoint_find(
+                    frame_target, frame_stop, frame_depth
+                )
+                if checkpoint is None:
+                    iteration = 0
+                    registers, accumulator = _initial_machine_state(
+                        self.context, self.header_digest, self.nonce_bytes
+                    )
+                    target_value = 0
+                else:
+                    iteration, target_value, registers, accumulator = checkpoint
+                self._write_frame(
+                    slot,
+                    frame_target,
+                    frame_stop,
+                    iteration,
+                    frame_depth,
+                    self._NEED_FIRST,
+                    target_value,
+                    registers,
+                    accumulator,
+                    0,
+                )
+                continue
+
+            if phase == self._NEED_FIRST:
+                if iteration >= frame_stop:
+                    self._memo_put(
+                        frame_stop, frame_target, target_value, frame_depth
+                    )
+                    self.completed_values += 1
+                    returned_value = target_value
+                    stack_size -= 1
+                    continue
+                if self.iterations >= self.work_limit:
+                    raise _RegenerationExhausted(
+                        "work_limit", frame_stop, frame_target, frame_depth
+                    )
+                self._charge_operation(frame_stop, frame_target, frame_depth)
+                self.iterations += 1
+                lane = iteration & 7
+                entry = self.context.schedule[iteration & 63]
+                first_selector = (
+                    registers[lane]
+                    ^ _rol64(registers[(lane + 1) & 7], iteration)
+                    ^ accumulator
+                    ^ entry.immediate
+                )
+                first_word = first_selector & (self.owner.word_count - 1)
+                self._write_frame(
+                    slot,
+                    frame_target,
+                    frame_stop,
+                    iteration,
+                    frame_depth,
+                    self._HAVE_FIRST,
+                    target_value,
+                    registers,
+                    accumulator,
+                    0,
+                )
+                if self._push_enter(
+                    stack_size, first_word, iteration, frame_depth + 1
+                ):
+                    stack_size += 1
+                else:
+                    returned_value = 0
+                continue
+
+            lane = iteration & 7
+            pass_index = iteration // self.owner.word_count
+            entry = self.context.schedule[iteration & 63]
+            x = registers[lane]
+            y = registers[(lane + 1) & 7]
+            z = registers[(lane + 3) & 7]
+            first_selector = x ^ _rol64(y, iteration) ^ accumulator ^ entry.immediate
+            first_word = first_selector & (self.owner.word_count - 1)
+
+            if phase == self._HAVE_FIRST:
+                first_scratch = returned_value
+                dataset_selector = (
+                    first_scratch
+                    ^ z
+                    ^ _rol64(accumulator, lane + pass_index)
+                    ^ iteration
+                )
+                dataset_word = _read_u64(self.context.dataset, dataset_selector)
+                second_selector = (
+                    dataset_word
+                    ^ registers[(lane + 5) & 7]
+                    ^ _rol64(_u64(first_scratch + accumulator), entry.immediate)
+                )
+                second_word = second_selector & (self.owner.word_count - 1)
+                self._write_frame(
+                    slot,
+                    frame_target,
+                    frame_stop,
+                    iteration,
+                    frame_depth,
+                    self._HAVE_SECOND,
+                    target_value,
+                    registers,
+                    accumulator,
+                    first_scratch,
+                )
+                if self._push_enter(
+                    stack_size, second_word, iteration, frame_depth + 1
+                ):
+                    stack_size += 1
+                else:
+                    returned_value = 0
+                continue
+
+            if phase != self._HAVE_SECOND:
+                raise AssertionError("invalid iterative work-stack phase")
+            second_scratch = returned_value
+            dataset_selector = (
+                first_scratch
+                ^ z
+                ^ _rol64(accumulator, lane + pass_index)
+                ^ iteration
+            )
+            dataset_word = _read_u64(self.context.dataset, dataset_selector)
+            second_selector = (
+                dataset_word
+                ^ registers[(lane + 5) & 7]
+                ^ _rol64(_u64(first_scratch + accumulator), entry.immediate)
+            )
+            second_word = second_selector & (self.owner.word_count - 1)
+            mixed_value = _execute_operation(
+                entry.opcode,
+                x,
+                y,
+                first_scratch,
+                second_scratch,
+                dataset_word,
+                entry.immediate,
+            )
+            accumulator = _u64(
+                _rol64(
+                    accumulator ^ mixed_value ^ dataset_word,
+                    first_scratch ^ second_scratch ^ entry.immediate,
+                )
+                + first_scratch
+                + entry.immediate
+                + iteration
+            )
+            first_write = (mixed_value ^ accumulator ^ second_scratch) & MASK64
+            second_write = (
+                second_scratch
+                ^ _rol64(_u64(mixed_value + accumulator), dataset_word)
+            ) & MASK64
+            word_index = iteration & (self.owner.word_count - 1)
+            if word_index == frame_target:
+                target_value = first_write
+            if second_word == frame_target:
+                target_value = second_write
+            registers[lane] = _u64(mixed_value + accumulator + first_scratch)
+            neighbor = (lane + 2) & 7
+            registers[neighbor] = _u64(
+                registers[neighbor]
+                ^ _rol64(_u64(dataset_word + first_scratch), second_scratch)
+            )
+            self._checkpoint_put(
+                frame_target,
+                iteration + 1,
+                [
+                    (frame_target, target_value),
+                    (
+                        first_word,
+                        self._value_after_writes(
+                            first_word,
+                            first_scratch,
+                            word_index,
+                            first_write,
+                            second_word,
+                            second_write,
+                        ),
+                    ),
+                    (second_word, second_write),
+                    (
+                        word_index,
+                        second_write if word_index == second_word else first_write,
+                    ),
+                ],
+                registers,
+                accumulator,
+            )
+            self._write_frame(
+                slot,
+                frame_target,
+                frame_stop,
+                iteration + 1,
+                frame_depth,
+                self._NEED_FIRST,
+                target_value,
+                registers,
+                accumulator,
+                0,
+            )
+        return returned_value
+
+
 def reconstruct_repeatedly_with_checkpoints(
     context: EpochContext,
     header: bytes,
@@ -742,6 +1083,7 @@ def reconstruct_repeatedly_with_checkpoints(
     _operation_limit: int | None = None,
     _external_reserve_bytes: int = 0,
     _rolling_transcript: bool = False,
+    _iterative_work_stack: bool = False,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -761,6 +1103,8 @@ def reconstruct_repeatedly_with_checkpoints(
     dependency_bundles = _dependency_bundle_width > 1
     if dependency_bundles and not _target_aware:
         raise ValueError("dependency bundles require target-aware checkpoints")
+    if _iterative_work_stack and not dependency_bundles:
+        raise ValueError("iterative work stack requires dependency bundles")
     checkpoint_entry_bytes = (
         _dependency_bundle_offsets(_dependency_bundle_width)[2]
         if dependency_bundles else
@@ -793,7 +1137,11 @@ def reconstruct_repeatedly_with_checkpoints(
         base.unused_arena_bytes - checkpoint_bytes, base.admitted_bytes,
     )
     if dependency_bundles:
-        regenerator = _DependencyBundleRegenerator(
+        regenerator_class = (
+            _IterativeDependencyBundleRegenerator
+            if _iterative_work_stack else _DependencyBundleRegenerator
+        )
+        regenerator = regenerator_class(
             arena, context, header_digest, nonce_bytes, work_limit,
             checkpoint_capacity, checkpoint_stride, _dependency_bundle_width,
             _operation_limit,
@@ -811,6 +1159,8 @@ def reconstruct_repeatedly_with_checkpoints(
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
+        DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION
+        if dependency_bundles and _iterative_work_stack else
         DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION
         if dependency_bundles and _rolling_transcript else
         DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION
@@ -912,6 +1262,8 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
+        "refused_iterative_work_stack_dependency_bundle_exhausted"
+        if dependency_bundles and _iterative_work_stack else
         "refused_physically_accounted_dependency_bundle_exhausted"
         if dependency_bundles and _rolling_transcript else
         "refused_operation_bounded_dependency_bundle_exhausted"
@@ -985,7 +1337,25 @@ def reconstruct_repeatedly_with_checkpoints(
                 + layout.arena_bytes
                 + PHYSICAL_EXTERNAL_RESERVE_BYTES,
             )
-            if _rolling_transcript else None
+            if _rolling_transcript and not _iterative_work_stack else None
+        ),
+        (
+            IterativeMemoryAccounting(
+                budget,
+                layout.fixed_state_reserve_bytes,
+                ALLOCATOR_ALLOWANCE_BYTES,
+                layout.arena_bytes,
+                layout.frame_bytes,
+                layout.frame_capacity,
+                layout.frame_reserve_bytes,
+                0,
+                48,
+                0,
+                layout.fixed_state_reserve_bytes
+                + layout.arena_bytes
+                + ITERATIVE_EXTERNAL_RESERVE_BYTES,
+            )
+            if _iterative_work_stack else None
         ),
     )
 
@@ -1114,4 +1484,40 @@ def reconstruct_repeatedly_with_physically_accounted_dependency_bundles(
         _operation_limit=operation_limit,
         _external_reserve_bytes=PHYSICAL_EXTERNAL_RESERVE_BYTES,
         _rolling_transcript=True,
+    )
+
+
+def reconstruct_repeatedly_with_iterative_work_stack(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    operation_limit: int = DEFAULT_TOTAL_OPERATION_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    checkpoint_capacity: int = DEFAULT_DEPENDENCY_BUNDLE_CAPACITY,
+    checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+    dependency_bundle_width: int = DEFAULT_DEPENDENCY_BUNDLE_WIDTH,
+) -> CheckpointRegenerationResult:
+    """Run the bounded bundle attack with an arena-resident explicit stack."""
+
+    _dependency_bundle_offsets(dependency_bundle_width)
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=checkpoint_capacity,
+        checkpoint_stride=checkpoint_stride,
+        _target_aware=True,
+        _dependency_bundle_width=dependency_bundle_width,
+        _operation_limit=operation_limit,
+        _external_reserve_bytes=ITERATIVE_EXTERNAL_RESERVE_BYTES,
+        _rolling_transcript=True,
+        _iterative_work_stack=True,
     )

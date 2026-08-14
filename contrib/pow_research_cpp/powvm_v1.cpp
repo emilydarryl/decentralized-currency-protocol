@@ -61,6 +61,7 @@ constexpr char DOMAIN_TARGET_CHECKPOINT_REGENERATION[] = "Soveroot/PowResearch/T
 constexpr char DOMAIN_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/DependencyBundleRegeneration/v1\0";
 constexpr char DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/OperationBoundedDependencyBundleRegeneration/v1\0";
 constexpr char DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/PhysicallyAccountedDependencyBundleRegeneration/v1\0";
+constexpr char DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/IterativeWorkStackDependencyBundleRegeneration/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -88,6 +89,7 @@ constexpr std::size_t NATIVE_STACK_RESERVE_BYTES{
 constexpr std::size_t ALLOCATOR_ALLOWANCE_BYTES{4'096};
 constexpr std::size_t PHYSICAL_EXTERNAL_RESERVE_BYTES{
     NATIVE_STACK_RESERVE_BYTES + ALLOCATOR_ALLOWANCE_BYTES};
+constexpr std::size_t ITERATIVE_EXTERNAL_RESERVE_BYTES{ALLOCATOR_ALLOWANCE_BYTES};
 constexpr std::uint32_t RECURSIVE_EMPTY_MEMO_KEY{std::numeric_limits<std::uint32_t>::max()};
 constexpr std::size_t CHECKPOINT_ENTRY_BYTES{80};
 constexpr std::size_t TARGET_CHECKPOINT_ENTRY_BYTES{88};
@@ -550,6 +552,7 @@ struct RepeatedRecursiveRegenerationResult {
     std::uint64_t checkpoint_replacements{0}, checkpoint_probes{0};
     std::uint64_t operation_limit{0}, total_operations{0};
     bool physical_accounting{false};
+    bool iterative_accounting{false};
     std::size_t physical_total_budget_bytes{0}, physical_arena_allocation_bytes{0};
 };
 
@@ -1747,6 +1750,11 @@ public:
         return m_checkpoint_offset + slot * m_layout.checkpoint_entry_bytes;
     }
 
+    std::size_t FrameOffset(std::size_t slot) const
+    {
+        return m_frame_offset + slot * RECURSIVE_FRAME_BYTES;
+    }
+
     Bytes& Arena() { return m_arena; }
     const RecursiveLayout& Layout() const { return m_layout; }
     std::size_t WordCount() const { return m_word_count; }
@@ -1913,6 +1921,185 @@ public:
         return target_value;
     }
 
+    std::uint64_t ValueAtIterative(
+        std::uint64_t target_word, std::uint64_t stop, std::uint64_t depth = 1)
+    {
+        std::size_t stack_size{1};
+        if (!PushEnter(0, target_word, stop, depth)) return 0;
+        std::uint64_t returned_value{0};
+        const std::size_t word_count = m_owner.WordCount();
+        while (stack_size != 0) {
+            const std::size_t slot = stack_size - 1;
+            IterativeFrame frame = ReadFrame(slot);
+            if (frame.phase == FRAME_ENTER) {
+                ChargeOperation(frame.stop, frame.target_word, frame.depth);
+                ++calls;
+                if (frame.stop == 0) {
+                    ++completed_values;
+                    returned_value = 0;
+                    --stack_size;
+                    continue;
+                }
+                maximum_depth = std::max(maximum_depth, std::uint64_t{frame.depth});
+                if (frame.depth > m_owner.Layout().frame_capacity) {
+                    throw RecursiveRegenerationExhausted{
+                        "frame_capacity", frame.stop, frame.target_word, frame.depth};
+                }
+                std::uint64_t cached{0};
+                if (MemoGet(frame.stop, frame.target_word, frame.depth, cached)) {
+                    returned_value = cached;
+                    --stack_size;
+                    continue;
+                }
+                std::uint64_t start{0};
+                bool target_value_restored{false};
+                if (!CheckpointFind(
+                        frame.target_word, frame.stop, frame.depth, start,
+                        frame.target_value, target_value_restored, frame.state)) {
+                    frame.state = InitializeMachineState(
+                        m_context, m_header_digest, m_nonce_bytes, m_params_bytes);
+                    frame.target_value = 0;
+                } else if (!target_value_restored) {
+                    throw std::logic_error(
+                        "iterative dependency bundle did not restore target value");
+                }
+                frame.iteration = static_cast<std::uint32_t>(start);
+                frame.phase = FRAME_NEED_FIRST;
+                WriteFrame(slot, frame);
+                continue;
+            }
+            if (frame.phase == FRAME_NEED_FIRST) {
+                if (frame.iteration >= frame.stop) {
+                    MemoPut(
+                        frame.stop, frame.target_word, frame.target_value, frame.depth);
+                    ++completed_values;
+                    returned_value = frame.target_value;
+                    --stack_size;
+                    continue;
+                }
+                if (iterations >= m_work_limit) {
+                    throw RecursiveRegenerationExhausted{
+                        "work_limit", frame.stop, frame.target_word, frame.depth};
+                }
+                ChargeOperation(frame.stop, frame.target_word, frame.depth);
+                ++iterations;
+                const std::size_t lane = frame.iteration & (REGISTER_COUNT - 1);
+                const ScheduleEntry& entry =
+                    m_context.schedule[frame.iteration & (SCHEDULE_LENGTH - 1)];
+                const std::uint64_t first_selector =
+                    frame.state.registers[lane] ^
+                    std::rotl(
+                        frame.state.registers[(lane + 1) & (REGISTER_COUNT - 1)],
+                        static_cast<int>(frame.iteration & 63)) ^
+                    frame.state.accumulator ^ entry.immediate;
+                const std::uint64_t first_word = first_selector & (word_count - 1);
+                frame.phase = FRAME_HAVE_FIRST;
+                WriteFrame(slot, frame);
+                if (PushEnter(
+                        stack_size, first_word, frame.iteration, frame.depth + 1)) {
+                    ++stack_size;
+                } else {
+                    returned_value = 0;
+                }
+                continue;
+            }
+
+            const std::size_t lane = frame.iteration & (REGISTER_COUNT - 1);
+            const std::size_t pass = frame.iteration / word_count;
+            const ScheduleEntry& entry =
+                m_context.schedule[frame.iteration & (SCHEDULE_LENGTH - 1)];
+            const std::uint64_t x = frame.state.registers[lane];
+            const std::uint64_t y =
+                frame.state.registers[(lane + 1) & (REGISTER_COUNT - 1)];
+            const std::uint64_t z =
+                frame.state.registers[(lane + 3) & (REGISTER_COUNT - 1)];
+            const std::uint64_t first_selector =
+                x ^ std::rotl(y, static_cast<int>(frame.iteration & 63)) ^
+                frame.state.accumulator ^ entry.immediate;
+            const std::uint64_t first_word = first_selector & (word_count - 1);
+            if (frame.phase == FRAME_HAVE_FIRST) {
+                frame.first_scratch = returned_value;
+                const std::uint64_t dataset_selector =
+                    frame.first_scratch ^ z ^
+                    std::rotl(
+                        frame.state.accumulator,
+                        static_cast<int>((lane + pass) & 63)) ^
+                    frame.iteration;
+                const std::uint64_t dataset_word =
+                    ReadMemory(m_context.dataset, dataset_selector);
+                const std::uint64_t second_selector =
+                    dataset_word ^
+                    frame.state.registers[(lane + 5) & (REGISTER_COUNT - 1)] ^
+                    std::rotl(
+                        frame.first_scratch + frame.state.accumulator,
+                        static_cast<int>(entry.immediate & 63));
+                const std::uint64_t second_word = second_selector & (word_count - 1);
+                frame.phase = FRAME_HAVE_SECOND;
+                WriteFrame(slot, frame);
+                if (PushEnter(
+                        stack_size, second_word, frame.iteration, frame.depth + 1)) {
+                    ++stack_size;
+                } else {
+                    returned_value = 0;
+                }
+                continue;
+            }
+            if (frame.phase != FRAME_HAVE_SECOND) {
+                throw std::logic_error("invalid iterative work-stack phase");
+            }
+            const std::uint64_t second_scratch = returned_value;
+            const std::uint64_t dataset_selector =
+                frame.first_scratch ^ z ^
+                std::rotl(
+                    frame.state.accumulator,
+                    static_cast<int>((lane + pass) & 63)) ^
+                frame.iteration;
+            const std::uint64_t dataset_word =
+                ReadMemory(m_context.dataset, dataset_selector);
+            const std::uint64_t second_selector =
+                dataset_word ^
+                frame.state.registers[(lane + 5) & (REGISTER_COUNT - 1)] ^
+                std::rotl(
+                    frame.first_scratch + frame.state.accumulator,
+                    static_cast<int>(entry.immediate & 63));
+            const std::uint64_t second_word = second_selector & (word_count - 1);
+            const std::uint64_t mixed = ExecuteOperation(
+                entry.opcode, x, y, frame.first_scratch, second_scratch,
+                dataset_word, entry.immediate);
+            frame.state.accumulator =
+                std::rotl(
+                    frame.state.accumulator ^ mixed ^ dataset_word,
+                    static_cast<int>(
+                        (frame.first_scratch ^ second_scratch ^ entry.immediate) & 63)) +
+                frame.first_scratch + entry.immediate + frame.iteration;
+            const std::uint64_t first_write =
+                mixed ^ frame.state.accumulator ^ second_scratch;
+            const std::uint64_t second_write =
+                second_scratch ^ std::rotl(
+                    mixed + frame.state.accumulator,
+                    static_cast<int>(dataset_word & 63));
+            const std::uint64_t sequential_word = frame.iteration & (word_count - 1);
+            if (sequential_word == frame.target_word) frame.target_value = first_write;
+            if (second_word == frame.target_word) frame.target_value = second_write;
+            frame.state.registers[lane] =
+                mixed + frame.state.accumulator + frame.first_scratch;
+            const std::size_t neighbor = (lane + 2) & (REGISTER_COUNT - 1);
+            frame.state.registers[neighbor] ^=
+                std::rotl(
+                    dataset_word + frame.first_scratch,
+                    static_cast<int>(second_scratch & 63));
+            CheckpointPut(
+                frame.target_word, frame.target_value, first_word,
+                frame.first_scratch, second_word, sequential_word,
+                first_write, second_write, frame.iteration + 1, frame.state);
+            ++frame.iteration;
+            frame.phase = FRAME_NEED_FIRST;
+            frame.first_scratch = 0;
+            WriteFrame(slot, frame);
+        }
+        return returned_value;
+    }
+
     std::uint64_t calls{0}, cache_hits{0}, completed_values{0}, iterations{0};
     std::uint64_t maximum_depth{0}, memo_entries{0}, memo_peak_entries{0};
     std::uint64_t memo_evictions{0}, memo_probes{0}, memo_shifted_bytes{0};
@@ -1921,6 +2108,87 @@ public:
     std::uint64_t total_operations{0};
 
 private:
+    static constexpr std::uint8_t FRAME_ENTER{0};
+    static constexpr std::uint8_t FRAME_NEED_FIRST{1};
+    static constexpr std::uint8_t FRAME_HAVE_FIRST{2};
+    static constexpr std::uint8_t FRAME_HAVE_SECOND{3};
+
+    struct IterativeFrame {
+        std::uint32_t target_word{0}, stop{0}, iteration{0};
+        std::uint16_t depth{0};
+        std::uint8_t phase{FRAME_ENTER};
+        std::uint64_t target_value{0};
+        MachineState state{};
+        std::uint64_t first_scratch{0};
+    };
+
+    IterativeFrame ReadFrame(std::size_t slot) const
+    {
+        const std::size_t offset = m_owner.FrameOffset(slot);
+        const std::uint8_t* data = m_owner.Arena().data() + offset;
+        IterativeFrame frame{};
+        frame.target_word = ReadLE32(data);
+        frame.stop = ReadLE32(data + 4);
+        frame.iteration = ReadLE32(data + 8);
+        frame.depth = ReadLE16(data + 12);
+        frame.phase = data[14];
+        frame.target_value = ReadLE64(data + 16);
+        for (std::size_t lane{0}; lane < REGISTER_COUNT; ++lane) {
+            frame.state.registers[lane] = ReadLE64(data + 24 + lane * 8);
+        }
+        frame.state.accumulator = ReadLE64(data + 88);
+        frame.first_scratch = ReadLE64(data + 96);
+        return frame;
+    }
+
+    void WriteFrame(std::size_t slot, const IterativeFrame& frame)
+    {
+        const std::size_t offset = m_owner.FrameOffset(slot);
+        std::uint8_t* data = m_owner.Arena().data() + offset;
+        WriteLE32(data, frame.target_word);
+        WriteLE32(data + 4, frame.stop);
+        WriteLE32(data + 8, frame.iteration);
+        WriteLE16(data + 12, frame.depth);
+        data[14] = frame.phase;
+        data[15] = 0;
+        WriteLE64(data + 16, frame.target_value);
+        for (std::size_t lane{0}; lane < REGISTER_COUNT; ++lane) {
+            WriteLE64(data + 24 + lane * 8, frame.state.registers[lane]);
+        }
+        WriteLE64(data + 88, frame.state.accumulator);
+        WriteLE64(data + 96, frame.first_scratch);
+    }
+
+    bool PushEnter(
+        std::size_t slot, std::uint64_t target_word,
+        std::uint64_t stop, std::uint64_t depth)
+    {
+        if (stop == 0) {
+            ChargeOperation(stop, target_word, depth);
+            ++calls;
+            ++completed_values;
+            return false;
+        }
+        if (slot >= m_owner.Layout().frame_capacity) {
+            ChargeOperation(stop, target_word, depth);
+            ++calls;
+            maximum_depth = std::max(maximum_depth, depth);
+            throw RecursiveRegenerationExhausted{
+                "frame_capacity", stop, target_word, depth};
+        }
+        if (target_word > std::numeric_limits<std::uint32_t>::max() ||
+            stop > std::numeric_limits<std::uint32_t>::max() ||
+            depth > std::numeric_limits<std::uint16_t>::max()) {
+            throw std::invalid_argument("iterative frame field exceeds packed range");
+        }
+        IterativeFrame frame{};
+        frame.target_word = static_cast<std::uint32_t>(target_word);
+        frame.stop = static_cast<std::uint32_t>(stop);
+        frame.depth = static_cast<std::uint16_t>(depth);
+        WriteFrame(slot, frame);
+        return true;
+    }
+
     void ChargeOperation(
         std::uint64_t stop, std::uint64_t word, std::uint64_t depth)
     {
@@ -3968,11 +4236,15 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     bool dependency_bundles = false,
     std::uint64_t operation_limit = 0,
     std::size_t external_reserve_bytes = 0,
-    bool rolling_transcript = false)
+    bool rolling_transcript = false,
+    bool iterative_work_stack = false)
 {
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) {
         throw std::invalid_argument("header size is outside the v1 research envelope");
+    }
+    if (iterative_work_stack && !dependency_bundles) {
+        throw std::invalid_argument("iterative work stack requires dependency bundles");
     }
     const Bytes params_bytes = EncodeParams(context.params);
     Bytes nonce_bytes;
@@ -4006,11 +4278,14 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     result.primary_denominator = primary_denominator;
     result.work_limit = work_limit;
     result.operation_limit = operation_limit;
-    result.physical_accounting = rolling_transcript;
+    result.physical_accounting = rolling_transcript && !iterative_work_stack;
+    result.iterative_accounting = iterative_work_stack;
     result.physical_total_budget_bytes = context.params.scratchpad_bytes / 2;
     result.physical_arena_allocation_bytes = arena.Layout().arena_bytes;
     result.layout = arena.Layout();
-    if (dependency_bundles && rolling_transcript) {
+    if (dependency_bundles && iterative_work_stack) {
+        result.status = "refused_iterative_work_stack_dependency_bundle_exhausted";
+    } else if (dependency_bundles && rolling_transcript) {
         result.status = "refused_physically_accounted_dependency_bundle_exhausted";
     } else if (dependency_bundles && operation_limit != 0) {
         result.status = "refused_operation_bounded_dependency_bundle_exhausted";
@@ -4021,7 +4296,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     } else if (checkpoint_capacity != 0) {
         result.status = "refused_checkpoint_regeneration_exhausted";
     }
-    Bytes transcript_input = dependency_bundles && rolling_transcript
+    Bytes transcript_input = dependency_bundles && iterative_work_stack
+        ? DomainBytes(DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION)
+        : dependency_bundles && rolling_transcript
         ? DomainBytes(DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION)
         : dependency_bundles && operation_limit != 0
         ? DomainBytes(DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION)
@@ -4036,7 +4313,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
 
     auto boundary_commitment = [&](const BoundedReadMiss& miss,
                                    const std::uint64_t* value) {
-        Bytes encoded = dependency_bundles && rolling_transcript
+        Bytes encoded = dependency_bundles && iterative_work_stack
+            ? DomainBytes(DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION)
+            : dependency_bundles && rolling_transcript
             ? DomainBytes(DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION)
             : dependency_bundles && operation_limit != 0
             ? DomainBytes(DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION)
@@ -4063,7 +4342,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
         ++result.reconstruction_attempts;
         const Bytes state_commitment = boundary_commitment(miss, nullptr);
         try {
-            const std::uint64_t value = regenerator.ValueAt(miss.word, miss.consumer);
+            const std::uint64_t value = iterative_work_stack
+                ? regenerator.ValueAtIterative(miss.word, miss.consumer)
+                : regenerator.ValueAt(miss.word, miss.consumer);
             RecursiveBoundary boundary{
                 miss.consumer, miss.word, value, regenerator.calls,
                 regenerator.cache_hits, regenerator.completed_values,
@@ -4886,7 +5167,8 @@ void PrintRepeatedRecursiveRegeneration(
     bool dependency_bundles = false,
     bool operation_bounded = false,
     std::uint64_t operation_limit = REGENERATION_OPERATION_LIMIT,
-    bool physically_accounted = false)
+    bool physically_accounted = false,
+    bool iterative_work_stack = false)
 {
     const bool has_checkpoints = checkpoints || target_checkpoints || dependency_bundles;
     const RepeatedRecursiveRegenerationResult r =
@@ -4895,8 +5177,10 @@ void PrintRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
               1, 128, DEPENDENCY_BUNDLE_CAPACITY, CHECKPOINT_STRIDE, false, true,
               operation_bounded ? operation_limit : 0,
-              physically_accounted ? PHYSICAL_EXTERNAL_RESERVE_BYTES : 0,
-              physically_accounted)
+              iterative_work_stack ? ITERATIVE_EXTERNAL_RESERVE_BYTES
+                  : (physically_accounted ? PHYSICAL_EXTERNAL_RESERVE_BYTES : 0),
+              physically_accounted || iterative_work_stack,
+              iterative_work_stack)
         : target_checkpoints
         ? ProbeRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
@@ -4932,7 +5216,9 @@ void PrintRepeatedRecursiveRegeneration(
     };
     std::cout << "{\n"
               << "  \"format\": \""
-              << (physically_accounted
+              << (iterative_work_stack
+                  ? "soveroot-pow-v1-iterative-work-stack-regeneration-v0"
+                  : physically_accounted
                   ? "soveroot-pow-v1-physically-accounted-dependency-bundle-regeneration-v0"
                   : operation_bounded
                   ? "soveroot-pow-v1-operation-bounded-dependency-bundle-regeneration-v0"
@@ -4945,7 +5231,9 @@ void PrintRepeatedRecursiveRegeneration(
                       : "soveroot-pow-v1-repeated-recursive-regeneration-v0"))
               << "\",\n"
               << "  \"warning\": \""
-              << (physically_accounted
+              << (iterative_work_stack
+                  ? "NON-CONSENSUS ITERATIVE WORK-STACK DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
+                  : physically_accounted
                   ? "NON-CONSENSUS PHYSICALLY ACCOUNTED DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
                   : operation_bounded
                   ? "NON-CONSENSUS OPERATION-BOUNDED DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
@@ -5038,6 +5326,25 @@ void PrintRepeatedRecursiveRegeneration(
             << ", \"accounted_bytes\": "
             << BOUNDED_FIXED_STATE_RESERVE_BYTES + r.physical_arena_allocation_bytes
                 + PHYSICAL_EXTERNAL_RESERVE_BYTES
+            << "},\n";
+    }
+    if (iterative_work_stack) {
+        std::cout
+            << "  \"iterative_memory_accounting\": {\"total_budget_bytes\": "
+            << r.physical_total_budget_bytes
+            << ", \"fixed_state_reserve_bytes\": " << BOUNDED_FIXED_STATE_RESERVE_BYTES
+            << ", \"allocator_allowance_bytes\": " << ALLOCATOR_ALLOWANCE_BYTES
+            << ", \"arena_allocation_bytes\": " << r.physical_arena_allocation_bytes
+            << ", \"explicit_frame_bytes\": " << l.frame_bytes
+            << ", \"explicit_frame_capacity\": " << l.frame_capacity
+            << ", \"explicit_work_stack_bytes_inside_arena\": "
+            << l.frame_reserve_bytes
+            << ", \"native_recursion_bytes\": 0"
+            << ", \"rolling_transcript_state_bytes\": 48"
+            << ", \"transcript_growth_bytes\": 0"
+            << ", \"accounted_bytes\": "
+            << BOUNDED_FIXED_STATE_RESERVE_BYTES + r.physical_arena_allocation_bytes
+                + ITERATIVE_EXTERNAL_RESERVE_BYTES
             << "},\n";
     }
     std::cout << "  \"first_reconstruction\": ";
@@ -5633,6 +5940,22 @@ int main(int argc, char* argv[])
 {
     try {
         if ((argc == 8 || argc == 9) &&
+            std::string_view{argv[1]} == "recursive-regenerate-iterative-work-stack") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            const std::uint64_t operation_limit = argc == 9
+                ? std::stoull(argv[8]) : REGENERATION_OPERATION_LIMIT;
+            if (operation_limit == 0) {
+                throw std::invalid_argument("operation limit must be positive");
+            }
+            PrintRepeatedRecursiveRegeneration(
+                seed, header, nonce, params, false, false, true, true,
+                operation_limit, false, true);
+            return 0;
+        }
+        if ((argc == 8 || argc == 9) &&
             std::string_view{argv[1]} == "recursive-regenerate-physically-accounted-bundle") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -5842,6 +6165,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp recursive-regenerate-dependency-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-operation-bounded-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-physically-accounted-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
+                      << "   or: powvm_v1_cpp recursive-regenerate-iterative-work-stack SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

@@ -1,7 +1,7 @@
 {
   "format": "soveroot-pow-v1-iterative-work-stack-regeneration-method-v0",
   "version": "0.1",
-  "status": "PREDECLARED NON-CONSENSUS ITERATIVE ATTACK PILOT",
+  "status": "NON-CONSENSUS ITERATIVE ATTACK PILOT; HOLDOUT COMPLETE",
   "question": "How far does the operation-bounded dependency-bundle attacker progress when every suspended regeneration frame is stored in a fixed arena-resident work stack and native recursion is forbidden?",
   "accounting_policy": {
     "total_attack_budget_bytes": 131072,
@@ -69,8 +69,30 @@
     ],
     "selection_rule": "No parameter changes after any holdout result is observed; retain all eight rows, including unfavorable outcomes."
   },
+  "standard_holdout": [
+    {"seed_index": 0, "completed_iterations": 712, "reconstructed_misses": 25, "logical_value_requests": 1983792, "replay_iterations": 991884, "memo_probes": 1980764, "checkpoint_probes": 43560, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "checkpoint_hits": 302, "transcript_commitment": "9e5d92673e9ac02d3be5c97a16dd84ae83383eb07aec65eeae9296088c730b321448ff40ddefb2ce2aebc96aa8456d04", "canonical_proof_completed": false},
+    {"seed_index": 1, "completed_iterations": 952, "reconstructed_misses": 54, "logical_value_requests": 1984390, "replay_iterations": 992169, "memo_probes": 1983109, "checkpoint_probes": 40332, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "checkpoint_hits": 1041, "transcript_commitment": "94063dbbaf21bdc8fb4fe09352aeb732d1882ae2cc358b150359b59e2133b8f783d613fb82a80a464996d9f4b7ec3410", "canonical_proof_completed": false},
+    {"seed_index": 2, "completed_iterations": 946, "reconstructed_misses": 43, "logical_value_requests": 1984079, "replay_iterations": 992018, "memo_probes": 1983283, "checkpoint_probes": 40620, "total_operations": 5000000, "maximum_explicit_stack_depth": 4, "checkpoint_hits": 1296, "transcript_commitment": "0c70e345da34640ad5f7e0535ffb30d93519f3991731548c54e27d4e117297b4d3154966deb9d0102cdd2bebf653531d", "canonical_proof_completed": false},
+    {"seed_index": 3, "completed_iterations": 895, "reconstructed_misses": 42, "logical_value_requests": 1988129, "replay_iterations": 994044, "memo_probes": 1986243, "checkpoint_probes": 31584, "total_operations": 5000000, "maximum_explicit_stack_depth": 4, "checkpoint_hits": 374, "transcript_commitment": "27e3dc4604948fdc83bdb56e1501b7530c1d0c61ac3cde312c8265ce0a261ba4eb7767acf1bdef56dd0dcfb684851874", "canonical_proof_completed": false},
+    {"seed_index": 4, "completed_iterations": 723, "reconstructed_misses": 26, "logical_value_requests": 1983448, "replay_iterations": 991711, "memo_probes": 1981413, "checkpoint_probes": 43428, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "checkpoint_hits": 794, "transcript_commitment": "21f7bcb34be25f3020d9a3b34431785a721cd1a275c52f3eec5af85f5a3bfafce7a00583ea160d6aca6235f09634ad25", "canonical_proof_completed": false},
+    {"seed_index": 5, "completed_iterations": 939, "reconstructed_misses": 47, "logical_value_requests": 1989420, "replay_iterations": 994687, "memo_probes": 1987657, "checkpoint_probes": 28236, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "checkpoint_hits": 297, "transcript_commitment": "6a54edac8bf5ca01cd2c43e36e6ca08f3efd06e3e806fede3c6a2c37a305d4649905a9fe127d62f504416e12d0529301", "canonical_proof_completed": false},
+    {"seed_index": 6, "completed_iterations": 877, "reconstructed_misses": 44, "logical_value_requests": 1985016, "replay_iterations": 992486, "memo_probes": 1983858, "checkpoint_probes": 38640, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "checkpoint_hits": 1033, "transcript_commitment": "442e8bd9061ebda36e4839df8a789a4a269b7b3c67181b4aa52d8fe0fb59235bdf325c97deed6508c4ae183217fa94df", "canonical_proof_completed": false},
+    {"seed_index": 7, "completed_iterations": 771, "reconstructed_misses": 29, "logical_value_requests": 1984358, "replay_iterations": 992166, "memo_probes": 1981092, "checkpoint_probes": 42384, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "checkpoint_hits": 135, "transcript_commitment": "3ab072188f05a172e1c79532bd64c3919e350dc389906fb1db415356a3e3ec70615306a9ba67fc1fc992a8dcb7ca1ea6", "canonical_proof_completed": false}
+  ],
+  "summary": {
+    "minimum_completed_iterations": 712,
+    "median_completed_iterations": 886.0,
+    "maximum_completed_iterations": 952,
+    "maximum_observed_explicit_stack_depth": 6,
+    "completed_proofs": 0,
+    "full_job_iterations": 98304,
+    "maximum_fraction_of_job_percent": 0.9684,
+    "prior_physically_accounted_maximum": 853,
+    "interpretation": "placing suspended frames inside the arena recovers capacity previously held for a conservative native-recursion reserve, but every seed still exhausts the total-operation ceiling before one percent of the canonical job and no proof is produced"
+  },
   "gate_mapping": {
     "time_memory_tradeoff": "NOT_ASSESSED",
-    "reason": "The screen must first establish exact independent boundaries. A gate assessment still requires canonical proofs, total measured attack memory on controlled hosts, and a second independently reviewed attack model."
-  }
+    "reason": "Every holdout refuses without a proof. A gate assessment still requires canonical proofs, total measured attack memory on controlled hosts, and a second independently reviewed attack model."
+  },
+  "next_use": "verify exact Python/C++ parity and the compiler-bounded iterative control frame, then continue independent bounded attack search; no throughput ratio is meaningful until an attacker produces canonical proofs"
 }

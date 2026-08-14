@@ -42,6 +42,23 @@ class PhysicalMemoryToolsV1Test(unittest.TestCase):
         self.assertEqual(records[0]["bytes"], 496)
         self.assertEqual(records[0]["qualifier"], "static")
 
+    def test_stack_usage_parser_accepts_selected_iterative_symbol(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "powvm.su"
+            source.write_text(
+                "powvm.cpp:1:1:uint64_t RecursiveRegenerator::ValueAt(uint64_t)"
+                "\t352\tstatic\n"
+                "powvm.cpp:2:1:uint64_t RecursiveRegenerator::ValueAtIterative(uint64_t)"
+                "\t480\tstatic\n",
+                encoding="utf-8",
+            )
+            records = parse_stack_usage(
+                [source], "RecursiveRegenerator::ValueAtIterative"
+            )
+        self.assertEqual(len(records), 1)
+        self.assertIn("ValueAtIterative", records[0]["identity"])
+        self.assertEqual(records[0]["bytes"], 480)
+
     def test_stack_usage_accepts_bounded_dynamic_and_rejects_unbounded(self) -> None:
         bounded = [{"bytes": 352, "qualifier": "dynamic,bounded"}]
         self.assertEqual(maximum_bounded_stack_usage(bounded), 352)
