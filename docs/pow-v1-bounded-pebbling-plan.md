@@ -94,6 +94,8 @@ That iterative pilot is complete. The next independently structured screen repla
 
 The [hierarchical checkpoint-ladder pilot](pow-v1-hierarchical-checkpoint-ladder.md) is now complete. It raises the median exact prefix from 886 to 945.5 and the maximum from 952 to 982, but all eight cases still exhaust exactly five million operations without a proof. The policy therefore becomes preserved adversarial evidence, not a gate result. The next attack must freeze a second bounded strategy before results rather than retune this ladder to the public holdout.
 
+That second family is now predeclared in [`frontier_pebbling_attacker_v0.json`](../contrib/pow_research_v1/frontier_pebbling_attacker_v0.json). It removes all machine-state checkpoints and instead gives each completed exact historical value two deterministic candidate slots in a 9,944-entry arena-resident frontier. Both probes are always charged. When both slots are occupied, a new value replaces the lower-stop resident only if its stop is strictly greater, using replay distance as a zero-metadata reconstruction-cost proxy. Fixed vectors use seeds 0–2 at 1,000 operations; the untouched holdout uses seeds 8–15 at five million operations. No policy parameter may change after either result is observed.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

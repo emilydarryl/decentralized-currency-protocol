@@ -1,0 +1,95 @@
+{
+  "format": "soveroot-pow-v1-frontier-pebbling-attacker-method-v0",
+  "version": "0.1",
+  "status": "PREDECLARED NON-CONSENSUS SECOND BOUNDED ATTACK FAMILY",
+  "question": "Can a cost-aware frontier of exact historical values complete a canonical proof at half scratch memory without machine-state checkpoints or unbounded planning?",
+  "independent_strategy": {
+    "base": "arena-resident iterative dependency regeneration from genesis",
+    "difference_from_checkpoint_policy": "retain completed value pebbles by estimated regeneration cost instead of retaining machine-state bookmarks by time",
+    "machine_state_checkpoints": 0,
+    "checkpoint_bytes": 0,
+    "external_storage_bytes": 0,
+    "offline_graph_or_schedule": "none",
+    "native_recursive_calls": 0
+  },
+  "frontier_policy": {
+    "entry_encoding": "little-endian packed key:u32 plus value:u64",
+    "entry_bytes": 12,
+    "packed_key": "stop_iteration shifted left 15 bits, bitwise-or scratch word",
+    "capacity": 9944,
+    "candidate_count": 2,
+    "first_candidate": "((key * 0x9e3779b1) mod 2^32) mod 9944",
+    "second_candidate": "first plus 1 plus ((((key xor (key shifted right 16)) * 0x85ebca6b) mod 2^32) mod 9943), modulo 9944",
+    "lookup": "probe both distinct candidates in order and return the first exact key match",
+    "admission": "update an exact key; otherwise use the first empty candidate; otherwise the second empty candidate; otherwise select the candidate with lower stop, breaking equal-stop ties toward the first candidate",
+    "replacement": "replace the selected resident only when the incoming stop is strictly greater; reject equal-or-lower-stop values",
+    "cost_proxy": "larger stop_iteration means more genesis replay and is therefore more expensive to reconstruct",
+    "hidden_metadata_bytes": 0
+  },
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 126464,
+    "write_bitmap_bytes": 4096,
+    "primary_cache_capacity": 59,
+    "primary_cache_bytes": 944,
+    "explicit_frame_bytes": 104,
+    "explicit_frame_capacity": 20,
+    "explicit_work_stack_bytes_inside_arena": 2080,
+    "frontier_entry_bytes": 12,
+    "frontier_capacity": 9944,
+    "frontier_bytes": 119328,
+    "unused_arena_bytes": 16,
+    "rolling_transcript_state_bytes": 48,
+    "transcript_growth_bytes": 0,
+    "accounted_bytes": 131072
+  },
+  "operation_policy": {
+    "total_operation_limit": 5000000,
+    "charged_operations": [
+      "every logical value request",
+      "every replayed VM iteration",
+      "each of two frontier candidate probes on every lookup",
+      "each of two frontier candidate probes on every admission attempt"
+    ],
+    "invariant": "total_operations equals logical_value_requests plus replay_iterations plus frontier_probes",
+    "failure": "refuse before an operation that would exceed the ceiling and emit no proof"
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "nonce": 0,
+    "primary_allocation": "1/128 of possible 16-byte primary slots after allocator reserve",
+    "replay_iteration_safety_limit": 1000000,
+    "predeclared_holdout_seed_indices": [8, 9, 10, 11, 12, 13, 14, 15]
+  },
+  "fixed_vector_policy": {
+    "profile": "standard",
+    "operation_limit": 1000,
+    "seed_indices": [0, 1, 2],
+    "require_python_cpp_exact_match": true
+  },
+  "holdout_policy": {
+    "seed_indices": [8, 9, 10, 11, 12, 13, 14, 15],
+    "reported_metrics": [
+      "completed_iterations",
+      "reconstructed_misses",
+      "logical_value_requests",
+      "replay_iterations",
+      "frontier_probes",
+      "frontier_hits",
+      "frontier_admissions",
+      "frontier_replacements",
+      "frontier_rejections",
+      "total_operations",
+      "maximum_explicit_stack_depth",
+      "transcript_commitment",
+      "canonical_proof_completed"
+    ],
+    "selection_rule": "No parameter changes after any fixed-vector or holdout result is observed; retain all eight holdout rows, including unfavorable outcomes."
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "The new family must first establish exact independent boundaries. A gate assessment still requires canonical proofs, controlled physical-host measurements, and independent review."
+  }
+}
