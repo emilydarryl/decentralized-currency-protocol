@@ -1,0 +1,113 @@
+{
+  "format": "soveroot-pow-v1-hierarchical-checkpoint-ladder-method-v0",
+  "version": "0.1",
+  "status": "COMPLETE NON-CONSENSUS HIERARCHICAL ATTACK PILOT; NO GATE ASSESSED",
+  "question": "Does a directly addressed four-level checkpoint ladder let the iterative half-memory attacker avoid enough repeated work to complete a canonical proof under the same byte and operation ceilings?",
+  "independent_strategy": {
+    "base": "arena-resident iterative dependency regeneration",
+    "difference_from_prior_policy": "replace one twelve-entry linear-scanned checkpoint table with four independently addressed time scales totaling sixty-four entries",
+    "lookup": "probe exactly one target-word-derived slot in each level, charge all four probes, validate the stored bundle, and resume from the greatest valid stop below the request",
+    "capture": "after a replayed iteration, write the target-aware four-value bundle into every level whose stride divides the new stop; these bounded writes are part of the already charged replay iteration",
+    "external_storage_bytes": 0,
+    "offline_graph_or_schedule": "none",
+    "native_recursive_calls": 0
+  },
+  "checkpoint_levels": [
+    {"level": 0, "stride": 8, "capacity": 32, "base_slot": 0},
+    {"level": 1, "stride": 64, "capacity": 16, "base_slot": 32},
+    {"level": 2, "stride": 512, "capacity": 8, "base_slot": 48},
+    {"level": 3, "stride": 4096, "capacity": 8, "base_slot": 56}
+  ],
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 126464,
+    "write_bitmap_bytes": 4096,
+    "primary_cache_capacity": 59,
+    "primary_cache_bytes": 944,
+    "explicit_frame_bytes": 104,
+    "explicit_frame_capacity": 20,
+    "explicit_work_stack_bytes_inside_arena": 2080,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_capacity": 64,
+    "checkpoint_bytes": 7680,
+    "memo_entry_bytes": 12,
+    "memo_capacity": 9304,
+    "memo_bytes": 111648,
+    "unused_arena_bytes": 16,
+    "rolling_transcript_state_bytes": 48,
+    "transcript_growth_bytes": 0,
+    "accounted_bytes": 131072
+  },
+  "operation_policy": {
+    "total_operation_limit": 5000000,
+    "charged_operations": [
+      "every logical value request",
+      "every replayed VM iteration",
+      "every memo get or put probe",
+      "each of four directly addressed checkpoint-level probes"
+    ],
+    "invariant": "total_operations equals logical_value_requests plus replay_iterations plus memo_probes plus checkpoint_probes",
+    "failure": "refuse before an operation that would exceed the ceiling and emit no proof"
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "nonce": 0,
+    "primary_allocation": "1/128 of possible 16-byte primary slots after allocator reserve",
+    "dependency_bundle_width": 4,
+    "replay_iteration_safety_limit": 1000000,
+    "predeclared_seed_count": 8
+  },
+  "fixed_vector_policy": {
+    "profile": "standard",
+    "operation_limit": 100,
+    "seed_indices": [0, 1, 2],
+    "require_python_cpp_exact_match": true
+  },
+  "holdout_policy": {
+    "seed_indices": [0, 1, 2, 3, 4, 5, 6, 7],
+    "reported_metrics": [
+      "completed_iterations",
+      "reconstructed_misses",
+      "logical_value_requests",
+      "replay_iterations",
+      "memo_probes",
+      "checkpoint_probes",
+      "total_operations",
+      "maximum_explicit_stack_depth",
+      "checkpoint_hits",
+      "checkpoint_captures",
+      "transcript_commitment",
+      "canonical_proof_completed"
+    ],
+    "selection_rule": "No parameter changes after any holdout result is observed; retain all eight rows, including unfavorable outcomes."
+  },
+  "holdout_result": {
+    "source_revision": "bd88968d69063ae00b85418e9e603f1864098ca2",
+    "minimum_completed_iterations": 840,
+    "median_completed_iterations": 945.5,
+    "maximum_completed_iterations": 982,
+    "completed_proofs": 0,
+    "comparison_to_iterative_work_stack": {
+      "prior_minimum": 712,
+      "prior_median": 886,
+      "prior_maximum": 952,
+      "interpretation": "The frozen ladder improves median and maximum progress but still completes less than one percent of the 98304-iteration job."
+    },
+    "cases": [
+      {"seed_index": 0, "completed_iterations": 875, "reconstructed_misses": 44, "logical_value_requests": 1991262, "replay_iterations": 995609, "memo_probes": 1990485, "checkpoint_lookups": 5661, "checkpoint_hits": 2444, "checkpoint_captures": 135887, "checkpoint_replacements": 135831, "checkpoint_probes": 22644, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "a5e28552766460a1bec353baf38bd04ba6653056484dde380ef939cb7bd042c41a828b6c44445a221206a49db4a2ff02", "canonical_proof_completed": false},
+      {"seed_index": 1, "completed_iterations": 840, "reconstructed_misses": 38, "logical_value_requests": 1992142, "replay_iterations": 996052, "memo_probes": 1991462, "checkpoint_lookups": 5086, "checkpoint_hits": 2205, "checkpoint_captures": 136006, "checkpoint_replacements": 135950, "checkpoint_probes": 20344, "total_operations": 5000000, "maximum_explicit_stack_depth": 7, "transcript_commitment": "dd64b178805bb9273fd226329bf14274fd397f7d3211b118490cd766d3c242fdb4332361e742144e7cdb4ca91d5e6fba", "canonical_proof_completed": false},
+      {"seed_index": 2, "completed_iterations": 982, "reconstructed_misses": 49, "logical_value_requests": 1992309, "replay_iterations": 996130, "memo_probes": 1992785, "checkpoint_lookups": 4694, "checkpoint_hits": 2586, "checkpoint_captures": 137438, "checkpoint_replacements": 137382, "checkpoint_probes": 18776, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "755de834e2c2c49291530bf0260f91be42e4870836768bf4d2498b2967b557eecd69e38bb65e7e19902f8adc371f070c", "canonical_proof_completed": false},
+      {"seed_index": 3, "completed_iterations": 978, "reconstructed_misses": 57, "logical_value_requests": 1994650, "replay_iterations": 997297, "memo_probes": 1994109, "checkpoint_lookups": 3486, "checkpoint_hits": 1474, "checkpoint_captures": 137942, "checkpoint_replacements": 137886, "checkpoint_probes": 13944, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "128815dda82569f644a10aab4d099c038f1e28181c3992d0d491616f4b4c62949651552b27ca4fd00ce5d3ab999e80ff", "canonical_proof_completed": false},
+      {"seed_index": 4, "completed_iterations": 914, "reconstructed_misses": 45, "logical_value_requests": 1993090, "replay_iterations": 996523, "memo_probes": 1992839, "checkpoint_lookups": 4387, "checkpoint_hits": 2069, "checkpoint_captures": 137292, "checkpoint_replacements": 137236, "checkpoint_probes": 17548, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "2a2d177c923e4fb792ed242235f407d062394570fada26419c3be281e7b4979b556ef150b60118ac1f5280ac7cfa444c", "canonical_proof_completed": false},
+      {"seed_index": 5, "completed_iterations": 965, "reconstructed_misses": 48, "logical_value_requests": 1996165, "replay_iterations": 998058, "memo_probes": 1994843, "checkpoint_lookups": 2734, "checkpoint_hits": 706, "checkpoint_captures": 138968, "checkpoint_replacements": 138912, "checkpoint_probes": 10934, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "16932009ec894b24ee9527e4a9555fc07b0c8ab545e62c84b1eaef1b1252965b6183f8fee8943abcd6e4c64e737a94b9", "canonical_proof_completed": false},
+      {"seed_index": 6, "completed_iterations": 977, "reconstructed_misses": 53, "logical_value_requests": 1994836, "replay_iterations": 997391, "memo_probes": 1994185, "checkpoint_lookups": 3397, "checkpoint_hits": 1374, "checkpoint_captures": 138218, "checkpoint_replacements": 138042, "checkpoint_probes": 13588, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "62d590dc7fffbf656c04bdcb89cf23cef4df10cfbbe4db022c3e5727a5c19653abc55fc7746e9032f7581277a651564c", "canonical_proof_completed": false},
+      {"seed_index": 7, "completed_iterations": 926, "reconstructed_misses": 49, "logical_value_requests": 1993705, "replay_iterations": 996828, "memo_probes": 1993431, "checkpoint_lookups": 4009, "checkpoint_hits": 1868, "checkpoint_captures": 137781, "checkpoint_replacements": 137725, "checkpoint_probes": 16036, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "f3a88949cfe9930d21b5156eec4bc0a5cfad51334b92b8bc3bbf0eb3f60500f31dc08fa0a6166a42fb8dc7e33d1a9f06", "canonical_proof_completed": false}
+    ]
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "The screen must first establish exact independent boundaries. A gate assessment still requires canonical proofs, total measured attack memory on controlled hosts, and independent review."
+  }
+}

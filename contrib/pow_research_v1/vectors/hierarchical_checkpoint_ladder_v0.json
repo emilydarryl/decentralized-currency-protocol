@@ -1,0 +1,25 @@
+{
+  "format": "soveroot-pow-v1-hierarchical-checkpoint-ladder-vectors-v0",
+  "profile": "standard",
+  "seed_generation": "benchmark_matrix_v1.seed_for(index)",
+  "seed_indices": [0, 1, 2],
+  "nonce": 0,
+  "primary_numerator": 1,
+  "primary_denominator": 128,
+  "checkpoint_capacity": 64,
+  "checkpoint_stride": 8,
+  "dependency_bundle_width": 4,
+  "work_limit": 1000000,
+  "operation_limit": 100,
+  "layout": {"budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "arena_bytes": 126464, "write_bitmap_bytes": 4096, "primary_cache_capacity": 59, "primary_cache_bytes": 944, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "checkpoint_entry_bytes": 120, "checkpoint_capacity": 64, "checkpoint_bytes": 7680, "checkpoint_stride": 8, "memo_entry_bytes": 12, "memo_capacity": 9304, "memo_bytes": 111648, "unused_arena_bytes": 16, "admitted_bytes": 131072},
+  "iterative_memory_accounting": {"total_budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "allocator_allowance_bytes": 4096, "arena_allocation_bytes": 126464, "explicit_frame_bytes": 104, "explicit_frame_capacity": 20, "explicit_work_stack_bytes_inside_arena": 2080, "native_recursion_bytes": 0, "rolling_transcript_state_bytes": 48, "transcript_growth_bytes": 0, "accounted_bytes": 131072},
+  "hierarchical_checkpoint_levels": [{"level": 0, "stride": 8, "capacity": 32, "base_slot": 0}, {"level": 1, "stride": 64, "capacity": 16, "base_slot": 32}, {"level": 2, "stride": 512, "capacity": 8, "base_slot": 48}, {"level": 3, "stride": 4096, "capacity": 8, "base_slot": 56}],
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes"],
+  "operation_fields": ["recursive_calls", "replay_iterations", "memo_probes", "checkpoint_probes", "total"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {"seed_index": 0, "counters": [159, 320, 0, 319, 1, 318, 259, 1, 0, 33, 11, 19, 16, 3, 5, 0, 23, 0, 7, 0, 0, 0, 28], "operations": [33, 16, 23, 28, 100], "exhaustion": ["operation_limit", 159, 1, 59, 2, 3, 16, "35ff162941043fe8761940e06ca492b88731da75c689490a11edaefd99588705f43e96afd1dd205d365cf4b539d3182f"], "transcript_commitment": "1b97c477b627bdb54f8aa0055dbf7a1b48429009f69ec1ee4e621456780f79b5f482a34e7c8efc5b9995254680f81ff4"},
+    {"seed_index": 1, "counters": [175, 351, 0, 350, 1, 350, 291, 1, 0, 33, 11, 19, 16, 3, 5, 0, 23, 0, 7, 0, 0, 0, 28], "operations": [33, 16, 23, 28, 100], "exhaustion": ["operation_limit", 175, 0, 33, 2, 3, 16, "8992bde99842cd12ff17f6113efa30c8dc2e9e3de8053347da708eca704d45ca9b611fcf4b849eeccd95cfed60a81959"], "transcript_commitment": "1b97c477b627bdb54f8aa0055dbf7a1b48429009f69ec1ee4e621456780f79b5f482a34e7c8efc5b9995254680f81ff4"},
+    {"seed_index": 2, "counters": [209, 420, 3, 416, 1, 418, 357, 1, 0, 33, 11, 19, 16, 3, 5, 0, 23, 0, 7, 0, 0, 0, 28], "operations": [33, 16, 23, 28, 100], "exhaustion": ["operation_limit", 209, 1, 6663, 2, 3, 16, "091de356b1516578a25649a7ad4ac0cef35cfb2be7fd8f8d92941ac4d0aab4aee247c66ae8406ab8ee4c0fa16f5f8dda"], "transcript_commitment": "1b97c477b627bdb54f8aa0055dbf7a1b48429009f69ec1ee4e621456780f79b5f482a34e7c8efc5b9995254680f81ff4"}
+  ]
+}
