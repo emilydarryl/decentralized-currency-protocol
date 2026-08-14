@@ -2,7 +2,7 @@
 
 Status: **WORKING DESIGN; NO PRODUCTION NETWORK; NO PROOF-OF-WORK GATE PASSED**
 
-Evidence cutoff: 2026-08-13, source revision `17e8a222425fd12f9b4ea618f8eb8b9c883b20b7`
+Evidence cutoff: 2026-08-14, source revision `a43a50e2366073ea65e09af7f0ec28b2f5511b99`
 
 This is the project-level index for decisions made, evidence collected, claims rejected, and work still required. Detailed specifications remain authoritative within their stated scope. This ledger exists so that a reader does not need private conversations to understand the project.
 

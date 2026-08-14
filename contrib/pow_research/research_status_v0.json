@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-13",
-  "evidence_cutoff_revision": "17e8a222425fd12f9b4ea618f8eb8b9c883b20b7",
+  "evidence_cutoff_revision": "a43a50e2366073ea65e09af7f0ec28b2f5511b99",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -157,10 +157,15 @@
       "id": "pow_v1_checkpoint_recursive_regeneration",
       "pull_request": 39,
       "conclusion": "The best of 14 compact machine-state checkpoint allocations reaches iteration 892 versus 999 without checkpoints under the same replay ceiling; the policy is rejected and no gate is assessed."
+    },
+    {
+      "id": "pow_v1_target_checkpoint_regeneration",
+      "pull_request": 40,
+      "conclusion": "Binding one exact historical target value to each state checkpoint raises the sparse 1/128 allocation from iteration 719 to 999 without increasing depth, but only ties the global attack record and produces no proof."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_dependency_aware_hierarchical_regeneration",
+    "id": "pow_v1_multi_value_dependency_bundle",
     "document": "docs/pow-v1-bounded-pebbling-plan.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
@@ -175,6 +180,7 @@
     "stage_c_first_recursive_regeneration": "One exact historical value is regenerated through recursive dependencies with a packed memo and logical bounded frame reserve inside the half-scratch arena; the pilot refuses at the next miss and no gate is assessed.",
     "stage_c_repeated_recursive_regeneration": "Persistent memo reuse recovers 51 standard seed-zero misses under a one-million-iteration replay ceiling; a five-point allocation sweep reaches a longest exact prefix of 999 iterations but no proof output.",
     "stage_c_checkpoint_recursive_regeneration": "Fourteen byte-accounted compact checkpoint allocations are screened; the best reaches iteration 892 versus 999 without checkpoints, so this policy is rejected without assessing a gate.",
-    "required_outcome": "Reduce recursive replay amplification with dependency-aware hierarchical summaries that accelerate both machine-state and historical scratch-value recovery, then require exact final outputs, explicit physical stack accounting, and measured process memory."
+    "stage_c_target_checkpoint_regeneration": "Target-aware 88-byte checkpoints improve the 1/128 allocation from iteration 719 to 999 with bounded depth, but only tie the best prior prefix and fail closed without a proof.",
+    "required_outcome": "Test compact multi-value dependency bundles that save more replay work than the memo capacity they displace, then require exact final outputs, explicit physical stack accounting, and measured process memory."
   }
 }
