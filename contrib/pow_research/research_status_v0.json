@@ -172,11 +172,16 @@
       "id": "pow_v1_total_operation_bound",
       "pull_request": 42,
       "conclusion": "A five-million-unit ceiling jointly charges recursive calls, replay iterations, memo probes, and checkpoint-entry probes; all eight standard seeds stop exactly at the bound with prefixes from 480 to 999 and no proof, so the replay-only bundle advantage is not preserved."
+    },
+    {
+      "id": "pow_v1_physical_memory_accounting",
+      "pull_request": 43,
+      "conclusion": "Native-stack and allocator allowances reduce the attack arena to 85504 bytes, a fixed rolling transcript removes recovery-dependent growth, and eight operation-bounded prefixes range from 641 to 853 with no proof; shared-runner RSS remains diagnostic only."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_physical_memory_accounting",
-    "document": "docs/pow-v1-operation-bounded-dependency-bundle-regeneration.md",
+    "id": "pow_v1_explicit_iterative_work_stack",
+    "document": "docs/pow-v1-physical-memory-accounting.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
@@ -193,6 +198,7 @@
     "stage_c_target_checkpoint_regeneration": "Target-aware 88-byte checkpoints improve the 1/128 allocation from iteration 719 to 999 with bounded depth, but only tie the best prior prefix and fail closed without a proof.",
     "stage_c_dependency_bundle_regeneration": "Twelve 120-byte four-value bundles advance the seed-zero prefix to 1006 while displacing 32 memo entries, but a partial holdout is mixed and exposes unbounded call/probe work beyond the replay counter; no proof output is reached.",
     "stage_c_total_operation_bound": "One five-million-unit ceiling charges replay iterations, recursive calls, memo probes, and checkpoint probes; all eight standard seeds terminate at the bound with prefixes from 480 to 999 and no proof, rejecting the replay-only bundle advantage without assessing a gate.",
-    "required_outcome": "Account explicitly for physical recursion-stack bytes and allocator allowances, measure process peak resident memory on controlled hosts, continue adversarial attack search, and still require exact final outputs before any time-memory gate assessment."
+    "stage_c_physical_memory_accounting": "The half-scratch budget now deducts a 40960-byte native-stack reserve and 4096-byte allocator allowance before allocating the arena; a rolling transcript has zero recovery-dependent growth, compiler stack-use and whole-process RSS diagnostics are reproducible, prefixes range from 641 to 853, and no gate is assessed.",
+    "required_outcome": "Replace native recursion with an explicit preallocated work stack, preserve independent exact boundaries and total-operation accounting, continue adversarial attack search, and require canonical proof outputs before controlled-host throughput can assess the time-memory gate."
   }
 }

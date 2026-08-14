@@ -44,6 +44,9 @@ DOMAIN_DEPENDENCY_BUNDLE_REGENERATION = (
 DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION = (
     b"Soveroot/PowResearch/OperationBoundedDependencyBundleRegeneration/v1\x00"
 )
+DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION = (
+    b"Soveroot/PowResearch/PhysicallyAccountedDependencyBundleRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
@@ -53,6 +56,15 @@ DEFAULT_CHECKPOINT_STRIDE = 8
 DEFAULT_DEPENDENCY_BUNDLE_WIDTH = 4
 DEFAULT_DEPENDENCY_BUNDLE_CAPACITY = 12
 DEFAULT_TOTAL_OPERATION_LIMIT = 5_000_000
+NATIVE_STACK_FRAME_ALLOWANCE_BYTES = 2_048
+NATIVE_STACK_DEPTH_CAPACITY = 20
+NATIVE_STACK_RESERVE_BYTES = (
+    NATIVE_STACK_FRAME_ALLOWANCE_BYTES * NATIVE_STACK_DEPTH_CAPACITY
+)
+ALLOCATOR_ALLOWANCE_BYTES = 4_096
+PHYSICAL_EXTERNAL_RESERVE_BYTES = (
+    NATIVE_STACK_RESERVE_BYTES + ALLOCATOR_ALLOWANCE_BYTES
+)
 
 
 def _dependency_bundle_offsets(width: int) -> tuple[int, int, int]:
@@ -120,6 +132,21 @@ class RegenerationOperationCounts:
 
 
 @dataclass(frozen=True)
+class PhysicalMemoryAccounting:
+    total_budget_bytes: int
+    fixed_state_reserve_bytes: int
+    native_stack_frame_allowance_bytes: int
+    native_stack_depth_capacity: int
+    native_stack_reserve_bytes: int
+    allocator_allowance_bytes: int
+    arena_allocation_bytes: int
+    logical_frame_reserve_bytes: int
+    rolling_transcript_state_bytes: int
+    transcript_growth_bytes: int
+    accounted_bytes: int
+
+
+@dataclass(frozen=True)
 class CheckpointRegenerationResult:
     status: str
     layout: CheckpointLayout
@@ -156,6 +183,7 @@ class CheckpointRegenerationResult:
     execution_result: ExecutionResult | None
     operation_limit: int | None = None
     operation_counts: RegenerationOperationCounts | None = None
+    physical_memory_accounting: PhysicalMemoryAccounting | None = None
 
     def to_dict(self) -> dict[str, object]:
         document = asdict(self)
@@ -165,6 +193,8 @@ class CheckpointRegenerationResult:
         if self.operation_limit is None:
             document.pop("operation_limit")
             document.pop("operation_counts")
+        if self.physical_memory_accounting is None:
+            document.pop("physical_memory_accounting")
         return document
 
 
@@ -710,6 +740,8 @@ def reconstruct_repeatedly_with_checkpoints(
     _target_aware: bool = False,
     _dependency_bundle_width: int = 1,
     _operation_limit: int | None = None,
+    _external_reserve_bytes: int = 0,
+    _rolling_transcript: bool = False,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -749,6 +781,7 @@ def reconstruct_repeatedly_with_checkpoints(
         primary_numerator,
         primary_denominator,
         checkpoint_bytes,
+        _external_reserve_bytes,
     )
     base = arena.layout
     layout = CheckpointLayout(
@@ -778,6 +811,8 @@ def reconstruct_repeatedly_with_checkpoints(
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
+        DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION
+        if dependency_bundles and _rolling_transcript else
         DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION
         if dependency_bundles and _operation_limit is not None else
         DOMAIN_DEPENDENCY_BUNDLE_REGENERATION if dependency_bundles else
@@ -785,6 +820,7 @@ def reconstruct_repeatedly_with_checkpoints(
         DOMAIN_CHECKPOINT_REGENERATION
     )
     transcript = hashlib.sha3_384(domain)
+    rolling_transcript_digest = transcript.digest() if _rolling_transcript else None
 
     def boundary_for(miss: _MaterializedMiss, value: int, commitment: str) -> CheckpointBoundary:
         return CheckpointBoundary(
@@ -800,6 +836,7 @@ def reconstruct_repeatedly_with_checkpoints(
 
     def recover(miss: _MaterializedMiss) -> bool:
         nonlocal attempts, successful, first, last, exhaustion
+        nonlocal rolling_transcript_digest
         attempts += 1
         state_commitment = _boundary_commitment(
             domain, context, header_digest, nonce_bytes,
@@ -818,7 +855,12 @@ def reconstruct_repeatedly_with_checkpoints(
             registers, accumulator, miss.consumer, miss.slot, miss.word, value,
         )
         boundary = boundary_for(miss, value, commitment)
-        transcript.update(bytes.fromhex(commitment))
+        if rolling_transcript_digest is None:
+            transcript.update(bytes.fromhex(commitment))
+        else:
+            rolling_transcript_digest = hashlib.sha3_384(
+                rolling_transcript_digest + bytes.fromhex(commitment)
+            ).digest()
         first = boundary if first is None else first
         last = boundary
         arena.retain(miss.word, value)
@@ -870,6 +912,8 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
+        "refused_physically_accounted_dependency_bundle_exhausted"
+        if dependency_bundles and _rolling_transcript else
         "refused_operation_bounded_dependency_bundle_exhausted"
         if dependency_bundles and _operation_limit is not None else
         "refused_dependency_bundle_regeneration_exhausted" if dependency_bundles else
@@ -909,7 +953,11 @@ def reconstruct_repeatedly_with_checkpoints(
         regenerator.checkpoint_lookups, regenerator.checkpoint_hits,
         regenerator.checkpoint_captures, regenerator.checkpoint_replacements,
         regenerator.checkpoint_probes, first, last, exhaustion,
-        transcript.hexdigest(), execution_result,
+        (
+            rolling_transcript_digest.hex()
+            if rolling_transcript_digest is not None else transcript.hexdigest()
+        ),
+        execution_result,
         _operation_limit,
         (
             RegenerationOperationCounts(
@@ -920,6 +968,24 @@ def reconstruct_repeatedly_with_checkpoints(
                 regenerator.total_operations,
             )
             if _operation_limit is not None else None
+        ),
+        (
+            PhysicalMemoryAccounting(
+                budget,
+                layout.fixed_state_reserve_bytes,
+                NATIVE_STACK_FRAME_ALLOWANCE_BYTES,
+                NATIVE_STACK_DEPTH_CAPACITY,
+                NATIVE_STACK_RESERVE_BYTES,
+                ALLOCATOR_ALLOWANCE_BYTES,
+                layout.arena_bytes,
+                layout.frame_reserve_bytes,
+                48,
+                0,
+                layout.fixed_state_reserve_bytes
+                + layout.arena_bytes
+                + PHYSICAL_EXTERNAL_RESERVE_BYTES,
+            )
+            if _rolling_transcript else None
         ),
     )
 
@@ -1013,4 +1079,39 @@ def reconstruct_repeatedly_with_operation_bounded_dependency_bundles(
         _target_aware=True,
         _dependency_bundle_width=dependency_bundle_width,
         _operation_limit=operation_limit,
+    )
+
+
+def reconstruct_repeatedly_with_physically_accounted_dependency_bundles(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    operation_limit: int = DEFAULT_TOTAL_OPERATION_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    checkpoint_capacity: int = DEFAULT_DEPENDENCY_BUNDLE_CAPACITY,
+    checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+    dependency_bundle_width: int = DEFAULT_DEPENDENCY_BUNDLE_WIDTH,
+) -> CheckpointRegenerationResult:
+    """Run the bounded bundle attack with explicit external-memory reserves."""
+
+    _dependency_bundle_offsets(dependency_bundle_width)
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=checkpoint_capacity,
+        checkpoint_stride=checkpoint_stride,
+        _target_aware=True,
+        _dependency_bundle_width=dependency_bundle_width,
+        _operation_limit=operation_limit,
+        _external_reserve_bytes=PHYSICAL_EXTERNAL_RESERVE_BYTES,
+        _rolling_transcript=True,
     )

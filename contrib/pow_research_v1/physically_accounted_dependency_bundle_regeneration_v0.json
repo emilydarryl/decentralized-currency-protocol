@@ -1,0 +1,62 @@
+{
+  "format": "soveroot-pow-v1-physically-accounted-dependency-bundle-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS PHYSICAL-RESERVE AND RSS-DIAGNOSTIC PILOT",
+  "question": "How far does the operation-bounded bundle attacker progress after native stack and allocator allowances are deducted from the same half-scratch budget, and what whole-process RSS does the Linux executable report?",
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "native_stack_frame_allowance_bytes": 2048,
+    "native_stack_depth_capacity": 20,
+    "native_stack_reserve_bytes": 40960,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 85504,
+    "accounted_bytes": 131072,
+    "compiler_check": "GCC -fstack-usage must report RecursiveRegenerator::ValueAt as static and no larger than 2048 bytes per frame",
+    "allocator_check": "the C++ arena vector capacity may not exceed its requested bytes plus the 4096-byte allocator allowance",
+    "transcript": "a domain-separated 48-byte rolling SHA3-384 chain replaces the C++ vector that grew by 48 bytes per recovered miss",
+    "transcript_growth_bytes": 0
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "primary_allocation": "1/128 of possible 16-byte primary slots after external reserves",
+    "primary_cache_capacity": 39,
+    "memo_capacity": 6436,
+    "checkpoint_entries": 12,
+    "dependency_bundle_width": 4,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_stride": 8,
+    "total_operation_limit": 5000000,
+    "predeclared_seed_count": 8
+  },
+  "standard_holdout": [
+    {"seed_index": 0, "completed_iterations": 669, "reconstructed_misses": 22, "recursive_calls": 1966336, "replay_iterations": 983158, "memo_probes": 1965114, "checkpoint_probes": 85392, "total_operations": 5000000, "maximum_depth": 8, "checkpoint_hits": 2950, "transcript_commitment": "afc34b6307ce32dbefdabe87abcf7a4ffc8c7752615d9dcc6c7b764c45b36a390a1bba51475f4ef0a405169cadfa38ac"},
+    {"seed_index": 1, "completed_iterations": 768, "reconstructed_misses": 30, "recursive_calls": 1977245, "replay_iterations": 988608, "memo_probes": 1976835, "checkpoint_probes": 57312, "total_operations": 5000000, "maximum_depth": 7, "checkpoint_hits": 2186, "transcript_commitment": "7fdf585491058089738a6bcb997470957714a593338905c939a88694a1cd04f93b7bc96402b40f2a97e5076a78bfb116"},
+    {"seed_index": 2, "completed_iterations": 773, "reconstructed_misses": 30, "recursive_calls": 1983830, "replay_iterations": 991900, "memo_probes": 1982102, "checkpoint_probes": 42168, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 895, "transcript_commitment": "02251da882c1a0c16f282b658d2c3ccbdb07db35bdf5d92644dea23cd2a8ff8955aed3eb66a92cd65e56a0e66039d9d6"},
+    {"seed_index": 3, "completed_iterations": 853, "reconstructed_misses": 37, "recursive_calls": 1987975, "replay_iterations": 993969, "memo_probes": 1986220, "checkpoint_probes": 31836, "total_operations": 5000000, "maximum_depth": 5, "checkpoint_hits": 451, "transcript_commitment": "2de144ffd945de3a30ebe9978482de7db37a69b495b41fdaf9bc6eb8298bc018402f89bd01c740d473b86e781be0fdbf"},
+    {"seed_index": 4, "completed_iterations": 848, "reconstructed_misses": 41, "recursive_calls": 1980523, "replay_iterations": 990241, "memo_probes": 1979664, "checkpoint_probes": 49572, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 1637, "transcript_commitment": "02dca0adb14b5d1075e3e26459458e954850c9339405fbf76891cf1e4cca2b3a364d522f9b1068492392b36fea4781a5"},
+    {"seed_index": 5, "completed_iterations": 641, "reconstructed_misses": 21, "recursive_calls": 1976964, "replay_iterations": 988471, "memo_probes": 1975969, "checkpoint_probes": 58596, "total_operations": 5000000, "maximum_depth": 7, "checkpoint_hits": 1946, "transcript_commitment": "591b88c39e3a4f8e66abb25d8e595caeb6256b2b52b07303443a075024b1911b845345c759b6305c71b55f16e11e1997"},
+    {"seed_index": 6, "completed_iterations": 755, "reconstructed_misses": 33, "recursive_calls": 1980528, "replay_iterations": 990248, "memo_probes": 1979580, "checkpoint_probes": 49644, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 1597, "transcript_commitment": "c3a71100403bd4a884b65ae1aa5ed25afd32b38b30007624b6a344cd185b3f463cbb4cdda741160c0248d63abfacdbb0"},
+    {"seed_index": 7, "completed_iterations": 771, "reconstructed_misses": 30, "recursive_calls": 1982687, "replay_iterations": 991330, "memo_probes": 1980383, "checkpoint_probes": 45600, "total_operations": 5000000, "maximum_depth": 6, "checkpoint_hits": 750, "transcript_commitment": "3a9b114478e4e911ade84cb843027de945cb856023cc6a059aa9af03a4cca1191588baff3d86cf1a1f0e80ee028cdf05"}
+  ],
+  "summary": {
+    "minimum_completed_iterations": 641,
+    "median_completed_iterations": 769.5,
+    "maximum_completed_iterations": 853,
+    "maximum_observed_depth": 8,
+    "completed_proofs": 0,
+    "prior_operation_bounded_maximum": 999,
+    "interpretation": "deducting stack and allocator allowances reduces the usable arena and lowers the maximum observed prefix; fixed transcript state removes the prior seed-three growth hazard"
+  },
+  "measurement_policy": {
+    "whole_process_rss": "measure ordinary and attacking executables in separate /usr/bin/time -v processes",
+    "shared_components": "report executable, runtime, epoch context, and dataset in whole-process RSS but do not charge shared read-only code and dataset to attack-specific scratch state",
+    "shared_runner": "informational only",
+    "controlled_hosts_required": 3
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "no exact proof completes, shared-runner RSS is not controlled-host evidence, allocator allowances need independent review, and a second attack model is absent"
+  },
+  "next_use": "run the frozen diagnostic on declared physical hosts and continue searching for an exact bounded attacker; no throughput ratio is meaningful until an attacker produces canonical proofs"
+}

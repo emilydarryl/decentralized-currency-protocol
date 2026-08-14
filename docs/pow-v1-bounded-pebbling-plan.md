@@ -86,6 +86,8 @@ The [repeated recursive-regeneration pilot](pow-v1-repeated-recursive-regenerati
 
 The [total-operation-bounded bundle pilot](pow-v1-operation-bounded-dependency-bundle-regeneration.md) closes a later control gap by charging recursive calls, replay iterations, memo probes, and checkpoint-entry probes against one five-million-unit ceiling. All eight standard seeds terminate exactly at the bound without a proof. Prefixes range from 480 to 999, so the earlier replay-only seed-zero bundle record of 1,006 does not survive the combined accounting. Explicit physical stack, allocator, and resident-memory accounting remain incomplete.
 
+The [physical-memory accounting pilot](pow-v1-physical-memory-accounting.md) deducts a 40,960-byte native-stack reserve and 4,096-byte allocator allowance before sizing the attack arena, replaces a recovery-dependent C++ transcript vector with a fixed rolling digest, validates compiler-reported recursive frame size, and records whole-process Linux RSS. The complete eight-seed prefixes range from 641 to 853 and no proof is produced. Shared-runner RSS is diagnostic only; a preallocated iterative work stack, exact final outputs, and controlled physical-host measurements remain incomplete.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.

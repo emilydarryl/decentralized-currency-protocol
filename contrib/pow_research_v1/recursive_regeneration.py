@@ -139,6 +139,7 @@ class _RecursiveArena:
         primary_numerator: int = PRIMARY_NUMERATOR,
         primary_denominator: int = PRIMARY_DENOMINATOR,
         reserved_tail_bytes: int = 0,
+        external_reserve_bytes: int = 0,
     ) -> None:
         if primary_numerator <= 0 or primary_denominator <= 0:
             raise ValueError("primary allocation ratio must be positive")
@@ -146,9 +147,15 @@ class _RecursiveArena:
             raise ValueError("primary allocation ratio cannot exceed one")
         if reserved_tail_bytes < 0:
             raise ValueError("reserved tail bytes cannot be negative")
+        if external_reserve_bytes < 0:
+            raise ValueError("external reserve bytes cannot be negative")
+        if budget_bytes <= FIXED_STATE_RESERVE_BYTES + external_reserve_bytes:
+            raise ValueError("budget cannot hold recursive external reserves")
         self.word_count = scratchpad_bytes // 8
         bitmap_bytes = (self.word_count + 7) // 8
-        arena_bytes = budget_bytes - FIXED_STATE_RESERVE_BYTES
+        arena_bytes = (
+            budget_bytes - FIXED_STATE_RESERVE_BYTES - external_reserve_bytes
+        )
         if arena_bytes <= (
             bitmap_bytes
             + CACHE_ENTRY_BYTES

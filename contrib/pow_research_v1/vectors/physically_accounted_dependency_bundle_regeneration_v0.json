@@ -1,0 +1,24 @@
+{
+  "format": "soveroot-pow-v1-physically-accounted-dependency-bundle-regeneration-vectors-v0",
+  "profile": "standard",
+  "seed_generation": "benchmark_matrix_v1.seed_for(index)",
+  "seed_indices": [0, 1, 2],
+  "nonce": 0,
+  "primary_numerator": 1,
+  "primary_denominator": 128,
+  "checkpoint_capacity": 12,
+  "checkpoint_stride": 8,
+  "dependency_bundle_width": 4,
+  "work_limit": 1000000,
+  "operation_limit": 100,
+  "layout": {"budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "arena_bytes": 85504, "write_bitmap_bytes": 4096, "primary_cache_capacity": 39, "primary_cache_bytes": 624, "frame_bytes": 104, "frame_capacity": 20, "frame_reserve_bytes": 2080, "checkpoint_entry_bytes": 120, "checkpoint_capacity": 12, "checkpoint_bytes": 1440, "checkpoint_stride": 8, "memo_entry_bytes": 12, "memo_capacity": 6436, "memo_bytes": 77232, "unused_arena_bytes": 32, "admitted_bytes": 131072},
+  "physical_memory_accounting": {"total_budget_bytes": 131072, "fixed_state_reserve_bytes": 512, "native_stack_frame_allowance_bytes": 2048, "native_stack_depth_capacity": 20, "native_stack_reserve_bytes": 40960, "allocator_allowance_bytes": 4096, "arena_allocation_bytes": 85504, "logical_frame_reserve_bytes": 2080, "rolling_transcript_state_bytes": 48, "transcript_growth_bytes": 0, "accounted_bytes": 131072},
+  "counter_fields": ["completed_iterations", "canonical_reads", "cache_hits", "initial_zero_reads", "materialized_misses", "writes", "evictions", "reconstruction_attempts", "reconstructed_misses", "regeneration_calls", "regeneration_cache_hits", "regeneration_completed_values", "regeneration_iterations", "maximum_depth", "memo_peak_entries", "memo_evictions", "memo_probes", "memo_shifted_bytes", "checkpoint_lookups", "checkpoint_hits", "checkpoint_captures", "checkpoint_replacements", "checkpoint_probes"],
+  "operation_fields": ["recursive_calls", "replay_iterations", "memo_probes", "checkpoint_probes", "total"],
+  "exhaustion_fields": ["reason", "consumer", "slot", "word", "stop_iteration", "attempted_depth", "regeneration_iterations", "state_commitment"],
+  "cases": [
+    {"seed_index": 0, "counters": [159, 320, 0, 319, 1, 318, 279, 1, 0, 19, 4, 13, 9, 3, 3, 0, 12, 0, 5, 0, 0, 0, 60], "operations": [19, 9, 12, 60, 100], "exhaustion": ["operation_limit", 159, 1, 59, 2, 2, 9, "16318f8abfd4eed081c54e9714054312e63e817c6a41ac8d743ce59aada8ff3a0b9a89b75f5952ae8aebd6dd3b53b499"], "transcript_commitment": "36a73fb060b5854d50d57c2558414dbe5921d6373bc27ba7138fe88c739be0cc1493e080695b121fb42c0a17d3cdb5b3"},
+    {"seed_index": 1, "counters": [175, 351, 0, 350, 1, 350, 311, 1, 0, 19, 4, 13, 9, 3, 3, 0, 12, 0, 5, 0, 0, 0, 60], "operations": [19, 9, 12, 60, 100], "exhaustion": ["operation_limit", 175, 0, 33, 2, 2, 9, "0bb65040dc5cf42114faca6dc527a623af889f3f02a6def399e4c77de4e40068f9b4c6a9cffe399ee5a12a6008a9c209"], "transcript_commitment": "36a73fb060b5854d50d57c2558414dbe5921d6373bc27ba7138fe88c739be0cc1493e080695b121fb42c0a17d3cdb5b3"},
+    {"seed_index": 2, "counters": [73, 148, 1, 146, 1, 146, 107, 1, 0, 19, 4, 13, 9, 3, 3, 0, 12, 0, 5, 0, 0, 0, 60], "operations": [19, 9, 12, 60, 100], "exhaustion": ["operation_limit", 73, 1, 60, 2, 2, 9, "0470d2d3d5d1ec45e51b3e4eb574b1b0936d04e04f04f49cbd61bd657467890c08110b1874cd86daaf73f51db85078c6"], "transcript_commitment": "36a73fb060b5854d50d57c2558414dbe5921d6373bc27ba7138fe88c739be0cc1493e080695b121fb42c0a17d3cdb5b3"}
+  ]
+}
