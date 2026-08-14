@@ -1921,6 +1921,9 @@ public:
         return target_value;
     }
 
+#if defined(__GNUC__)
+    __attribute__((noinline))
+#endif
     std::uint64_t ValueAtIterative(
         std::uint64_t target_word, std::uint64_t stop, std::uint64_t depth = 1)
     {
