@@ -1,0 +1,103 @@
+{
+  "format": "soveroot-pow-v1-dependency-bundle-regeneration-method-v0",
+  "version": "0.1",
+  "status": "NON-CONSENSUS DIRECT-DEPENDENCY BUNDLE PILOT",
+  "question": "Can one machine-state checkpoint carry several exact direct-dependency values and advance the bounded half-memory attack farther than the memo entries it displaces?",
+  "algorithm": {
+    "entry": "store one 32-bit stop, four 16-bit word identities, four 64-bit exact values, alignment padding, eight 64-bit VM registers, and one 64-bit accumulator in 120 bytes",
+    "values": "capture the requested target, first direct read, second direct read/write, and sequential write from the current exact replay step; duplicate identities collapse in insertion order",
+    "index": "write by target_word modulo checkpoint_capacity; lookup scans every small-table entry and chooses the latest strictly earlier stop containing the requested word",
+    "accounting": "all bundle bytes displace packed memo entries inside the same half-scratch arena; every scanned entry increments checkpoint_probes",
+    "safety": "stored values and machine state arise only from completed exact replay; exhaustion emits no proof"
+  },
+  "selected_configuration": {
+    "primary_allocation": "1/128 of possible 16-byte primary slots",
+    "checkpoint_entries": 12,
+    "dependency_bundle_width": 4,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_stride": 8,
+    "checkpoint_bytes": 1440,
+    "cumulative_replay_iteration_limit": 1000000
+  },
+  "standard_seed_zero_capacity_screen": [
+    {"entries": 3, "completed_iterations": 988},
+    {"entries": 4, "completed_iterations": 784},
+    {"entries": 5, "completed_iterations": 784},
+    {"entries": 6, "completed_iterations": 844},
+    {"entries": 7, "completed_iterations": 875},
+    {"entries": 8, "completed_iterations": 983},
+    {"entries": 9, "completed_iterations": 784},
+    {"entries": 10, "completed_iterations": 792},
+    {"entries": 11, "completed_iterations": 885},
+    {"entries": 12, "completed_iterations": 1006},
+    {"entries": 13, "completed_iterations": 875},
+    {"entries": 14, "completed_iterations": 983},
+    {"entries": 15, "completed_iterations": 875},
+    {"entries": 16, "completed_iterations": 983},
+    {"entries": 17, "completed_iterations": 831},
+    {"entries": 18, "completed_iterations": 899},
+    {"entries": 19, "completed_iterations": 912},
+    {"entries": 20, "completed_iterations": 859},
+    {"entries": 21, "completed_iterations": 983},
+    {"entries": 22, "completed_iterations": 983},
+    {"entries": 23, "completed_iterations": 844},
+    {"entries": 24, "completed_iterations": 785},
+    {"entries": 25, "completed_iterations": 928},
+    {"entries": 26, "completed_iterations": 983},
+    {"entries": 27, "completed_iterations": 784},
+    {"entries": 28, "completed_iterations": 988},
+    {"entries": 29, "completed_iterations": 844},
+    {"entries": 30, "completed_iterations": 831},
+    {"entries": 31, "completed_iterations": 983},
+    {"entries": 32, "completed_iterations": 875}
+  ],
+  "standard_seed_zero_width_screen_at_four_entries": [
+    {"width": 2, "entry_bytes": 96, "completed_iterations": 999, "checkpoint_hits": 31},
+    {"width": 3, "entry_bytes": 112, "completed_iterations": 784, "checkpoint_hits": 1382},
+    {"width": 4, "entry_bytes": 120, "completed_iterations": 784, "checkpoint_hits": 1383}
+  ],
+  "standard_seed_zero_selected_result": {
+    "completed_iterations": 1006,
+    "reconstructed_misses": 55,
+    "maximum_depth": 3,
+    "checkpoint_hits": 2,
+    "checkpoint_probes": 24012,
+    "memo_capacity": 10164,
+    "regeneration_iterations": 1000000,
+    "proof": false
+  },
+  "matched_target_checkpoint_baseline": {
+    "checkpoint_entries": 12,
+    "checkpoint_entry_bytes": 88,
+    "checkpoint_bytes": 1056,
+    "memo_capacity": 10196,
+    "completed_iterations": 951,
+    "reconstructed_misses": 50,
+    "maximum_depth": 5,
+    "checkpoint_hits": 976,
+    "comparison": "the four-value policy displaces 32 memo entries and advances 55 additional primary iterations"
+  },
+  "partial_standard_holdout": {
+    "status": "EXPLORATORY AND INCOMPLETE",
+    "cases": [
+      {"seed_index": 0, "target_checkpoint_prefix": 951, "bundle_prefix": 1006, "delta": 55},
+      {"seed_index": 1, "target_checkpoint_prefix": 940, "bundle_prefix": 952, "delta": 12},
+      {"seed_index": 2, "target_checkpoint_prefix": 982, "bundle_prefix": 946, "delta": -36}
+    ],
+    "interruption": "seed index 3 was operator-stopped after several minutes without a result; seeds 4 through 7 were not run",
+    "interpretation": "the seed-zero record is real but the fixed policy is not a general cross-seed improvement, and the replay-iteration ceiling does not bound memo/checkpoint call work"
+  },
+  "comparison": {
+    "previous_global_record": 999,
+    "selected_completed_iterations": 1006,
+    "global_delta_iterations": 7,
+    "global_relative_change_percent": 0.7,
+    "standard_total_iterations": 98304,
+    "selected_workload_percent": 1.023
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "the seed-zero prefix record improves slightly but no proof completes, the cross-seed observation is mixed and incomplete, total call/probe work lacks an independent bound, and physical memory is unmeasured"
+  },
+  "next_use": "add a deterministic total-operation ceiling and explain which rare bundle hits reduce depth before any broader retention policy or physical-host measurement"
+}
