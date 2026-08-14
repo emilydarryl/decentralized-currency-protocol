@@ -51,6 +51,9 @@ DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION = (
 DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION = (
     b"Soveroot/PowResearch/IterativeWorkStackDependencyBundleRegeneration/v1\x00"
 )
+DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION = (
+    b"Soveroot/PowResearch/HierarchicalCheckpointLadderRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
@@ -73,6 +76,15 @@ ITERATIVE_EXTERNAL_RESERVE_BYTES = ALLOCATOR_ALLOWANCE_BYTES
 ITERATIVE_FRAME_STRUCT = struct.Struct("<IIIHBBQ8QQQ")
 if ITERATIVE_FRAME_STRUCT.size != FRAME_BYTES:
     raise AssertionError("iterative frame encoding must match the arena frame reserve")
+HIERARCHICAL_CHECKPOINT_LEVELS = (
+    (0, 8, 32, 0),
+    (1, 64, 16, 32),
+    (2, 512, 8, 48),
+    (3, 4096, 8, 56),
+)
+HIERARCHICAL_CHECKPOINT_CAPACITY = 64
+if sum(level[2] for level in HIERARCHICAL_CHECKPOINT_LEVELS) != HIERARCHICAL_CHECKPOINT_CAPACITY:
+    raise AssertionError("hierarchical checkpoint capacities must cover every slot")
 
 
 def _dependency_bundle_offsets(width: int) -> tuple[int, int, int]:
@@ -208,6 +220,7 @@ class CheckpointRegenerationResult:
     operation_counts: RegenerationOperationCounts | None = None
     physical_memory_accounting: PhysicalMemoryAccounting | None = None
     iterative_memory_accounting: IterativeMemoryAccounting | None = None
+    hierarchical_checkpoint_levels: list[dict[str, int]] | None = None
 
     def to_dict(self) -> dict[str, object]:
         document = asdict(self)
@@ -221,6 +234,8 @@ class CheckpointRegenerationResult:
             document.pop("physical_memory_accounting")
         if self.iterative_memory_accounting is None:
             document.pop("iterative_memory_accounting")
+        if self.hierarchical_checkpoint_levels is None:
+            document.pop("hierarchical_checkpoint_levels")
         return document
 
 
@@ -1067,6 +1082,112 @@ class _IterativeDependencyBundleRegenerator(_DependencyBundleRegenerator):
         return returned_value
 
 
+class _HierarchicalCheckpointLadderRegenerator(
+    _IterativeDependencyBundleRegenerator
+):
+    """Use one directly addressed target checkpoint at each frozen time scale."""
+
+    def _checkpoint_find(
+        self, target_word: int, stop: int, depth: int
+    ) -> tuple[int, int, list[int], int] | None:
+        self.checkpoint_lookups += 1
+        selected: tuple[int, int, list[int], int] | None = None
+        for _level, _stride, capacity, base_slot in HIERARCHICAL_CHECKPOINT_LEVELS:
+            self._charge_operation(stop, target_word, depth)
+            self.checkpoint_probes += 1
+            slot = base_slot + target_word % capacity
+            offset = self.checkpoint_offset + slot * self.checkpoint_entry_bytes
+            stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
+            if (
+                stored_stop == EMPTY_CHECKPOINT_STOP
+                or stored_stop >= stop
+                or (selected is not None and stored_stop <= selected[0])
+            ):
+                continue
+            words = struct.unpack_from(
+                f"<{self.dependency_bundle_width}H", self.owner.arena, offset + 4
+            )
+            try:
+                value_index = words.index(target_word)
+            except ValueError:
+                continue
+            target_value = struct.unpack_from(
+                "<Q",
+                self.owner.arena,
+                offset + self.bundle_value_offset + value_index * 8,
+            )[0]
+            state = struct.unpack_from(
+                "<9Q", self.owner.arena, offset + self.bundle_state_offset
+            )
+            selected = stored_stop, target_value, list(state[:8]), state[8]
+        if selected is not None:
+            self.checkpoint_hits += 1
+        return selected
+
+    def _checkpoint_put(
+        self,
+        anchor_word: int,
+        stop: int,
+        candidates: list[tuple[int, int]],
+        registers: list[int],
+        accumulator: int,
+    ) -> None:
+        if stop == 0:
+            return
+        words: list[int] = []
+        values: list[int] = []
+        for word, value in candidates:
+            if word in words:
+                values[words.index(word)] = value & MASK64
+                continue
+            if len(words) == self.dependency_bundle_width:
+                break
+            words.append(word)
+            values.append(value & MASK64)
+        while len(words) < self.dependency_bundle_width:
+            words.append(EMPTY_BUNDLE_WORD)
+            values.append(0)
+
+        for _level, stride, capacity, base_slot in HIERARCHICAL_CHECKPOINT_LEVELS:
+            if stop % stride:
+                continue
+            slot = base_slot + anchor_word % capacity
+            offset = self.checkpoint_offset + slot * self.checkpoint_entry_bytes
+            stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
+            stored_anchor = struct.unpack_from("<H", self.owner.arena, offset + 4)[0]
+            if (
+                stored_stop != EMPTY_CHECKPOINT_STOP
+                and (stored_stop != stop or stored_anchor != anchor_word)
+            ):
+                self.checkpoint_replacements += 1
+            struct.pack_into("<I", self.owner.arena, offset, stop)
+            struct.pack_into(
+                f"<{self.dependency_bundle_width}H",
+                self.owner.arena,
+                offset + 4,
+                *words,
+            )
+            padding_start = offset + 4 + self.dependency_bundle_width * 2
+            padding_end = offset + self.bundle_value_offset
+            self.owner.arena[padding_start:padding_end] = b"\x00" * (
+                padding_end - padding_start
+            )
+            struct.pack_into(
+                f"<{self.dependency_bundle_width}Q",
+                self.owner.arena,
+                offset + self.bundle_value_offset,
+                *values,
+            )
+            struct.pack_into(
+                "<9Q",
+                self.owner.arena,
+                offset + self.bundle_state_offset,
+                *registers,
+                accumulator & MASK64,
+            )
+            self.checkpoint_captures += 1
+
+
 def reconstruct_repeatedly_with_checkpoints(
     context: EpochContext,
     header: bytes,
@@ -1084,6 +1205,7 @@ def reconstruct_repeatedly_with_checkpoints(
     _external_reserve_bytes: int = 0,
     _rolling_transcript: bool = False,
     _iterative_work_stack: bool = False,
+    _hierarchical_checkpoint_ladder: bool = False,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -1105,6 +1227,13 @@ def reconstruct_repeatedly_with_checkpoints(
         raise ValueError("dependency bundles require target-aware checkpoints")
     if _iterative_work_stack and not dependency_bundles:
         raise ValueError("iterative work stack requires dependency bundles")
+    if _hierarchical_checkpoint_ladder and not _iterative_work_stack:
+        raise ValueError("hierarchical checkpoint ladder requires iterative work stack")
+    if (
+        _hierarchical_checkpoint_ladder
+        and checkpoint_capacity != HIERARCHICAL_CHECKPOINT_CAPACITY
+    ):
+        raise ValueError("hierarchical checkpoint capacity must match frozen levels")
     checkpoint_entry_bytes = (
         _dependency_bundle_offsets(_dependency_bundle_width)[2]
         if dependency_bundles else
@@ -1138,8 +1267,11 @@ def reconstruct_repeatedly_with_checkpoints(
     )
     if dependency_bundles:
         regenerator_class = (
+            _HierarchicalCheckpointLadderRegenerator
+            if _hierarchical_checkpoint_ladder else
             _IterativeDependencyBundleRegenerator
-            if _iterative_work_stack else _DependencyBundleRegenerator
+            if _iterative_work_stack else
+            _DependencyBundleRegenerator
         )
         regenerator = regenerator_class(
             arena, context, header_digest, nonce_bytes, work_limit,
@@ -1159,6 +1291,8 @@ def reconstruct_repeatedly_with_checkpoints(
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
+        DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION
+        if dependency_bundles and _hierarchical_checkpoint_ladder else
         DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION
         if dependency_bundles and _iterative_work_stack else
         DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION
@@ -1262,6 +1396,8 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
+        "refused_hierarchical_checkpoint_ladder_exhausted"
+        if dependency_bundles and _hierarchical_checkpoint_ladder else
         "refused_iterative_work_stack_dependency_bundle_exhausted"
         if dependency_bundles and _iterative_work_stack else
         "refused_physically_accounted_dependency_bundle_exhausted"
@@ -1356,6 +1492,19 @@ def reconstruct_repeatedly_with_checkpoints(
                 + ITERATIVE_EXTERNAL_RESERVE_BYTES,
             )
             if _iterative_work_stack else None
+        ),
+        (
+            [
+                {
+                    "level": level,
+                    "stride": stride,
+                    "capacity": capacity,
+                    "base_slot": base_slot,
+                }
+                for level, stride, capacity, base_slot
+                in HIERARCHICAL_CHECKPOINT_LEVELS
+            ]
+            if _hierarchical_checkpoint_ladder else None
         ),
     )
 
@@ -1520,4 +1669,39 @@ def reconstruct_repeatedly_with_iterative_work_stack(
         _external_reserve_bytes=ITERATIVE_EXTERNAL_RESERVE_BYTES,
         _rolling_transcript=True,
         _iterative_work_stack=True,
+    )
+
+
+def reconstruct_repeatedly_with_hierarchical_checkpoint_ladder(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    operation_limit: int = DEFAULT_TOTAL_OPERATION_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    dependency_bundle_width: int = DEFAULT_DEPENDENCY_BUNDLE_WIDTH,
+) -> CheckpointRegenerationResult:
+    """Run the iterative attacker with the frozen four-level checkpoint ladder."""
+
+    _dependency_bundle_offsets(dependency_bundle_width)
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=HIERARCHICAL_CHECKPOINT_CAPACITY,
+        checkpoint_stride=HIERARCHICAL_CHECKPOINT_LEVELS[0][1],
+        _target_aware=True,
+        _dependency_bundle_width=dependency_bundle_width,
+        _operation_limit=operation_limit,
+        _external_reserve_bytes=ITERATIVE_EXTERNAL_RESERVE_BYTES,
+        _rolling_transcript=True,
+        _iterative_work_stack=True,
+        _hierarchical_checkpoint_ladder=True,
     )
