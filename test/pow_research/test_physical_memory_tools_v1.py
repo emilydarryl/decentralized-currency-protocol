@@ -10,7 +10,10 @@ import tempfile
 import unittest
 
 from contrib.pow_research_cpp.measure_physical_memory_v1 import parse_verbose_time
-from contrib.pow_research_cpp.verify_recursive_stack_usage_v1 import parse_stack_usage
+from contrib.pow_research_cpp.verify_recursive_stack_usage_v1 import (
+    maximum_bounded_stack_usage,
+    parse_stack_usage,
+)
 
 
 class PhysicalMemoryToolsV1Test(unittest.TestCase):
@@ -38,6 +41,12 @@ class PhysicalMemoryToolsV1Test(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["bytes"], 496)
         self.assertEqual(records[0]["qualifier"], "static")
+
+    def test_stack_usage_accepts_bounded_dynamic_and_rejects_unbounded(self) -> None:
+        bounded = [{"bytes": 352, "qualifier": "dynamic,bounded"}]
+        self.assertEqual(maximum_bounded_stack_usage(bounded), 352)
+        with self.assertRaisesRegex(AssertionError, "unbounded stack usage"):
+            maximum_bounded_stack_usage([{"bytes": 352, "qualifier": "dynamic"}])
 
 
 if __name__ == "__main__":
