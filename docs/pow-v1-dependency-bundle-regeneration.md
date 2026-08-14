@@ -62,3 +62,5 @@ The pilot establishes that a few exact related values can repay their checkpoint
 It does not assess the time-memory gate. No exact proof is completed; actual call-stack bytes, allocator overhead, peak resident memory, controlled throughput, energy, GPUs, FPGAs, ASICs, and cross-architecture behavior remain unmeasured. A stronger attack is evidence against the candidate, not evidence that mining is decentralized.
 
 The machine-readable method is [`dependency_bundle_regeneration_v0.json`](../contrib/pow_research_v1/dependency_bundle_regeneration_v0.json), and fixed vectors are [`dependency_bundle_regeneration_v0.json`](../contrib/pow_research_v1/vectors/dependency_bundle_regeneration_v0.json).
+
+The completed follow-up is [Total-Operation-Bounded Bundle Regeneration](pow-v1-operation-bounded-dependency-bundle-regeneration.md). It closes the call/probe gap, finishes all eight seeds, and shows that the 1,006-step replay-only record falls back to 999 under combined work accounting.

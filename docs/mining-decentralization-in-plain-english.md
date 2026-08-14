@@ -58,7 +58,9 @@ The next version made each bookmark remember one exact notebook value as well as
 
 We then let each bookmark carry four values already being used by that calculation step. The best seed-zero setup reached step 1,006, seven steps beyond the previous record. It did this even though the larger bookmarks displaced 32 general-purpose memo entries. That is a real improvement to the attack, but still only about 1.02% of the job and still no proof.
 
-The result did not generalize cleanly. The same setup helped a second seed, hurt a third, and a later seed spent several minutes in recursive calls and lookups without returning. The one-million limit counts replayed calculation steps, but it does not yet cap all bookkeeping operations. We therefore preserve the new record while refusing to claim that bundles are generally better.
+The result did not generalize cleanly. The same setup helped a second seed, hurt a third, and a later seed spent several minutes in recursive calls and lookups without returning. The one-million limit counted replayed calculation steps but did not cap all bookkeeping operations.
+
+We have now closed that loophole. The attacker receives five million total tokens, and every recursive request, replayed step, memo check, and bookmark check spends one. All eight planned seeds stop exactly at the limit. They reach between step 480 and step 999, and none produces a proof. Under the fairer accounting, the old 1,006 seed-zero record falls back to 999, so the larger bookmarks have not demonstrated a general advantage. One seed also performs more than 1.5 million short-lived recoveries while advancing only 480 steps, exposing severe cache thrashing.
 
 That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and the prototypes have not measured every byte used by the program's real call stack and allocator.
 
@@ -79,9 +81,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The next experiment will put one deterministic ceiling around all attacker work: replay iterations, recursive calls, memo probes, and checkpoint probes. Then we can finish the multi-seed comparison without allowing one type of bookkeeping to run indefinitely. We should try hard to defeat our own design before asking anyone to trust it.
-
-If an exact half-memory miner eventually finishes, we will measure its actual memory and speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
+The next experiment will account for the physical memory that logical models can miss: the real call stack, allocator overhead, and peak memory reported by the operating system. We should also continue searching for smarter attacks. If an exact half-memory miner eventually finishes, we will measure its speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
 
 Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
 
@@ -96,4 +96,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest dependency-bundle result](pow-v1-dependency-bundle-regeneration.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest operation-bounded result](pow-v1-operation-bounded-dependency-bundle-regeneration.md), and [research ledger](research-ledger.md).

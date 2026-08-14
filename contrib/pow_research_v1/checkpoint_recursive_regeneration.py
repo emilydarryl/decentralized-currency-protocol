@@ -41,6 +41,9 @@ DOMAIN_TARGET_CHECKPOINT_REGENERATION = (
 DOMAIN_DEPENDENCY_BUNDLE_REGENERATION = (
     b"Soveroot/PowResearch/DependencyBundleRegeneration/v1\x00"
 )
+DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION = (
+    b"Soveroot/PowResearch/OperationBoundedDependencyBundleRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
@@ -49,6 +52,7 @@ DEFAULT_CHECKPOINT_CAPACITY = 4
 DEFAULT_CHECKPOINT_STRIDE = 8
 DEFAULT_DEPENDENCY_BUNDLE_WIDTH = 4
 DEFAULT_DEPENDENCY_BUNDLE_CAPACITY = 12
+DEFAULT_TOTAL_OPERATION_LIMIT = 5_000_000
 
 
 def _dependency_bundle_offsets(width: int) -> tuple[int, int, int]:
@@ -107,6 +111,15 @@ class CheckpointBoundary:
 
 
 @dataclass(frozen=True)
+class RegenerationOperationCounts:
+    recursive_calls: int
+    replay_iterations: int
+    memo_probes: int
+    checkpoint_probes: int
+    total: int
+
+
+@dataclass(frozen=True)
 class CheckpointRegenerationResult:
     status: str
     layout: CheckpointLayout
@@ -141,12 +154,17 @@ class CheckpointRegenerationResult:
     exhaustion: RepeatedRecursiveExhaustion | None
     transcript_commitment: str
     execution_result: ExecutionResult | None
+    operation_limit: int | None = None
+    operation_counts: RegenerationOperationCounts | None = None
 
     def to_dict(self) -> dict[str, object]:
         document = asdict(self)
         document["execution_result"] = (
             None if self.execution_result is None else self.execution_result.to_dict()
         )
+        if self.operation_limit is None:
+            document.pop("operation_limit")
+            document.pop("operation_counts")
         return document
 
 
@@ -160,8 +178,11 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
         work_limit: int,
         checkpoint_capacity: int,
         checkpoint_stride: int,
+        operation_limit: int | None = None,
     ) -> None:
-        super().__init__(owner, context, header_digest, nonce_bytes, work_limit)
+        super().__init__(
+            owner, context, header_digest, nonce_bytes, work_limit, operation_limit
+        )
         self.checkpoint_capacity = checkpoint_capacity
         self.checkpoint_stride = checkpoint_stride
         self.checkpoint_offset = owner.memo_offset + owner.layout.memo_bytes
@@ -174,11 +195,14 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
                 EMPTY_CHECKPOINT_STOP,
             )
 
-    def _checkpoint_find(self, stop: int) -> tuple[int, list[int], int] | None:
+    def _checkpoint_find(
+        self, stop: int, target_word: int, depth: int
+    ) -> tuple[int, list[int], int] | None:
         self.checkpoint_lookups += 1
         selected_stop = -1
         selected_offset = 0
         for slot in range(self.checkpoint_capacity):
+            self._charge_operation(stop, target_word, depth)
             self.checkpoint_probes += 1
             offset = self.checkpoint_offset + slot * CHECKPOINT_ENTRY_BYTES
             stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
@@ -205,6 +229,7 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
         self.checkpoint_captures += 1
 
     def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self._charge_operation(stop, target_word, depth)
         self.calls += 1
         if stop == 0:
             self.completed_values += 1
@@ -212,11 +237,11 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
         self.maximum_depth = max(self.maximum_depth, depth)
         if depth > self.owner.layout.frame_capacity:
             raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
-        cached = self._memo_get(stop, target_word)
+        cached = self._memo_get(stop, target_word, depth)
         if cached is not None:
             return cached
 
-        checkpoint = self._checkpoint_find(stop)
+        checkpoint = self._checkpoint_find(stop, target_word, depth)
         if checkpoint is None:
             start = 0
             registers, accumulator = _initial_machine_state(
@@ -231,6 +256,7 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
         for iteration in range(start, stop):
             if self.iterations >= self.work_limit:
                 raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self._charge_operation(stop, target_word, depth)
             self.iterations += 1
             pass_index = iteration // word_count
             word_index = iteration & (word_count - 1)
@@ -274,7 +300,7 @@ class _CheckpointRegenerator(_RecursiveRegenerator):
                 registers[neighbor] ^ _rol64(_u64(dataset_word + first_scratch), second_scratch)
             )
             self._checkpoint_put(iteration + 1, registers, accumulator)
-        self._memo_put(stop, target_word, target_value)
+        self._memo_put(stop, target_word, target_value, depth)
         self.completed_values += 1
         return target_value
 
@@ -291,8 +317,11 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
         work_limit: int,
         checkpoint_capacity: int,
         checkpoint_stride: int,
+        operation_limit: int | None = None,
     ) -> None:
-        super().__init__(owner, context, header_digest, nonce_bytes, work_limit)
+        super().__init__(
+            owner, context, header_digest, nonce_bytes, work_limit, operation_limit
+        )
         self.checkpoint_capacity = checkpoint_capacity
         self.checkpoint_stride = checkpoint_stride
         self.checkpoint_offset = owner.memo_offset + owner.layout.memo_bytes
@@ -307,9 +336,10 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
             )
 
     def _checkpoint_find(
-        self, target_word: int, stop: int
+        self, target_word: int, stop: int, depth: int
     ) -> tuple[int, int, list[int], int] | None:
         self.checkpoint_lookups += 1
+        self._charge_operation(stop, target_word, depth)
         self.checkpoint_probes += 1
         slot = target_word % self.checkpoint_capacity
         offset = self.checkpoint_offset + slot * TARGET_CHECKPOINT_ENTRY_BYTES
@@ -349,6 +379,7 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
         self.checkpoint_captures += 1
 
     def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self._charge_operation(stop, target_word, depth)
         self.calls += 1
         if stop == 0:
             self.completed_values += 1
@@ -356,11 +387,11 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
         self.maximum_depth = max(self.maximum_depth, depth)
         if depth > self.owner.layout.frame_capacity:
             raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
-        cached = self._memo_get(stop, target_word)
+        cached = self._memo_get(stop, target_word, depth)
         if cached is not None:
             return cached
 
-        checkpoint = self._checkpoint_find(target_word, stop)
+        checkpoint = self._checkpoint_find(target_word, stop, depth)
         if checkpoint is None:
             start = 0
             registers, accumulator = _initial_machine_state(
@@ -374,6 +405,7 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
         for iteration in range(start, stop):
             if self.iterations >= self.work_limit:
                 raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self._charge_operation(stop, target_word, depth)
             self.iterations += 1
             pass_index = iteration // word_count
             word_index = iteration & (word_count - 1)
@@ -422,7 +454,7 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
             self._checkpoint_put(
                 target_word, target_value, iteration + 1, registers, accumulator
             )
-        self._memo_put(stop, target_word, target_value)
+        self._memo_put(stop, target_word, target_value, depth)
         self.completed_values += 1
         return target_value
 
@@ -440,8 +472,11 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
         checkpoint_capacity: int,
         checkpoint_stride: int,
         dependency_bundle_width: int,
+        operation_limit: int | None = None,
     ) -> None:
-        super().__init__(owner, context, header_digest, nonce_bytes, work_limit)
+        super().__init__(
+            owner, context, header_digest, nonce_bytes, work_limit, operation_limit
+        )
         self.checkpoint_capacity = checkpoint_capacity
         self.checkpoint_stride = checkpoint_stride
         self.dependency_bundle_width = dependency_bundle_width
@@ -462,11 +497,12 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
             )
 
     def _checkpoint_find(
-        self, target_word: int, stop: int
+        self, target_word: int, stop: int, depth: int
     ) -> tuple[int, int, list[int], int] | None:
         self.checkpoint_lookups += 1
         selected: tuple[int, int, list[int], int] | None = None
         for slot in range(self.checkpoint_capacity):
+            self._charge_operation(stop, target_word, depth)
             self.checkpoint_probes += 1
             offset = self.checkpoint_offset + slot * self.checkpoint_entry_bytes
             stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
@@ -561,6 +597,7 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
         return value & MASK64
 
     def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self._charge_operation(stop, target_word, depth)
         self.calls += 1
         if stop == 0:
             self.completed_values += 1
@@ -568,11 +605,11 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
         self.maximum_depth = max(self.maximum_depth, depth)
         if depth > self.owner.layout.frame_capacity:
             raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
-        cached = self._memo_get(stop, target_word)
+        cached = self._memo_get(stop, target_word, depth)
         if cached is not None:
             return cached
 
-        checkpoint = self._checkpoint_find(target_word, stop)
+        checkpoint = self._checkpoint_find(target_word, stop, depth)
         if checkpoint is None:
             start = 0
             registers, accumulator = _initial_machine_state(
@@ -586,6 +623,7 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
         for iteration in range(start, stop):
             if self.iterations >= self.work_limit:
                 raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self._charge_operation(stop, target_word, depth)
             self.iterations += 1
             pass_index = iteration // word_count
             word_index = iteration & (word_count - 1)
@@ -653,7 +691,7 @@ class _DependencyBundleRegenerator(_RecursiveRegenerator):
                 registers,
                 accumulator,
             )
-        self._memo_put(stop, target_word, target_value)
+        self._memo_put(stop, target_word, target_value, depth)
         self.completed_values += 1
         return target_value
 
@@ -671,6 +709,7 @@ def reconstruct_repeatedly_with_checkpoints(
     checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
     _target_aware: bool = False,
     _dependency_bundle_width: int = 1,
+    _operation_limit: int | None = None,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -681,6 +720,8 @@ def reconstruct_repeatedly_with_checkpoints(
         raise ValueError("nonce must be an unsigned 64-bit integer")
     if work_limit <= 0:
         raise ValueError("work_limit must be positive")
+    if _operation_limit is not None and _operation_limit <= 0:
+        raise ValueError("operation_limit must be positive")
     if checkpoint_capacity <= 0:
         raise ValueError("checkpoint_capacity must be positive")
     if checkpoint_stride <= 0:
@@ -722,6 +763,7 @@ def reconstruct_repeatedly_with_checkpoints(
         regenerator = _DependencyBundleRegenerator(
             arena, context, header_digest, nonce_bytes, work_limit,
             checkpoint_capacity, checkpoint_stride, _dependency_bundle_width,
+            _operation_limit,
         )
     else:
         regenerator_class = (
@@ -729,13 +771,15 @@ def reconstruct_repeatedly_with_checkpoints(
         )
         regenerator = regenerator_class(
             arena, context, header_digest, nonce_bytes, work_limit,
-            checkpoint_capacity, checkpoint_stride,
+            checkpoint_capacity, checkpoint_stride, _operation_limit,
         )
     completed = attempts = successful = 0
     first: CheckpointBoundary | None = None
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
+        DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION
+        if dependency_bundles and _operation_limit is not None else
         DOMAIN_DEPENDENCY_BUNDLE_REGENERATION if dependency_bundles else
         DOMAIN_TARGET_CHECKPOINT_REGENERATION if _target_aware else
         DOMAIN_CHECKPOINT_REGENERATION
@@ -826,6 +870,8 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
+        "refused_operation_bounded_dependency_bundle_exhausted"
+        if dependency_bundles and _operation_limit is not None else
         "refused_dependency_bundle_regeneration_exhausted" if dependency_bundles else
         "refused_target_checkpoint_regeneration_exhausted" if _target_aware else
         "refused_checkpoint_regeneration_exhausted"
@@ -864,6 +910,17 @@ def reconstruct_repeatedly_with_checkpoints(
         regenerator.checkpoint_captures, regenerator.checkpoint_replacements,
         regenerator.checkpoint_probes, first, last, exhaustion,
         transcript.hexdigest(), execution_result,
+        _operation_limit,
+        (
+            RegenerationOperationCounts(
+                regenerator.calls,
+                regenerator.iterations,
+                regenerator.memo_probes,
+                regenerator.checkpoint_probes,
+                regenerator.total_operations,
+            )
+            if _operation_limit is not None else None
+        ),
     )
 
 
@@ -923,4 +980,37 @@ def reconstruct_repeatedly_with_dependency_bundles(
         checkpoint_stride=checkpoint_stride,
         _target_aware=True,
         _dependency_bundle_width=dependency_bundle_width,
+    )
+
+
+def reconstruct_repeatedly_with_operation_bounded_dependency_bundles(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    operation_limit: int = DEFAULT_TOTAL_OPERATION_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    checkpoint_capacity: int = DEFAULT_DEPENDENCY_BUNDLE_CAPACITY,
+    checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+    dependency_bundle_width: int = DEFAULT_DEPENDENCY_BUNDLE_WIDTH,
+) -> CheckpointRegenerationResult:
+    """Recover bundle-backed misses under one deterministic operation ceiling."""
+
+    _dependency_bundle_offsets(dependency_bundle_width)
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=checkpoint_capacity,
+        checkpoint_stride=checkpoint_stride,
+        _target_aware=True,
+        _dependency_bundle_width=dependency_bundle_width,
+        _operation_limit=operation_limit,
     )
