@@ -38,11 +38,27 @@ DOMAIN_CHECKPOINT_REGENERATION = b"Soveroot/PowResearch/CheckpointRegeneration/v
 DOMAIN_TARGET_CHECKPOINT_REGENERATION = (
     b"Soveroot/PowResearch/TargetCheckpointRegeneration/v1\x00"
 )
+DOMAIN_DEPENDENCY_BUNDLE_REGENERATION = (
+    b"Soveroot/PowResearch/DependencyBundleRegeneration/v1\x00"
+)
 CHECKPOINT_ENTRY_BYTES = 80
 TARGET_CHECKPOINT_ENTRY_BYTES = 88
 EMPTY_CHECKPOINT_STOP = 0xFFFFFFFF
+EMPTY_BUNDLE_WORD = 0xFFFF
 DEFAULT_CHECKPOINT_CAPACITY = 4
 DEFAULT_CHECKPOINT_STRIDE = 8
+DEFAULT_DEPENDENCY_BUNDLE_WIDTH = 4
+DEFAULT_DEPENDENCY_BUNDLE_CAPACITY = 12
+
+
+def _dependency_bundle_offsets(width: int) -> tuple[int, int, int]:
+    """Return value, machine-state, and entry offsets for a packed bundle."""
+
+    if width < 2 or width > DEFAULT_DEPENDENCY_BUNDLE_WIDTH:
+        raise ValueError("dependency_bundle_width must be in [2, 4]")
+    value_offset = (4 + width * 2 + 7) & ~7
+    state_offset = value_offset + width * 8
+    return value_offset, state_offset, state_offset + 9 * 8
 
 
 @dataclass(frozen=True)
@@ -411,6 +427,237 @@ class _TargetCheckpointRegenerator(_RecursiveRegenerator):
         return target_value
 
 
+class _DependencyBundleRegenerator(_RecursiveRegenerator):
+    """Checkpoint machine state with exact values from one direct dependency step."""
+
+    def __init__(
+        self,
+        owner: _RecursiveArena,
+        context: EpochContext,
+        header_digest: bytes,
+        nonce_bytes: bytes,
+        work_limit: int,
+        checkpoint_capacity: int,
+        checkpoint_stride: int,
+        dependency_bundle_width: int,
+    ) -> None:
+        super().__init__(owner, context, header_digest, nonce_bytes, work_limit)
+        self.checkpoint_capacity = checkpoint_capacity
+        self.checkpoint_stride = checkpoint_stride
+        self.dependency_bundle_width = dependency_bundle_width
+        (
+            self.bundle_value_offset,
+            self.bundle_state_offset,
+            self.checkpoint_entry_bytes,
+        ) = _dependency_bundle_offsets(dependency_bundle_width)
+        self.checkpoint_offset = owner.memo_offset + owner.layout.memo_bytes
+        self.checkpoint_lookups = self.checkpoint_hits = 0
+        self.checkpoint_captures = self.checkpoint_replacements = 0
+        self.checkpoint_probes = 0
+        for slot in range(checkpoint_capacity):
+            struct.pack_into(
+                "<I", self.owner.arena,
+                self.checkpoint_offset + slot * self.checkpoint_entry_bytes,
+                EMPTY_CHECKPOINT_STOP,
+            )
+
+    def _checkpoint_find(
+        self, target_word: int, stop: int
+    ) -> tuple[int, int, list[int], int] | None:
+        self.checkpoint_lookups += 1
+        selected: tuple[int, int, list[int], int] | None = None
+        for slot in range(self.checkpoint_capacity):
+            self.checkpoint_probes += 1
+            offset = self.checkpoint_offset + slot * self.checkpoint_entry_bytes
+            stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
+            if (
+                stored_stop == EMPTY_CHECKPOINT_STOP
+                or stored_stop >= stop
+                or (selected is not None and stored_stop <= selected[0])
+            ):
+                continue
+            words = struct.unpack_from(
+                f"<{self.dependency_bundle_width}H", self.owner.arena, offset + 4
+            )
+            try:
+                value_index = words.index(target_word)
+            except ValueError:
+                continue
+            target_value = struct.unpack_from(
+                "<Q", self.owner.arena,
+                offset + self.bundle_value_offset + value_index * 8,
+            )[0]
+            state = struct.unpack_from(
+                "<9Q", self.owner.arena, offset + self.bundle_state_offset
+            )
+            selected = stored_stop, target_value, list(state[:8]), state[8]
+        if selected is not None:
+            self.checkpoint_hits += 1
+        return selected
+
+    def _checkpoint_put(
+        self,
+        anchor_word: int,
+        stop: int,
+        candidates: list[tuple[int, int]],
+        registers: list[int],
+        accumulator: int,
+    ) -> None:
+        if stop == 0 or stop % self.checkpoint_stride:
+            return
+        words: list[int] = []
+        values: list[int] = []
+        for word, value in candidates:
+            if word in words:
+                values[words.index(word)] = value & MASK64
+                continue
+            if len(words) == self.dependency_bundle_width:
+                break
+            words.append(word)
+            values.append(value & MASK64)
+        while len(words) < self.dependency_bundle_width:
+            words.append(EMPTY_BUNDLE_WORD)
+            values.append(0)
+
+        slot = anchor_word % self.checkpoint_capacity
+        offset = self.checkpoint_offset + slot * self.checkpoint_entry_bytes
+        stored_stop = struct.unpack_from("<I", self.owner.arena, offset)[0]
+        stored_anchor = struct.unpack_from("<H", self.owner.arena, offset + 4)[0]
+        if (
+            stored_stop != EMPTY_CHECKPOINT_STOP
+            and (stored_stop != stop or stored_anchor != anchor_word)
+        ):
+            self.checkpoint_replacements += 1
+        struct.pack_into("<I", self.owner.arena, offset, stop)
+        struct.pack_into(
+            f"<{self.dependency_bundle_width}H", self.owner.arena, offset + 4, *words
+        )
+        padding_start = offset + 4 + self.dependency_bundle_width * 2
+        padding_end = offset + self.bundle_value_offset
+        self.owner.arena[padding_start:padding_end] = b"\x00" * (padding_end - padding_start)
+        struct.pack_into(
+            f"<{self.dependency_bundle_width}Q", self.owner.arena,
+            offset + self.bundle_value_offset, *values,
+        )
+        struct.pack_into(
+            "<9Q", self.owner.arena, offset + self.bundle_state_offset,
+            *registers, accumulator & MASK64,
+        )
+        self.checkpoint_captures += 1
+
+    @staticmethod
+    def _value_after_writes(
+        word: int,
+        value: int,
+        first_word: int,
+        first_write: int,
+        second_word: int,
+        second_write: int,
+    ) -> int:
+        if word == first_word:
+            value = first_write
+        if word == second_word:
+            value = second_write
+        return value & MASK64
+
+    def value_at(self, target_word: int, stop: int, depth: int = 1) -> int:
+        self.calls += 1
+        if stop == 0:
+            self.completed_values += 1
+            return 0
+        self.maximum_depth = max(self.maximum_depth, depth)
+        if depth > self.owner.layout.frame_capacity:
+            raise _RegenerationExhausted("frame_capacity", stop, target_word, depth)
+        cached = self._memo_get(stop, target_word)
+        if cached is not None:
+            return cached
+
+        checkpoint = self._checkpoint_find(target_word, stop)
+        if checkpoint is None:
+            start = 0
+            registers, accumulator = _initial_machine_state(
+                self.context, self.header_digest, self.nonce_bytes
+            )
+            target_value = 0
+        else:
+            start, target_value, registers, accumulator = checkpoint
+
+        word_count = self.owner.word_count
+        for iteration in range(start, stop):
+            if self.iterations >= self.work_limit:
+                raise _RegenerationExhausted("work_limit", stop, target_word, depth)
+            self.iterations += 1
+            pass_index = iteration // word_count
+            word_index = iteration & (word_count - 1)
+            lane = iteration & 7
+            entry = self.context.schedule[iteration & 63]
+            x = registers[lane]
+            y = registers[(lane + 1) & 7]
+            z = registers[(lane + 3) & 7]
+            first_selector = x ^ _rol64(y, iteration) ^ accumulator ^ entry.immediate
+            first_word = first_selector & (word_count - 1)
+            first_scratch = self.value_at(first_word, iteration, depth + 1)
+            dataset_selector = first_scratch ^ z ^ _rol64(accumulator, lane + pass_index) ^ iteration
+            dataset_word = _read_u64(self.context.dataset, dataset_selector)
+            second_selector = (
+                dataset_word
+                ^ registers[(lane + 5) & 7]
+                ^ _rol64(_u64(first_scratch + accumulator), entry.immediate)
+            )
+            second_word = second_selector & (word_count - 1)
+            second_scratch = self.value_at(second_word, iteration, depth + 1)
+            mixed_value = _execute_operation(
+                entry.opcode, x, y, first_scratch, second_scratch,
+                dataset_word, entry.immediate,
+            )
+            accumulator = _u64(
+                _rol64(
+                    accumulator ^ mixed_value ^ dataset_word,
+                    first_scratch ^ second_scratch ^ entry.immediate,
+                )
+                + first_scratch + entry.immediate + iteration
+            )
+            first_write = (mixed_value ^ accumulator ^ second_scratch) & MASK64
+            second_write = (
+                second_scratch
+                ^ _rol64(_u64(mixed_value + accumulator), dataset_word)
+            ) & MASK64
+            if word_index == target_word:
+                target_value = first_write
+            if second_word == target_word:
+                target_value = second_write
+            registers[lane] = _u64(mixed_value + accumulator + first_scratch)
+            neighbor = (lane + 2) & 7
+            registers[neighbor] = _u64(
+                registers[neighbor]
+                ^ _rol64(_u64(dataset_word + first_scratch), second_scratch)
+            )
+            self._checkpoint_put(
+                target_word,
+                iteration + 1,
+                [
+                    (target_word, target_value),
+                    (
+                        first_word,
+                        self._value_after_writes(
+                            first_word, first_scratch, word_index, first_write,
+                            second_word, second_write,
+                        ),
+                    ),
+                    (second_word, second_write),
+                    (
+                        word_index,
+                        second_write if word_index == second_word else first_write,
+                    ),
+                ],
+                registers,
+                accumulator,
+            )
+        self._memo_put(stop, target_word, target_value)
+        self.completed_values += 1
+        return target_value
+
+
 def reconstruct_repeatedly_with_checkpoints(
     context: EpochContext,
     header: bytes,
@@ -423,6 +670,7 @@ def reconstruct_repeatedly_with_checkpoints(
     checkpoint_capacity: int = DEFAULT_CHECKPOINT_CAPACITY,
     checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
     _target_aware: bool = False,
+    _dependency_bundle_width: int = 1,
 ) -> CheckpointRegenerationResult:
     """Recover successive misses using exact reusable machine-state checkpoints."""
 
@@ -437,7 +685,12 @@ def reconstruct_repeatedly_with_checkpoints(
         raise ValueError("checkpoint_capacity must be positive")
     if checkpoint_stride <= 0:
         raise ValueError("checkpoint_stride must be positive")
+    dependency_bundles = _dependency_bundle_width > 1
+    if dependency_bundles and not _target_aware:
+        raise ValueError("dependency bundles require target-aware checkpoints")
     checkpoint_entry_bytes = (
+        _dependency_bundle_offsets(_dependency_bundle_width)[2]
+        if dependency_bundles else
         TARGET_CHECKPOINT_ENTRY_BYTES if _target_aware else CHECKPOINT_ENTRY_BYTES
     )
     checkpoint_bytes = checkpoint_capacity * checkpoint_entry_bytes
@@ -465,20 +718,27 @@ def reconstruct_repeatedly_with_checkpoints(
         base.memo_entry_bytes, base.memo_capacity, base.memo_bytes,
         base.unused_arena_bytes - checkpoint_bytes, base.admitted_bytes,
     )
-    regenerator_class = (
-        _TargetCheckpointRegenerator if _target_aware else _CheckpointRegenerator
-    )
-    regenerator = regenerator_class(
-        arena, context, header_digest, nonce_bytes, work_limit,
-        checkpoint_capacity, checkpoint_stride,
-    )
+    if dependency_bundles:
+        regenerator = _DependencyBundleRegenerator(
+            arena, context, header_digest, nonce_bytes, work_limit,
+            checkpoint_capacity, checkpoint_stride, _dependency_bundle_width,
+        )
+    else:
+        regenerator_class = (
+            _TargetCheckpointRegenerator if _target_aware else _CheckpointRegenerator
+        )
+        regenerator = regenerator_class(
+            arena, context, header_digest, nonce_bytes, work_limit,
+            checkpoint_capacity, checkpoint_stride,
+        )
     completed = attempts = successful = 0
     first: CheckpointBoundary | None = None
     last: CheckpointBoundary | None = None
     exhaustion: RepeatedRecursiveExhaustion | None = None
     domain = (
-        DOMAIN_TARGET_CHECKPOINT_REGENERATION
-        if _target_aware else DOMAIN_CHECKPOINT_REGENERATION
+        DOMAIN_DEPENDENCY_BUNDLE_REGENERATION if dependency_bundles else
+        DOMAIN_TARGET_CHECKPOINT_REGENERATION if _target_aware else
+        DOMAIN_CHECKPOINT_REGENERATION
     )
     transcript = hashlib.sha3_384(domain)
 
@@ -566,8 +826,9 @@ def reconstruct_repeatedly_with_checkpoints(
             selector = _u64(selector ^ sampled)
 
     status = (
-        "refused_target_checkpoint_regeneration_exhausted"
-        if _target_aware else "refused_checkpoint_regeneration_exhausted"
+        "refused_dependency_bundle_regeneration_exhausted" if dependency_bundles else
+        "refused_target_checkpoint_regeneration_exhausted" if _target_aware else
+        "refused_checkpoint_regeneration_exhausted"
     )
     if not stopped:
         params_bytes = context.params.encode()
@@ -631,4 +892,35 @@ def reconstruct_repeatedly_with_target_checkpoints(
         checkpoint_capacity=checkpoint_capacity,
         checkpoint_stride=checkpoint_stride,
         _target_aware=True,
+    )
+
+
+def reconstruct_repeatedly_with_dependency_bundles(
+    context: EpochContext,
+    header: bytes,
+    nonce: int,
+    *,
+    budget_bytes: int | None = None,
+    work_limit: int = DEFAULT_WORK_LIMIT,
+    primary_numerator: int = 1,
+    primary_denominator: int = 128,
+    checkpoint_capacity: int = DEFAULT_DEPENDENCY_BUNDLE_CAPACITY,
+    checkpoint_stride: int = DEFAULT_CHECKPOINT_STRIDE,
+    dependency_bundle_width: int = DEFAULT_DEPENDENCY_BUNDLE_WIDTH,
+) -> CheckpointRegenerationResult:
+    """Recover misses using state checkpoints with direct-dependency values."""
+
+    _dependency_bundle_offsets(dependency_bundle_width)
+    return reconstruct_repeatedly_with_checkpoints(
+        context,
+        header,
+        nonce,
+        budget_bytes=budget_bytes,
+        work_limit=work_limit,
+        primary_numerator=primary_numerator,
+        primary_denominator=primary_denominator,
+        checkpoint_capacity=checkpoint_capacity,
+        checkpoint_stride=checkpoint_stride,
+        _target_aware=True,
+        _dependency_bundle_width=dependency_bundle_width,
     )
