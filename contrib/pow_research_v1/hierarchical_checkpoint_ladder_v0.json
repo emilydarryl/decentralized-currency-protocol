@@ -1,0 +1,90 @@
+{
+  "format": "soveroot-pow-v1-hierarchical-checkpoint-ladder-method-v0",
+  "version": "0.1",
+  "status": "PREDECLARED NON-CONSENSUS HIERARCHICAL ATTACK PILOT",
+  "question": "Does a directly addressed four-level checkpoint ladder let the iterative half-memory attacker avoid enough repeated work to complete a canonical proof under the same byte and operation ceilings?",
+  "independent_strategy": {
+    "base": "arena-resident iterative dependency regeneration",
+    "difference_from_prior_policy": "replace one twelve-entry linear-scanned checkpoint table with four independently addressed time scales totaling sixty-four entries",
+    "lookup": "probe exactly one target-word-derived slot in each level, charge all four probes, validate the stored bundle, and resume from the greatest valid stop below the request",
+    "capture": "after a replayed iteration, write the target-aware four-value bundle into every level whose stride divides the new stop; these bounded writes are part of the already charged replay iteration",
+    "external_storage_bytes": 0,
+    "offline_graph_or_schedule": "none",
+    "native_recursive_calls": 0
+  },
+  "checkpoint_levels": [
+    {"level": 0, "stride": 8, "capacity": 32, "base_slot": 0},
+    {"level": 1, "stride": 64, "capacity": 16, "base_slot": 32},
+    {"level": 2, "stride": 512, "capacity": 8, "base_slot": 48},
+    {"level": 3, "stride": 4096, "capacity": 8, "base_slot": 56}
+  ],
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 126464,
+    "write_bitmap_bytes": 4096,
+    "primary_cache_capacity": 59,
+    "primary_cache_bytes": 944,
+    "explicit_frame_bytes": 104,
+    "explicit_frame_capacity": 20,
+    "explicit_work_stack_bytes_inside_arena": 2080,
+    "checkpoint_entry_bytes": 120,
+    "checkpoint_capacity": 64,
+    "checkpoint_bytes": 7680,
+    "memo_entry_bytes": 12,
+    "memo_capacity": 9304,
+    "memo_bytes": 111648,
+    "unused_arena_bytes": 16,
+    "rolling_transcript_state_bytes": 48,
+    "transcript_growth_bytes": 0,
+    "accounted_bytes": 131072
+  },
+  "operation_policy": {
+    "total_operation_limit": 5000000,
+    "charged_operations": [
+      "every logical value request",
+      "every replayed VM iteration",
+      "every memo get or put probe",
+      "each of four directly addressed checkpoint-level probes"
+    ],
+    "invariant": "total_operations equals logical_value_requests plus replay_iterations plus memo_probes plus checkpoint_probes",
+    "failure": "refuse before an operation that would exceed the ceiling and emit no proof"
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "nonce": 0,
+    "primary_allocation": "1/128 of possible 16-byte primary slots after allocator reserve",
+    "dependency_bundle_width": 4,
+    "replay_iteration_safety_limit": 1000000,
+    "predeclared_seed_count": 8
+  },
+  "fixed_vector_policy": {
+    "profile": "standard",
+    "operation_limit": 100,
+    "seed_indices": [0, 1, 2],
+    "require_python_cpp_exact_match": true
+  },
+  "holdout_policy": {
+    "seed_indices": [0, 1, 2, 3, 4, 5, 6, 7],
+    "reported_metrics": [
+      "completed_iterations",
+      "reconstructed_misses",
+      "logical_value_requests",
+      "replay_iterations",
+      "memo_probes",
+      "checkpoint_probes",
+      "total_operations",
+      "maximum_explicit_stack_depth",
+      "checkpoint_hits",
+      "checkpoint_captures",
+      "transcript_commitment",
+      "canonical_proof_completed"
+    ],
+    "selection_rule": "No parameter changes after any holdout result is observed; retain all eight rows, including unfavorable outcomes."
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "The screen must first establish exact independent boundaries. A gate assessment still requires canonical proofs, total measured attack memory on controlled hosts, and independent review."
+  }
+}
