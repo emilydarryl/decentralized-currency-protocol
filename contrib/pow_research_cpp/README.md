@@ -186,6 +186,8 @@ python3 test/pow_research/run_cpp_iterative_work_stack_vectors_v1.py \
   --binary build/powvm_v1_cpp
 python3 test/pow_research/run_cpp_hierarchical_checkpoint_ladder_vectors_v1.py \
   --binary build/powvm_v1_cpp
+python3 test/pow_research/run_cpp_frontier_pebbling_attacker_vectors_v1.py \
+  --binary build/powvm_v1_cpp
 python3 contrib/pow_research_cpp/verify_recursive_stack_usage_v1.py \
   build/*.su --output build/pow-v1-recursive-stack-usage.json
 python3 contrib/pow_research_cpp/verify_recursive_stack_usage_v1.py \
@@ -197,6 +199,9 @@ python3 contrib/pow_research_cpp/iterative_work_stack_regeneration_v1.py \
 python3 contrib/pow_research_cpp/hierarchical_checkpoint_ladder_v1.py \
   --profile standard --seeds 8 --operation-limit 5000000 \
   --output build/pow-v1-hierarchical-checkpoint-ladder-holdout.json
+python3 contrib/pow_research_cpp/frontier_pebbling_attacker_v1.py \
+  --profile standard --seed-start 8 --seeds 8 --operation-limit 5000000 \
+  --output build/pow-v1-frontier-pebbling-holdout.json
 python3 contrib/pow_research_cpp/measure_physical_memory_v1.py \
   --binary build/powvm_v1_cpp --profile standard --seeds 1 \
   --operation-limit 100 --output build/pow-v1-physical-memory-diagnostic.json
