@@ -62,6 +62,8 @@ The result did not generalize cleanly. The same setup helped a second seed, hurt
 
 We have now closed that loophole. The attacker receives five million total tokens, and every recursive request, replayed step, memo check, and bookmark check spends one. All eight planned seeds stop exactly at the limit. They reach between step 480 and step 999, and none produces a proof. Under the fairer accounting, the old 1,006 seed-zero record falls back to 999, so the larger bookmarks have not demonstrated a general advantage. One seed also performs more than 1.5 million short-lived recoveries while advancing only 480 steps, exposing severe cache thrashing.
 
+We then audited memory that the model had treated as free. The recursive C++ function uses the computer's real call stack, and its audit log grew with every recovery. The new version reserves stack and allocator space before sizing its notebook and replaces the growing log with one fixed 48-byte rolling fingerprint. With these costs included, the eight attackers reach only steps 641 through 853. They still do not produce a proof. This is a more honest failure boundary, not a declaration that no better attacker exists.
+
 That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and the prototypes have not measured every byte used by the program's real call stack and allocator.
 
 ## Where we are now
@@ -81,7 +83,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The next experiment will account for the physical memory that logical models can miss: the real call stack, allocator overhead, and peak memory reported by the operating system. We should also continue searching for smarter attacks. If an exact half-memory miner eventually finishes, we will measure its speed on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
+The next engineering step is to replace native recursion with an explicit preallocated work stack. That removes compiler-dependent stack uncertainty and may let a stronger attacker reuse some of the conservative reserve. We should also continue searching for smarter attacks. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
 
 Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
 
@@ -96,4 +98,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest operation-bounded result](pow-v1-operation-bounded-dependency-bundle-regeneration.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest physical-memory accounting result](pow-v1-physical-memory-accounting.md), and [research ledger](research-ledger.md).

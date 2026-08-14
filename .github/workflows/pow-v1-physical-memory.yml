@@ -1,0 +1,67 @@
+name: PoW v1 physical-memory diagnostic
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Research profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - standard
+      seeds:
+        description: Number of deterministic seeds
+        required: true
+        default: "8"
+        type: string
+      operation_limit:
+        description: Combined operation ceiling
+        required: true
+        default: "5000000"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  physical-memory-diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build with compiler stack-usage records
+        shell: bash
+        run: |
+          mkdir -p build
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror -fstack-usage \
+            contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+          python3 contrib/pow_research_cpp/verify_recursive_stack_usage_v1.py \
+            build/*.su --output build/pow-v1-recursive-stack-usage.json
+
+      - name: Verify independent deterministic boundaries
+        shell: bash
+        run: |
+          python3 test/pow_research/run_cpp_physically_accounted_dependency_bundle_vectors_v1.py \
+            --binary build/powvm_v1_cpp
+
+      - name: Measure whole-process resident memory
+        shell: bash
+        run: |
+          python3 contrib/pow_research_cpp/measure_physical_memory_v1.py \
+            --binary build/powvm_v1_cpp \
+            --profile "${{ inputs.profile }}" \
+            --seeds "${{ inputs.seeds }}" \
+            --operation-limit "${{ inputs.operation_limit }}" \
+            --output build/pow-v1-physical-memory-diagnostic.json
+
+      - name: Upload diagnostic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pow-v1-physical-memory-${{ github.run_id }}
+          path: |
+            build/pow-v1-physical-memory-diagnostic.json
+            build/pow-v1-recursive-stack-usage.json
+          if-no-files-found: error

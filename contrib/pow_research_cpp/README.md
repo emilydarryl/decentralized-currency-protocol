@@ -178,6 +178,15 @@ python3 test/pow_research/run_cpp_target_checkpoint_regeneration_vectors_v1.py \
   --binary build/powvm_v1_cpp
 python3 test/pow_research/run_cpp_dependency_bundle_regeneration_vectors_v1.py \
   --binary build/powvm_v1_cpp
+python3 test/pow_research/run_cpp_operation_bounded_dependency_bundle_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 test/pow_research/run_cpp_physically_accounted_dependency_bundle_vectors_v1.py \
+  --binary build/powvm_v1_cpp
+python3 contrib/pow_research_cpp/verify_recursive_stack_usage_v1.py \
+  build/*.su --output build/pow-v1-recursive-stack-usage.json
+python3 contrib/pow_research_cpp/measure_physical_memory_v1.py \
+  --binary build/powvm_v1_cpp --profile standard --seeds 1 \
+  --operation-limit 100 --output build/pow-v1-physical-memory-diagnostic.json
 python3 contrib/pow_research_cpp/repeated_recursive_regeneration_v1.py \
   --profile standard --seeds 1 --output build/pow-v1-repeated-recursive-regeneration.json
 python3 contrib/pow_research_cpp/render_repeated_recursive_regeneration_report_v1.py \

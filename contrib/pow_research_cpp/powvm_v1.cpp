@@ -60,6 +60,7 @@ constexpr char DOMAIN_CHECKPOINT_REGENERATION[] = "Soveroot/PowResearch/Checkpoi
 constexpr char DOMAIN_TARGET_CHECKPOINT_REGENERATION[] = "Soveroot/PowResearch/TargetCheckpointRegeneration/v1\0";
 constexpr char DOMAIN_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/DependencyBundleRegeneration/v1\0";
 constexpr char DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/OperationBoundedDependencyBundleRegeneration/v1\0";
+constexpr char DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/PhysicallyAccountedDependencyBundleRegeneration/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -80,6 +81,13 @@ constexpr std::size_t RECURSIVE_PRIMARY_DENOMINATOR{64};
 constexpr std::size_t RECURSIVE_MAXIMUM_FRAMES{20};
 constexpr std::uint64_t RECURSIVE_WORK_LIMIT{1'000'000};
 constexpr std::uint64_t REGENERATION_OPERATION_LIMIT{5'000'000};
+constexpr std::size_t NATIVE_STACK_FRAME_ALLOWANCE_BYTES{2'048};
+constexpr std::size_t NATIVE_STACK_DEPTH_CAPACITY{20};
+constexpr std::size_t NATIVE_STACK_RESERVE_BYTES{
+    NATIVE_STACK_FRAME_ALLOWANCE_BYTES * NATIVE_STACK_DEPTH_CAPACITY};
+constexpr std::size_t ALLOCATOR_ALLOWANCE_BYTES{4'096};
+constexpr std::size_t PHYSICAL_EXTERNAL_RESERVE_BYTES{
+    NATIVE_STACK_RESERVE_BYTES + ALLOCATOR_ALLOWANCE_BYTES};
 constexpr std::uint32_t RECURSIVE_EMPTY_MEMO_KEY{std::numeric_limits<std::uint32_t>::max()};
 constexpr std::size_t CHECKPOINT_ENTRY_BYTES{80};
 constexpr std::size_t TARGET_CHECKPOINT_ENTRY_BYTES{88};
@@ -541,6 +549,8 @@ struct RepeatedRecursiveRegenerationResult {
     std::uint64_t checkpoint_lookups{0}, checkpoint_hits{0}, checkpoint_captures{0};
     std::uint64_t checkpoint_replacements{0}, checkpoint_probes{0};
     std::uint64_t operation_limit{0}, total_operations{0};
+    bool physical_accounting{false};
+    std::size_t physical_total_budget_bytes{0}, physical_arena_allocation_bytes{0};
 };
 
 struct GraphLayoutEstimate {
@@ -1590,7 +1600,8 @@ public:
         std::size_t checkpoint_capacity = 0,
         std::size_t checkpoint_stride = 0,
         bool target_checkpoints = false,
-        bool dependency_bundles = false)
+        bool dependency_bundles = false,
+        std::size_t external_reserve_bytes = 0)
         : m_word_count(scratchpad_bytes / 8)
     {
         if (primary_numerator == 0 || primary_denominator == 0 ||
@@ -1602,7 +1613,11 @@ public:
         if (budget_bytes <= BOUNDED_FIXED_STATE_RESERVE_BYTES) {
             throw std::invalid_argument("recursive budget cannot hold fixed state");
         }
-        m_layout.arena_bytes = budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES;
+        if (budget_bytes <= BOUNDED_FIXED_STATE_RESERVE_BYTES + external_reserve_bytes) {
+            throw std::invalid_argument("recursive budget cannot hold external reserves");
+        }
+        m_layout.arena_bytes =
+            budget_bytes - BOUNDED_FIXED_STATE_RESERVE_BYTES - external_reserve_bytes;
         m_layout.write_bitmap_bytes = (m_word_count + 7) / 8;
         if (m_layout.arena_bytes <=
             m_layout.write_bitmap_bytes + BOUNDED_CACHE_ENTRY_BYTES +
@@ -1735,6 +1750,7 @@ public:
     Bytes& Arena() { return m_arena; }
     const RecursiveLayout& Layout() const { return m_layout; }
     std::size_t WordCount() const { return m_word_count; }
+    std::size_t ArenaCapacityBytes() const { return m_arena.capacity(); }
 
     std::uint64_t canonical_reads{0}, cache_hits{0}, initial_zero_reads{0};
     std::uint64_t materialized_misses{0}, writes{0}, evictions{0};
@@ -3950,7 +3966,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     std::size_t checkpoint_stride = 0,
     bool target_checkpoints = false,
     bool dependency_bundles = false,
-    std::uint64_t operation_limit = 0)
+    std::uint64_t operation_limit = 0,
+    std::size_t external_reserve_bytes = 0,
+    bool rolling_transcript = false)
 {
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) {
@@ -3971,17 +3989,30 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
         checkpoint_capacity,
         checkpoint_stride,
         target_checkpoints,
-        dependency_bundles);
+        dependency_bundles,
+        external_reserve_bytes);
     RecursiveRegenerator regenerator(
         arena, context, header_digest, nonce_bytes, params_bytes, work_limit,
         operation_limit);
+    if (
+        rolling_transcript
+        && arena.ArenaCapacityBytes() >
+            arena.Layout().arena_bytes + ALLOCATOR_ALLOWANCE_BYTES
+    ) {
+        throw std::runtime_error("arena capacity exceeds allocator allowance");
+    }
     RepeatedRecursiveRegenerationResult result{};
     result.primary_numerator = primary_numerator;
     result.primary_denominator = primary_denominator;
     result.work_limit = work_limit;
     result.operation_limit = operation_limit;
+    result.physical_accounting = rolling_transcript;
+    result.physical_total_budget_bytes = context.params.scratchpad_bytes / 2;
+    result.physical_arena_allocation_bytes = arena.Layout().arena_bytes;
     result.layout = arena.Layout();
-    if (dependency_bundles && operation_limit != 0) {
+    if (dependency_bundles && rolling_transcript) {
+        result.status = "refused_physically_accounted_dependency_bundle_exhausted";
+    } else if (dependency_bundles && operation_limit != 0) {
         result.status = "refused_operation_bounded_dependency_bundle_exhausted";
     } else if (dependency_bundles) {
         result.status = "refused_dependency_bundle_regeneration_exhausted";
@@ -3990,7 +4021,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     } else if (checkpoint_capacity != 0) {
         result.status = "refused_checkpoint_regeneration_exhausted";
     }
-    Bytes transcript_input = dependency_bundles && operation_limit != 0
+    Bytes transcript_input = dependency_bundles && rolling_transcript
+        ? DomainBytes(DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION)
+        : dependency_bundles && operation_limit != 0
         ? DomainBytes(DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION)
         : dependency_bundles
         ? DomainBytes(DOMAIN_DEPENDENCY_BUNDLE_REGENERATION)
@@ -3998,10 +4031,14 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
         : (checkpoint_capacity == 0
             ? DomainBytes(DOMAIN_REPEATED_RECURSIVE_REGENERATION)
             : DomainBytes(DOMAIN_CHECKPOINT_REGENERATION));
+    Bytes rolling_transcript_digest = rolling_transcript
+        ? Sha3_384(transcript_input) : Bytes{};
 
     auto boundary_commitment = [&](const BoundedReadMiss& miss,
                                    const std::uint64_t* value) {
-        Bytes encoded = dependency_bundles && operation_limit != 0
+        Bytes encoded = dependency_bundles && rolling_transcript
+            ? DomainBytes(DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION)
+            : dependency_bundles && operation_limit != 0
             ? DomainBytes(DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION)
             : dependency_bundles
             ? DomainBytes(DOMAIN_DEPENDENCY_BUNDLE_REGENERATION)
@@ -4040,7 +4077,13 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
             boundary.checkpoint_captures = regenerator.checkpoint_captures;
             boundary.checkpoint_replacements = regenerator.checkpoint_replacements;
             boundary.checkpoint_probes = regenerator.checkpoint_probes;
-            Append(transcript_input, boundary.commitment);
+            if (rolling_transcript) {
+                Bytes rolling_input = rolling_transcript_digest;
+                Append(rolling_input, boundary.commitment);
+                rolling_transcript_digest = Sha3_384(rolling_input);
+            } else {
+                Append(transcript_input, boundary.commitment);
+            }
             if (!result.has_first) {
                 result.has_first = true;
                 result.first_reconstruction = boundary;
@@ -4156,7 +4199,8 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     result.checkpoint_replacements = regenerator.checkpoint_replacements;
     result.checkpoint_probes = regenerator.checkpoint_probes;
     result.total_operations = regenerator.total_operations;
-    result.transcript_commitment = Sha3_384(transcript_input);
+    result.transcript_commitment = rolling_transcript
+        ? rolling_transcript_digest : Sha3_384(transcript_input);
     return result;
 }
 
@@ -4841,7 +4885,8 @@ void PrintRepeatedRecursiveRegeneration(
     bool target_checkpoints = false,
     bool dependency_bundles = false,
     bool operation_bounded = false,
-    std::uint64_t operation_limit = REGENERATION_OPERATION_LIMIT)
+    std::uint64_t operation_limit = REGENERATION_OPERATION_LIMIT,
+    bool physically_accounted = false)
 {
     const bool has_checkpoints = checkpoints || target_checkpoints || dependency_bundles;
     const RepeatedRecursiveRegenerationResult r =
@@ -4849,7 +4894,9 @@ void PrintRepeatedRecursiveRegeneration(
         ? ProbeRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
               1, 128, DEPENDENCY_BUNDLE_CAPACITY, CHECKPOINT_STRIDE, false, true,
-              operation_bounded ? operation_limit : 0)
+              operation_bounded ? operation_limit : 0,
+              physically_accounted ? PHYSICAL_EXTERNAL_RESERVE_BYTES : 0,
+              physically_accounted)
         : target_checkpoints
         ? ProbeRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
@@ -4885,7 +4932,9 @@ void PrintRepeatedRecursiveRegeneration(
     };
     std::cout << "{\n"
               << "  \"format\": \""
-              << (operation_bounded
+              << (physically_accounted
+                  ? "soveroot-pow-v1-physically-accounted-dependency-bundle-regeneration-v0"
+                  : operation_bounded
                   ? "soveroot-pow-v1-operation-bounded-dependency-bundle-regeneration-v0"
                   : dependency_bundles
                   ? "soveroot-pow-v1-dependency-bundle-regeneration-v0"
@@ -4896,7 +4945,9 @@ void PrintRepeatedRecursiveRegeneration(
                       : "soveroot-pow-v1-repeated-recursive-regeneration-v0"))
               << "\",\n"
               << "  \"warning\": \""
-              << (operation_bounded
+              << (physically_accounted
+                  ? "NON-CONSENSUS PHYSICALLY ACCOUNTED DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
+                  : operation_bounded
                   ? "NON-CONSENSUS OPERATION-BOUNDED DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
                   : dependency_bundles
                   ? "NON-CONSENSUS DEPENDENCY-BUNDLE REGENERATION PILOT; no completed proof or gate result"
@@ -4969,6 +5020,25 @@ void PrintRepeatedRecursiveRegeneration(
                   << ", \"memo_probes\": " << r.memo_probes
                   << ", \"checkpoint_probes\": " << r.checkpoint_probes
                   << ", \"total\": " << r.total_operations << "},\n";
+    }
+    if (physically_accounted) {
+        std::cout
+            << "  \"physical_memory_accounting\": {\"total_budget_bytes\": "
+            << r.physical_total_budget_bytes
+            << ", \"fixed_state_reserve_bytes\": " << BOUNDED_FIXED_STATE_RESERVE_BYTES
+            << ", \"native_stack_frame_allowance_bytes\": "
+            << NATIVE_STACK_FRAME_ALLOWANCE_BYTES
+            << ", \"native_stack_depth_capacity\": " << NATIVE_STACK_DEPTH_CAPACITY
+            << ", \"native_stack_reserve_bytes\": " << NATIVE_STACK_RESERVE_BYTES
+            << ", \"allocator_allowance_bytes\": " << ALLOCATOR_ALLOWANCE_BYTES
+            << ", \"arena_allocation_bytes\": " << r.physical_arena_allocation_bytes
+            << ", \"logical_frame_reserve_bytes\": " << l.frame_reserve_bytes
+            << ", \"rolling_transcript_state_bytes\": 48"
+            << ", \"transcript_growth_bytes\": 0"
+            << ", \"accounted_bytes\": "
+            << BOUNDED_FIXED_STATE_RESERVE_BYTES + r.physical_arena_allocation_bytes
+                + PHYSICAL_EXTERNAL_RESERVE_BYTES
+            << "},\n";
     }
     std::cout << "  \"first_reconstruction\": ";
     if (r.has_first) print_boundary(r.first_reconstruction); else std::cout << "null";
@@ -5563,6 +5633,22 @@ int main(int argc, char* argv[])
 {
     try {
         if ((argc == 8 || argc == 9) &&
+            std::string_view{argv[1]} == "recursive-regenerate-physically-accounted-bundle") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            const std::uint64_t operation_limit = argc == 9
+                ? std::stoull(argv[8]) : REGENERATION_OPERATION_LIMIT;
+            if (operation_limit == 0) {
+                throw std::invalid_argument("operation limit must be positive");
+            }
+            PrintRepeatedRecursiveRegeneration(
+                seed, header, nonce, params, false, false, true, true,
+                operation_limit, true);
+            return 0;
+        }
+        if ((argc == 8 || argc == 9) &&
             std::string_view{argv[1]} == "recursive-regenerate-operation-bounded-bundle") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -5755,6 +5841,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp recursive-regenerate-target-checkpoint SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-dependency-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-operation-bounded-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
+                      << "   or: powvm_v1_cpp recursive-regenerate-physically-accounted-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"

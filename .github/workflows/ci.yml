@@ -71,8 +71,10 @@ jobs:
           c++ -std=c++20 -O2 -Wall -Wextra -Werror \
             contrib/pow_research_cpp/powvm.cpp -o build/powvm_cpp
           python3 test/pow_research/run_cpp_vectors.py --binary build/powvm_cpp
-          c++ -std=c++20 -O2 -Wall -Wextra -Werror \
+          c++ -std=c++20 -O2 -Wall -Wextra -Werror -fstack-usage \
             contrib/pow_research_cpp/powvm_v1.cpp -o build/powvm_v1_cpp
+          python3 contrib/pow_research_cpp/verify_recursive_stack_usage_v1.py \
+            build/*.su --output build/pow-v1-recursive-stack-usage.json
           python3 test/pow_research/run_cpp_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_half_memory_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_trace_vectors_v1.py --binary build/powvm_v1_cpp
@@ -91,6 +93,11 @@ jobs:
           python3 test/pow_research/run_cpp_target_checkpoint_regeneration_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_dependency_bundle_regeneration_vectors_v1.py --binary build/powvm_v1_cpp
           python3 test/pow_research/run_cpp_operation_bounded_dependency_bundle_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 test/pow_research/run_cpp_physically_accounted_dependency_bundle_vectors_v1.py --binary build/powvm_v1_cpp
+          python3 contrib/pow_research_cpp/measure_physical_memory_v1.py \
+            --binary build/powvm_v1_cpp --profile standard --seeds 8 \
+            --operation-limit 5000000 --output build/pow-v1-physical-memory-diagnostic.json
+          python3 -c "import json; d=json.load(open('build/pow-v1-physical-memory-diagnostic.json')); assert len(d['cases']) == 8; assert all(c['attacker']['physical_memory_accounting']['accounted_bytes'] == 131072 for c in d['cases'])"
           python3 contrib/pow_research_cpp/pebbling_lower_bound_v1.py \
             --profile smoke --seeds 1 --output build/pow-v1-pebbling-lower-bound-smoke.json
           python3 contrib/pow_research_cpp/render_pebbling_lower_bound_report_v1.py \
@@ -141,6 +148,15 @@ jobs:
           python3 contrib/pow_research_cpp/benchmark_matrix.py \
             --binary build/powvm_cpp --profile smoke --output build/pow-benchmark-smoke.json
           python3 -c "import json; d=json.load(open('build/pow-benchmark-smoke.json')); assert all(set(r['median_phase_ns_across_seeds']) == {'input_setup','scratchpad_init','vm_execute','finalize'} for r in d['results'])"
+
+      - name: Retain physical-memory evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pow-v1-physical-memory-${{ github.run_id }}
+          path: |
+            build/pow-v1-physical-memory-diagnostic.json
+            build/pow-v1-recursive-stack-usage.json
+          if-no-files-found: error
 
       - name: Configure focused node and test build
         shell: bash

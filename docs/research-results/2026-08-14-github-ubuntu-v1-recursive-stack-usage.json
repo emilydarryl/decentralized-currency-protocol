@@ -1,0 +1,20 @@
+{
+  "format": "soveroot-pow-v1-recursive-stack-usage-v0",
+  "warning": "COMPILER-SPECIFIC DIAGNOSTIC; not controlled-host gate evidence",
+  "symbol": "RecursiveRegenerator::ValueAt",
+  "allowance_bytes_per_frame": 2048,
+  "accepted_bounded_qualifiers": [
+    "dynamic,bounded",
+    "static"
+  ],
+  "maximum_reported_bounded_frame_bytes": 352,
+  "within_allowance": true,
+  "records": [
+    {
+      "source": "build/powvm_v1_cpp-powvm_v1.su",
+      "identity": "contrib/pow_research_cpp/powvm_v1.cpp:1832:19:uint64_t {anonymous}::RecursiveRegenerator::ValueAt(uint64_t, uint64_t, uint64_t)",
+      "bytes": 352,
+      "qualifier": "dynamic,bounded"
+    }
+  ]
+}

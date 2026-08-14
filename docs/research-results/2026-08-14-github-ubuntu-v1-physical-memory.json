@@ -1,0 +1,321 @@
+{
+  "format": "soveroot-pow-v1-physical-memory-diagnostic-v0",
+  "warning": "SHARED-RUNNER WHOLE-PROCESS DIAGNOSTIC; not controlled-host gate evidence",
+  "profile": "standard",
+  "params": {
+    "dataset_bytes": 2097152,
+    "scratchpad_bytes": 262144,
+    "passes": 3
+  },
+  "operation_limit": 5000000,
+  "host": {
+    "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "github_run_id": "31821645159",
+    "github_runner_name": "GitHub Actions 1000000131"
+  },
+  "interpretation": {
+    "whole_process_rss": "includes executable, runtime, epoch context, dataset, and attack state",
+    "shared_components": "dataset and executable code are reported but are not attack-specific",
+    "gate_assessment": "NOT_ASSESSED"
+  },
+  "cases": [
+    {
+      "seed_index": 0,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7917568,
+        "major_page_faults": 0,
+        "minor_page_faults": 727
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 669,
+        "operation_counts": {
+          "recursive_calls": 1966336,
+          "replay_iterations": 983158,
+          "memo_probes": 1965114,
+          "checkpoint_probes": 85392,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7897088,
+        "major_page_faults": 0,
+        "minor_page_faults": 687
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 1,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7786496,
+        "major_page_faults": 0,
+        "minor_page_faults": 726
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 768,
+        "operation_counts": {
+          "recursive_calls": 1977245,
+          "replay_iterations": 988608,
+          "memo_probes": 1976835,
+          "checkpoint_probes": 57312,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7892992,
+        "major_page_faults": 0,
+        "minor_page_faults": 687
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 2,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7802880,
+        "major_page_faults": 0,
+        "minor_page_faults": 725
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 773,
+        "operation_counts": {
+          "recursive_calls": 1983830,
+          "replay_iterations": 991900,
+          "memo_probes": 1982102,
+          "checkpoint_probes": 42168,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7913472,
+        "major_page_faults": 0,
+        "minor_page_faults": 689
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 3,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7917568,
+        "major_page_faults": 0,
+        "minor_page_faults": 729
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 853,
+        "operation_counts": {
+          "recursive_calls": 1987975,
+          "replay_iterations": 993969,
+          "memo_probes": 1986220,
+          "checkpoint_probes": 31836,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7962624,
+        "major_page_faults": 0,
+        "minor_page_faults": 689
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 4,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7917568,
+        "major_page_faults": 0,
+        "minor_page_faults": 728
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 848,
+        "operation_counts": {
+          "recursive_calls": 1980523,
+          "replay_iterations": 990241,
+          "memo_probes": 1979664,
+          "checkpoint_probes": 49572,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7897088,
+        "major_page_faults": 0,
+        "minor_page_faults": 688
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 5,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7811072,
+        "major_page_faults": 0,
+        "minor_page_faults": 726
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 641,
+        "operation_counts": {
+          "recursive_calls": 1976964,
+          "replay_iterations": 988471,
+          "memo_probes": 1975969,
+          "checkpoint_probes": 58596,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7901184,
+        "major_page_faults": 0,
+        "minor_page_faults": 689
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 6,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7786496,
+        "major_page_faults": 0,
+        "minor_page_faults": 728
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 755,
+        "operation_counts": {
+          "recursive_calls": 1980528,
+          "replay_iterations": 990248,
+          "memo_probes": 1979580,
+          "checkpoint_probes": 49644,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7794688,
+        "major_page_faults": 0,
+        "minor_page_faults": 687
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    },
+    {
+      "seed_index": 7,
+      "ordinary": {
+        "status": "exact_complete",
+        "maximum_resident_set_bytes": 7782400,
+        "major_page_faults": 0,
+        "minor_page_faults": 727
+      },
+      "attacker": {
+        "status": "refused_physically_accounted_dependency_bundle_exhausted",
+        "completed_iterations": 771,
+        "operation_counts": {
+          "recursive_calls": 1982687,
+          "replay_iterations": 991330,
+          "memo_probes": 1980383,
+          "checkpoint_probes": 45600,
+          "total": 5000000
+        },
+        "physical_memory_accounting": {
+          "total_budget_bytes": 131072,
+          "fixed_state_reserve_bytes": 512,
+          "native_stack_frame_allowance_bytes": 2048,
+          "native_stack_depth_capacity": 20,
+          "native_stack_reserve_bytes": 40960,
+          "allocator_allowance_bytes": 4096,
+          "arena_allocation_bytes": 85504,
+          "logical_frame_reserve_bytes": 2080,
+          "rolling_transcript_state_bytes": 48,
+          "transcript_growth_bytes": 0,
+          "accounted_bytes": 131072
+        },
+        "maximum_resident_set_bytes": 7794688,
+        "major_page_faults": 0,
+        "minor_page_faults": 687
+      },
+      "attacker_whole_process_rss_exceeds_half_budget": true
+    }
+  ]
+}
