@@ -2,7 +2,7 @@
 
 Status: **WORKING DESIGN; NO PRODUCTION NETWORK; NO PROOF-OF-WORK GATE PASSED**
 
-Evidence cutoff: 2026-08-14, source revision `6fd6bb02601e0add33ff25d9d08309f08731ebc4`
+Evidence cutoff: 2026-08-14, source revision `1ec1090ea8e277ae2e7283d7fd14ed53ca140432`
 
 This is the project-level index for decisions made, evidence collected, claims rejected, and work still required. Detailed specifications remain authoritative within their stated scope. This ledger exists so that a reader does not need private conversations to understand the project.
 
@@ -35,7 +35,7 @@ No document or benchmark in this repository establishes production safety, anony
 
 ## What the PoW evidence says
 
-In plain language, we are trying to attack our own mining design using a miner that keeps only half the normal scratch memory. Replay-only [direct-dependency bundles](pow-v1-dependency-bundle-regeneration.md) briefly moved seed zero to 1,006 while exposing an unbounded-work gap. The [total-operation follow-up](pow-v1-operation-bounded-dependency-bundle-regeneration.md) closes that gap, and the [physical-memory audit](pow-v1-physical-memory-accounting.md) then deducts native-stack and allocator allowances while replacing a growing transcript buffer. With those hidden costs included, all eight seeds stop at exactly five million operations, reach only iterations 641 through 853 of 98,304, and produce no proof. This is adversarial evidence, not a passed test: smarter attacks, exact proofs, controlled physical-memory measurements, and hardware comparisons remain outstanding. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the full nontechnical explanation.
+In plain language, we are trying to attack our own mining design using a miner that keeps only half the normal scratch memory. Replay-only [direct-dependency bundles](pow-v1-dependency-bundle-regeneration.md) briefly moved seed zero to 1,006 while exposing an unbounded-work gap. The [total-operation follow-up](pow-v1-operation-bounded-dependency-bundle-regeneration.md) closes that gap, and the [physical-memory audit](pow-v1-physical-memory-accounting.md) then deducts native-stack and allocator allowances while replacing a growing transcript buffer. With those hidden costs included, all eight seeds stop at exactly five million operations, reach only iterations 641 through 853 of 98,304, and produce no proof. GCC reports a bounded 352-byte recursive frame against the conservative 2,048-byte allowance; shared-runner RSS stays in the same whole-process range as ordinary evaluation but is too noisy and inclusive to prove the attack-specific cap. This is adversarial evidence, not a passed test: smarter attacks, exact proofs, controlled physical-memory measurements, and hardware comparisons remain outstanding. See [Mining Decentralization in Plain English](mining-decentralization-in-plain-english.md) for the full nontechnical explanation.
 
 The v0 candidate was dominated by initialization and finalization, so the workload was redesigned as v1. The v1 software screens advanced the candidate to adversarial testing, not to consensus integration.
 

@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
   "as_of": "2026-08-14",
-  "evidence_cutoff_revision": "6fd6bb02601e0add33ff25d9d08309f08731ebc4",
+  "evidence_cutoff_revision": "1ec1090ea8e277ae2e7283d7fd14ed53ca140432",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -176,7 +176,7 @@
     {
       "id": "pow_v1_physical_memory_accounting",
       "pull_request": 43,
-      "conclusion": "Native-stack and allocator allowances reduce the attack arena to 85504 bytes, a fixed rolling transcript removes recovery-dependent growth, and eight operation-bounded prefixes range from 641 to 853 with no proof; shared-runner RSS remains diagnostic only."
+      "conclusion": "Native-stack and allocator allowances reduce the attack arena to 85504 bytes, a fixed rolling transcript removes recovery-dependent growth, and eight operation-bounded prefixes range from 641 to 853 with no proof. GCC reports a bounded 352-byte recursive frame; paired whole-process RSS remains shared-runner diagnostic evidence only."
     }
   ],
   "next_milestone": {

@@ -42,6 +42,8 @@ A separate harness runs the ordinary evaluator and attacker under `/usr/bin/time
 
 GitHub's shared runner is useful for checking the measurement pipeline but cannot pass a hardware gate. Its CPU allocation, contention, memory placement, and host configuration are not controlled.
 
+The first retained run reported a 352-byte compiler-bounded recursive frame. Across eight paired processes, median whole-process RSS was 7,806,976 bytes for ordinary evaluation and 7,897,088 bytes for the attacker. Those totals include the executable, runtime, and 2 MiB dataset; they are diagnostic rather than proof of the 131,072-byte attack-specific limit. The [raw evidence and interpretation](research-results/2026-08-14-github-ubuntu-v1-physical-memory.md) are preserved with the runner identifier and integrity hashes.
+
 ## What this establishes
 
 This closes two known accounting gaps: native stack capacity now reduces the usable attack arena, and transcript memory is constant rather than recovery-dependent. Python and C++ independently commit to the same deterministic refusal boundaries.
