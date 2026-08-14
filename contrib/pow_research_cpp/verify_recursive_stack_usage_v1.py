@@ -1,7 +1,7 @@
 # Copyright (c) 2026 The Soveroot developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit/.
-"""Fail closed unless GCC reports bounded RecursiveRegenerator stack use."""
+"""Fail closed unless GCC reports bounded stack use for a selected symbol."""
 
 from __future__ import annotations
 
@@ -10,16 +10,18 @@ import json
 from pathlib import Path
 
 
-SYMBOL = "RecursiveRegenerator::ValueAt"
-ALLOWANCE_BYTES = 2_048
+DEFAULT_SYMBOL = "RecursiveRegenerator::ValueAt"
+DEFAULT_ALLOWANCE_BYTES = 2_048
 BOUNDED_QUALIFIERS = frozenset(("static", "dynamic,bounded"))
 
 
-def parse_stack_usage(paths: list[Path]) -> list[dict[str, object]]:
+def parse_stack_usage(
+    paths: list[Path], symbol: str = DEFAULT_SYMBOL
+) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
     for path in paths:
         for line in path.read_text(encoding="utf-8").splitlines():
-            if SYMBOL not in line:
+            if symbol not in line:
                 continue
             fields = line.rsplit("\t", 2)
             if len(fields) != 3:
@@ -36,11 +38,13 @@ def parse_stack_usage(paths: list[Path]) -> list[dict[str, object]]:
     return records
 
 
-def maximum_bounded_stack_usage(records: list[dict[str, object]]) -> int:
+def maximum_bounded_stack_usage(
+    records: list[dict[str, object]], symbol: str = DEFAULT_SYMBOL
+) -> int:
     """Return the maximum compiler-bounded frame size, rejecting ambiguity."""
 
     if not records:
-        raise AssertionError(f"no stack-usage record found for {SYMBOL}")
+        raise AssertionError(f"no stack-usage record found for {symbol}")
     unbounded = [
         record for record in records
         if record["qualifier"] not in BOUNDED_QUALIFIERS
@@ -53,27 +57,31 @@ def maximum_bounded_stack_usage(records: list[dict[str, object]]) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("stack_usage", nargs="+", type=Path)
+    parser.add_argument("--symbol", default=DEFAULT_SYMBOL)
+    parser.add_argument("--allowance", type=int, default=DEFAULT_ALLOWANCE_BYTES)
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
-    records = parse_stack_usage(args.stack_usage)
-    maximum = maximum_bounded_stack_usage(records)
+    if args.allowance <= 0:
+        parser.error("--allowance must be positive")
+    records = parse_stack_usage(args.stack_usage, args.symbol)
+    maximum = maximum_bounded_stack_usage(records, args.symbol)
     report = {
         "format": "soveroot-pow-v1-recursive-stack-usage-v0",
         "warning": "COMPILER-SPECIFIC DIAGNOSTIC; not controlled-host gate evidence",
-        "symbol": SYMBOL,
-        "allowance_bytes_per_frame": ALLOWANCE_BYTES,
+        "symbol": args.symbol,
+        "allowance_bytes_per_frame": args.allowance,
         "accepted_bounded_qualifiers": sorted(BOUNDED_QUALIFIERS),
         "maximum_reported_bounded_frame_bytes": maximum,
-        "within_allowance": maximum <= ALLOWANCE_BYTES,
+        "within_allowance": maximum <= args.allowance,
         "records": records,
     }
     encoded = json.dumps(report, indent=2) + "\n"
     if args.output is not None:
         args.output.write_text(encoded, encoding="utf-8")
     print(encoded, end="")
-    if maximum > ALLOWANCE_BYTES:
+    if maximum > args.allowance:
         raise AssertionError(
-            f"reported frame {maximum} exceeds {ALLOWANCE_BYTES}-byte allowance"
+            f"reported frame {maximum} exceeds {args.allowance}-byte allowance"
         )
     return 0
 
