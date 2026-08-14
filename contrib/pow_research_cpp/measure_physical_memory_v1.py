@@ -43,7 +43,7 @@ def parse_verbose_time(text: str) -> dict[str, int]:
     return parsed
 
 
-def timed_json(command: list[str], directory: Path) -> tuple[dict[str, object], dict[str, int]]:
+def timed_output(command: list[str], directory: Path) -> tuple[str, dict[str, int]]:
     timing_path = directory / "time.txt"
     completed = subprocess.run(
         ["/usr/bin/time", "-v", "-o", str(timing_path), *command],
@@ -51,7 +51,7 @@ def timed_json(command: list[str], directory: Path) -> tuple[dict[str, object], 
         capture_output=True,
         text=True,
     )
-    return json.loads(completed.stdout), parse_verbose_time(
+    return completed.stdout, parse_verbose_time(
         timing_path.read_text(encoding="utf-8")
     )
 
@@ -80,8 +80,8 @@ def main() -> int:
         ]
         with tempfile.TemporaryDirectory(prefix="soveroot-pow-rss-") as temp:
             directory = Path(temp)
-            ordinary, ordinary_usage = timed_json([binary, *common], directory)
-            attacked, attacked_usage = timed_json(
+            ordinary_output, ordinary_usage = timed_output([binary, *common], directory)
+            attacked_output, attacked_usage = timed_output(
                 [
                     binary,
                     "recursive-regenerate-physically-accounted-bundle",
@@ -90,6 +90,9 @@ def main() -> int:
                 ],
                 directory,
             )
+        if not ordinary_output.startswith("digest="):
+            raise ValueError("ordinary evaluator did not emit its digest record")
+        attacked = json.loads(attacked_output)
         accounting = attacked["physical_memory_accounting"]
         half_budget = params.scratchpad_bytes // 2
         if accounting["accounted_bytes"] != half_budget:
@@ -98,7 +101,7 @@ def main() -> int:
             {
                 "seed_index": seed_index,
                 "ordinary": {
-                    "status": ordinary.get("status", "exact_complete"),
+                    "status": "exact_complete",
                     **ordinary_usage,
                 },
                 "attacker": {
