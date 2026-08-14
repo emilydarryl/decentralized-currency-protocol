@@ -36,7 +36,7 @@ The median prefix is 769.5 and the maximum observed recursion depth is eight. Th
 
 ## Compiler and process checks
 
-The Linux C++ build emits GCC `-fstack-usage` records and enables `-Wstack-usage=2048` under `-Werror`. CI fails unless `RecursiveRegenerator::ValueAt` is classified as `static` or `dynamic,bounded` and its reported bound is no greater than the 2,048-byte per-frame allowance. Unbounded dynamic stack use is rejected. The arena vector also refuses if its allocated capacity exceeds its requested bytes plus the allocator allowance.
+The Linux C++ build emits GCC `-fstack-usage` records. A symbol-specific verifier makes CI fail unless `RecursiveRegenerator::ValueAt` is classified as `static` or `dynamic,bounded` and its reported bound is no greater than the 2,048-byte per-frame allowance. Unbounded dynamic stack use is rejected. The arena vector also refuses if its allocated capacity exceeds its requested bytes plus the allocator allowance.
 
 A separate harness runs the ordinary evaluator and attacker under `/usr/bin/time -v`. It records whole-process peak resident set size and page faults. Whole-process RSS includes executable code, libraries, the epoch dataset, and other state shared with an ordinary miner, so it is reported separately from the 131,072-byte attack-specific budget.
 

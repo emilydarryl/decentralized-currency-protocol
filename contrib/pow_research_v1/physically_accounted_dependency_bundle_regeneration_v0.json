@@ -12,7 +12,7 @@
     "allocator_allowance_bytes": 4096,
     "arena_allocation_bytes": 85504,
     "accounted_bytes": 131072,
-    "compiler_check": "GCC -fstack-usage must report RecursiveRegenerator::ValueAt as static or dynamic,bounded and no larger than 2048 bytes per frame; -Wstack-usage=2048 is promoted to an error",
+    "compiler_check": "GCC -fstack-usage must report RecursiveRegenerator::ValueAt as static or dynamic,bounded and no larger than 2048 bytes per frame",
     "allocator_check": "the C++ arena vector capacity may not exceed its requested bytes plus the 4096-byte allocator allowance",
     "transcript": "a domain-separated 48-byte rolling SHA3-384 chain replaces the C++ vector that grew by 48 bytes per recovered miss",
     "transcript_growth_bytes": 0
