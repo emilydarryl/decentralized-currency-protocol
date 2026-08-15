@@ -1,0 +1,45 @@
+{
+  "format": "soveroot-pow-v1-external-attack-submission-v0",
+  "challenge_version": "0.1",
+  "status": "TEMPLATE_NOT_A_SUBMISSION",
+  "submission_id": "replace-with-short-public-id",
+  "authors": ["replace-with-name-or-pseudonym"],
+  "contact": "replace-with-public-contact-or-none",
+  "source_url": "https://example.invalid/replace-with-source-repository",
+  "source_revision": "0000000000000000000000000000000000000000",
+  "license": "replace-with-source-license",
+  "tracks": ["screening", "completion"],
+  "entrypoint_argv": ["./replace-with-runner", "--request", "{request}", "--output", "{output}"],
+  "strategy_summary": "Replace with the independently developed attack strategy and its expected advantage.",
+  "relationship_to_prior_work": "Replace with copied components, prior collaboration, and differences from repository attackers.",
+  "memory_model": {
+    "declared_peak_attack_bytes": 131072,
+    "external_storage_bytes": 0,
+    "dynamic_allocation_after_start": false,
+    "worker_threads": 1,
+    "allocations": [
+      {
+        "name": "replace-with-allocation-name",
+        "bytes": 131072,
+        "purpose": "replace-with-purpose"
+      }
+    ]
+  },
+  "operation_model": {
+    "counter_fields": [
+      "logical_value_requests",
+      "replay_iterations",
+      "metadata_probes",
+      "checkpoint_probes",
+      "other_charged_operations"
+    ],
+    "other_charged_operations_mapping": "Replace with a complete mapping for work not represented by the first four counters. Use none only when it is genuinely empty."
+  },
+  "build_argv": [
+    ["replace-with-build-tool", "replace-with-argument"]
+  ],
+  "limitations": [
+    "Replace with known accounting, portability, correctness, and performance limitations."
+  ],
+  "submitter_salt_hex": "0000000000000000000000000000000000000000000000000000000000000000"
+}

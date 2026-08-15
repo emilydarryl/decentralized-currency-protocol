@@ -1,0 +1,27 @@
+{
+  "format": "soveroot-pow-v1-external-attack-results-v0",
+  "challenge_version": "0.1",
+  "submission_id": "replace-with-submission-id",
+  "source_revision": "0000000000000000000000000000000000000000",
+  "track": "screening",
+  "case_set_commitment": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+  "cases": [
+    {
+      "case_id": "replace-with-assigned-case-id",
+      "status": "EXHAUSTED",
+      "completed_iterations": 0,
+      "accounted_peak_attack_bytes": 131072,
+      "external_storage_bytes": 0,
+      "operation_counts": {
+        "logical_value_requests": 0,
+        "replay_iterations": 0,
+        "metadata_probes": 0,
+        "checkpoint_probes": 0,
+        "other_charged_operations": 0
+      },
+      "total_operations": 0,
+      "transcript_commitment": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+      "execution_result": null
+    }
+  ]
+}

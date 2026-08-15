@@ -1,7 +1,7 @@
 {
   "format": "soveroot-research-status-v0",
-  "as_of": "2026-08-14",
-  "evidence_cutoff_revision": "97cdc4b3fe9b6731fc5c88f7e3c5042bdd93ce30",
+  "as_of": "2026-08-15",
+  "evidence_cutoff_revision": "938813c032236f9e41f34f3517fc3b264e8d6324",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
   "pow_candidate": "v1_non_consensus_research_candidate",
@@ -192,11 +192,16 @@
       "id": "pow_v1_frontier_pebbling_attacker",
       "pull_request": 46,
       "conclusion": "A second frozen attack family removes machine-state checkpoints and retains cost-ranked historical values in a two-choice frontier. Eight fresh cases reach prefixes from 714 to 828, all exhaust exactly five million operations without a proof, and different seeds prevent a controlled comparison with the checkpoint ladder; no gate is assessed."
+    },
+    {
+      "id": "pow_v1_external_attack_challenge",
+      "pull_request": 47,
+      "conclusion": "The public challenge freezes qualification, screening, and exact-completion artifact contracts, fresh-case assignment, byte and operation accounting, untrusted-code handling, and fail-closed interpretation. It is review infrastructure, not attack evidence, and no gate is assessed."
     }
   ],
   "next_milestone": {
-    "id": "pow_v1_external_attack_review",
-    "document": "docs/pow-v1-frontier-pebbling-attacker.md",
+    "id": "pow_v1_independent_attack_submission",
+    "document": "docs/pow-v1-external-attack-challenge.md",
     "stage_a": "Exact versioned scratch graph and byte model implemented; no gate assessed.",
     "stage_b_lower_bound": "Optimistic offline cut-set replay floor implemented; no gate assessed.",
     "stage_b_schedule": "Concrete graph-only recursive replay schedules implemented with explicit work, depth, retained and transient values, and encoded bytes; not executable and no gate assessed.",
@@ -217,6 +222,7 @@
     "stage_c_explicit_iterative_work_stack": "Twenty packed 104-byte frames inside the preallocated arena replace native recursive self-calls; all eight frozen cases exhaust exactly five million operations at prefixes from 712 to 952 with no proof, so no gate is assessed.",
     "stage_c_hierarchical_checkpoint_ladder": "Four directly addressed time scales use sixty-four arena-resident target-aware bundles; the frozen eight-seed median rises from 886 to 945.5 and the maximum from 952 to 982, but all cases exhaust five million operations without a proof and no gate is assessed.",
     "stage_c_frontier_pebbling_attacker": "A second frozen family replaces machine-state checkpoints with 9,944 two-choice cost-ranked historical values. Fresh exact prefixes range from 714 to 828; all cases exhaust five million operations without a proof, and no gate is assessed.",
-    "required_outcome": "Publish the bounded attacker interface and challenge, obtain independent adversarial review or a separately developed external attack model, and decide whether the candidate requires redesign. Preserve exact cross-language boundaries, the byte ceiling, total-operation accounting, and canonical proof requirement; do not begin controlled-host gate measurement until an eligible attacker emits exact proofs."
+    "stage_c_external_attack_challenge": "The public contract defines a qualification preflight, a five-million-operation screening track, an uncapped exact-completion track, deterministic case commitments, fresh assignment after source freeze, a complete memory ledger, and fail-closed evidence interpretation. The package does not execute untrusted submissions or prove their memory claims.",
+    "required_outcome": "Obtain at least one independently developed submission, freeze its source and manifest before assigning eight fresh cases, review every memory and operation claim, and publish all rows. If an eligible attacker emits an exact canonical proof, begin controlled physical-host measurement; otherwise keep the time-memory gate OPEN and NOT ASSESSED."
   }
 }

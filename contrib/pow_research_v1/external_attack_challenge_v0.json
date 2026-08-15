@@ -1,0 +1,110 @@
+{
+  "format": "soveroot-pow-v1-external-attack-challenge-v0",
+  "version": "0.1",
+  "status": "OPEN NON-CONSENSUS RESEARCH CHALLENGE; NO GATE ASSESSED",
+  "candidate": {
+    "specification": "docs/pow-v1-candidate-spec.md",
+    "baseline_revision": "938813c032236f9e41f34f3517fc3b264e8d6324",
+    "seed_derivation": "SHA3-384(Soveroot/PowResearch/BenchmarkSeed/v1\\0 || uint32_le(seed_index))",
+    "header_utf8": "Soveroot reproducible C++ benchmark matrix v1",
+    "nonce": 0
+  },
+  "profiles": {
+    "qualification": {
+      "dataset_bytes": 65536,
+      "scratchpad_bytes": 8192,
+      "passes": 1,
+      "purpose": "small exact-output runner preflight; no reduced-memory eligibility claim"
+    },
+    "standard": {
+      "dataset_bytes": 2097152,
+      "scratchpad_bytes": 262144,
+      "passes": 3,
+      "canonical_iterations": 98304
+    }
+  },
+  "tracks": {
+    "screening": {
+      "profile": "standard",
+      "operation_limit": 5000000,
+      "canonical_proof_required_for_success": false,
+      "purpose": "compare deterministic exact prefixes under the existing bounded-work accounting"
+    },
+    "completion": {
+      "profile": "standard",
+      "operation_limit": null,
+      "canonical_proof_required_for_success": true,
+      "purpose": "find any exact half-memory attack before controlled physical-host measurement"
+    }
+  },
+  "memory_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fraction_of_standard_scratchpad": "1/2",
+    "included": [
+      "all mutable per-attempt attack state",
+      "retained or reconstructed scratch values",
+      "machine-state checkpoints",
+      "memo, index, tag, bitmap, queue, and schedule metadata",
+      "native and explicit work stacks for every worker thread",
+      "allocator bookkeeping and reserved capacity",
+      "transcripts, counters, buffers, and inter-thread communication"
+    ],
+    "excluded": [
+      "read-only candidate code",
+      "the read-only epoch dataset and 64-entry schedule available to every ordinary miner",
+      "fixed input seed, header, nonce, and parameter bytes",
+      "operating-system and runtime baseline measured before epoch preparation"
+    ],
+    "forbidden": [
+      "external spill files or databases",
+      "memory-mapped or compressed external backing stores",
+      "network helpers or hidden worker processes",
+      "future-aware traces, graphs, or schedules retained during an eligible run",
+      "recovery-dependent unreported allocation"
+    ],
+    "logical_accounting_is_not_physical_proof": true
+  },
+  "operation_policy": {
+    "screening_counter_fields": [
+      "logical_value_requests",
+      "replay_iterations",
+      "metadata_probes",
+      "checkpoint_probes",
+      "other_charged_operations"
+    ],
+    "total_rule": "total_operations is the exact sum of every screening counter field",
+    "mapping_rule": "Every attack-specific action must map to a declared counter; work that does not fit the first four fields is charged as other_charged_operations and explained.",
+    "completion_track": "All counters remain mandatory and auditable, but there is no artificial operation ceiling; measured accepted-work throughput is considered only after an exact proof."
+  },
+  "case_policy": {
+    "public_preflight_seed_indices": [0, 1, 2],
+    "previously_used_standard_seed_indices": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    "fresh_case_count": 8,
+    "evaluator_commitment": "Before the submission freeze, the evaluator publishes SHA3-384(Soveroot/PowResearch/ExternalAttackEvaluatorSalt/v0\\0 || 32-byte evaluator_salt).",
+    "submission_freeze": "After the evaluator commitment, the source revision, manifest, build instructions, and 32-byte submitter salt become immutable.",
+    "fresh_selection": "After the freeze, the evaluator reveals its salt. Eight unique uint32 indices are drawn from SHAKE-256(Soveroot/PowResearch/ExternalAttackFreshSeeds/v0\\0 || evaluator_salt || submitter_salt || source_revision_bytes), skipping every previously used index. The salts, revision, exclusions, and complete case set are published.",
+    "anti_overfitting_limit": "Fresh cases are hidden only until the source revision is frozen; secrecy never substitutes for reproducibility or independent review.",
+    "retention": "All complete, exhausted, refused, invalid, and unfavorable rows are preserved."
+  },
+  "submission_policy": {
+    "license": "source-available terms sufficient for reproduction and review",
+    "required_independence": "Disclose copied code and prior collaboration; a second model requires independently developed attack logic, not only a language port.",
+    "untrusted_code": "Submissions are never executed in project CI and must be built and run in a disposable, network-disabled evaluator environment.",
+    "required_artifacts": [
+      "validated submission manifest",
+      "immutable source revision",
+      "reproducible build commands",
+      "machine-readable case set and results",
+      "complete memory allocation ledger",
+      "operation-counter mapping",
+      "compiler and host record",
+      "limitations and relationships to earlier attacks"
+    ]
+  },
+  "decision_policy": {
+    "exact_eligible_proof": "Advance immediately to independent code review and controlled physical-memory and throughput measurements; redesign or reject according to the frozen gate thresholds.",
+    "partial_improvement": "Preserve the result and review the new strategy, but do not assess or pass the time-memory gate.",
+    "no_successful_submission": "Keep the gate OPEN and NOT ASSESSED; absence of a published attack is not proof of security.",
+    "invalid_accounting": "Preserve the submission as ineligible evidence with the exact reason; do not silently repair or discard it."
+  }
+}

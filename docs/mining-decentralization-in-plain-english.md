@@ -89,7 +89,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The explicit work stack, four-level checkpoint ladder, and second cost-aware frontier strategy are now implemented. The next engineering step is an external attack challenge and independent adversarial review. We should publish the exact byte budget, work counter, proof requirement, and fixed vectors so outside reviewers can try a different bounded strategy. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
+The external attack challenge is now specified. Think of it as publishing the exam, the half-size notebook rule, the scoring ruler, and the form for showing every hidden pocket. An outside researcher first proves that their program produces correct small answers, freezes its source code, and then receives eight fresh cases. The project keeps successful, partial, failed, and invalid results. The next step is to obtain and independently review a genuinely different attack submission. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. No submission—or many failed submissions—would still not prove the design secure.
 
 Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
 
@@ -104,4 +104,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest cost-aware frontier result](pow-v1-frontier-pebbling-attacker.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [external attack challenge](pow-v1-external-attack-challenge.md), [latest cost-aware frontier result](pow-v1-frontier-pebbling-attacker.md), and [research ledger](research-ledger.md).

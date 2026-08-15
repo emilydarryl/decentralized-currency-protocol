@@ -98,6 +98,8 @@ That second family is now predeclared in [`frontier_pebbling_attacker_v0.json`](
 
 The [cost-aware frontier-pebbling pilot](pow-v1-frontier-pebbling-attacker.md) is now complete. Its frozen holdout reaches exact prefixes from 714 to 828 with a median of 794. Every case records roughly 1.42 million frontier hits but exhausts exactly five million operations without a proof; the maximum completes only 0.8423% of the canonical job. Because this holdout uses different seeds from the checkpoint ladder, the figures are not a controlled head-to-head comparison. The policy is preserved as a second bounded attack family, no gate is assessed, and the next milestone is external adversarial review rather than further tuning against public cases.
 
+The [external attack challenge](pow-v1-external-attack-challenge.md) now freezes that review interface. It publishes exact qualification outputs, separates bounded screening from uncapped exact completion, assigns fresh cases after an immutable source freeze, validates canonical proof objects independently, and requires a complete memory and operation ledger. Its validator deliberately cannot certify a self-reported memory claim, and project CI never executes submitted code. The next evidence milestone is a genuinely independent strategy reviewed and run in a disposable, network-disabled evaluator environment.
+
 ### Stage D: controlled measurement
 
 - Measure ordinary and attacking implementations on at least three declared physical systems.
