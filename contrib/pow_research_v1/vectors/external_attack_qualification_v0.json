@@ -1,0 +1,78 @@
+{
+  "case_set_commitment": "37a2ad3e9669e9b06a1b9bd0b7640742bade5555e5674ea5859d8ef689cc29c791d3c33116498c9eb2939e1217b8a535",
+  "cases": [
+    {
+      "attack_budget_bytes": null,
+      "canonical_iterations": 1024,
+      "case_id": "qualification-seed-0",
+      "expected_result": {
+        "dataset_digest": "ec94e40c4e3e9d97b425af4e0fc9e4841a63aded2c4ecb276aaf21857ed70bae910d7995a86015dd5868b75b3945ff22",
+        "digest": "ada0174df6802fc821c77fee5ee66d4342b6734a152b6c8e09c55ee38b2c4f5960b0f5f4568199200db6ac9789ba2204",
+        "memory_commitment": "e368a569865a00eb556cac22389671c673983b0c18c6372468f5cc2cdc30862f25140aa98d557ba45537a0cbe3c9f2e6",
+        "registers": [
+          "a543c02e05daff82", "5af96e68146d5602", "8bf8fbae71220254", "4674d01e6654088a",
+          "fed6a66de48a2003", "33cbc332ac1881f3", "c126fba91cc95818", "70d7f2c77a6b05f7"
+        ],
+        "schedule_digest": "afe5b72c92b9ff85b3a7cd1a1b35cf5ff9ba5598ea9ea8bf14a83a0b16a7a5746121010394d4504a358adc77904e1900"
+      },
+      "header": "536f7665726f6f7420726570726f64756369626c6520432b2b2062656e63686d61726b206d6174726978207631",
+      "header_digest": "bda568e58adacd32a6fa2d2f1dd4c0c0e1a924ac6e113ab510513361dba35be611a0e2e21eb89b44cbd6c774672fa2f6",
+      "nonce": 0,
+      "operation_limit": null,
+      "params": {"dataset_bytes": 65536, "passes": 1, "scratchpad_bytes": 8192},
+      "seed": "697eeed71c7b5ef985cc368e69f509300da8c637a7d0f983600636e87efc1fad8a9b91f43fa6d90922dd3014d7a2428d",
+      "seed_commitment": "c99d41030fb652ebb7f9465bbaa07e6ff120d4f59059fcc380e6416d080bfb742b92573cd9879476303d8d088be5e887",
+      "seed_index": 0
+    },
+    {
+      "attack_budget_bytes": null,
+      "canonical_iterations": 1024,
+      "case_id": "qualification-seed-1",
+      "expected_result": {
+        "dataset_digest": "a9bd39e60e232a1e7575164dc09ae6525d2bedaebfbaaced3565cb04f8c6eb6e7f4750a878c12e78e46854544f519258",
+        "digest": "6f84209a6698012e0a00e700c7ccc035ed572550b78f344445a90169ffc26b60f8ba55164f1c745771ce7367954a584a",
+        "memory_commitment": "fd442dee825a702bbe6ca2bcd7e06f9f953d9c759ad14700aa05554e8aac7f4befc268d23b3499c3fbd5fad8a4fda7cf",
+        "registers": [
+          "9367b67ca2d80de7", "6935f4081c4aa186", "fff170f606d5e0ed", "3feaa57076a342d8",
+          "eab54f1ae439b3aa", "ebf485867809b657", "ded2e5b7d116a1cf", "6e6298254ca11605"
+        ],
+        "schedule_digest": "382e6dbd55c4cedd25fa9ecc7cdec7cd0ff2de20cd78d871bf138785b2da893d043df68133f1691bc0b762f4130a274f"
+      },
+      "header": "536f7665726f6f7420726570726f64756369626c6520432b2b2062656e63686d61726b206d6174726978207631",
+      "header_digest": "bda568e58adacd32a6fa2d2f1dd4c0c0e1a924ac6e113ab510513361dba35be611a0e2e21eb89b44cbd6c774672fa2f6",
+      "nonce": 0,
+      "operation_limit": null,
+      "params": {"dataset_bytes": 65536, "passes": 1, "scratchpad_bytes": 8192},
+      "seed": "477440d1395abcabbf339943c833a32508db8893c3569f909f5f72123cc9b1d534f718e9ea66a8e8b2714c2d7a12867a",
+      "seed_commitment": "905ed2015b953260bbb2c2b396d32731c2e1efa11eabe7d2b558b09b0cb6e7ad568005fe0dfb1a2e20131436e5217d0d",
+      "seed_index": 1
+    },
+    {
+      "attack_budget_bytes": null,
+      "canonical_iterations": 1024,
+      "case_id": "qualification-seed-2",
+      "expected_result": {
+        "dataset_digest": "ddb37b3c8be013ba0542a1758bc289c65e68ca25bdc872a9e6dffda3a3eec9b371bbb6d6dbb21b2c659cd0048d47e275",
+        "digest": "bab2c6c90091ae5b843ff10c15fd2f38477ced8a9261c7c85d57e9cac376549fb728c158690aac9adbc332158ffdd97a",
+        "memory_commitment": "8449adc5c08988ac835548d7854f870f9439d75aac4f0b0d691bac4dfb6149a3c41334bee048b4faa09dbdd08d86ab3d",
+        "registers": [
+          "e79bfad8a9851971", "aea9f6941619d8a5", "f05e3bf7d1931554", "5a8302b572252fbd",
+          "f30cb1c85ff1f2a9", "52c366380620baa2", "949b148f4cd8c672", "7ee8c06695395eb1"
+        ],
+        "schedule_digest": "986a180e588ea66e76fd2b59251c7c23321aa391aba4f1c12b5b90495cbd8685dbf448c452922f4b2ea2c4f71b219ef7"
+      },
+      "header": "536f7665726f6f7420726570726f64756369626c6520432b2b2062656e63686d61726b206d6174726978207631",
+      "header_digest": "bda568e58adacd32a6fa2d2f1dd4c0c0e1a924ac6e113ab510513361dba35be611a0e2e21eb89b44cbd6c774672fa2f6",
+      "nonce": 0,
+      "operation_limit": null,
+      "params": {"dataset_bytes": 65536, "passes": 1, "scratchpad_bytes": 8192},
+      "seed": "96a5cc2c4416ee3fcd484a6244508f31b92e63e4612bc7822a201beb98eabee659c6849a43dec38c47d2abe3c97528c4",
+      "seed_commitment": "8637c6defe2a8c87af65f53ce10ce1af145e47847d712a4fedc2c286f6c99fd11b7964ffbbaa9b7a9eca886e83c71996",
+      "seed_index": 2
+    }
+  ],
+  "challenge_version": "0.1",
+  "format": "soveroot-pow-v1-external-attack-case-set-v0",
+  "profile": "qualification",
+  "track": "qualification"
+}

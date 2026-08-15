@@ -52,6 +52,7 @@ Start with [Mining Decentralization in Plain English](docs/mining-decentralizati
 - [pow-v1-iterative-work-stack.md](docs/pow-v1-iterative-work-stack.md) replaces native recursive recovery with twenty packed arena-resident frames and records the complete eight-seed fail-closed holdout.
 - [pow-v1-hierarchical-checkpoint-ladder.md](docs/pow-v1-hierarchical-checkpoint-ladder.md) gives the bounded attacker four directly addressed checkpoint time scales and records the stronger but still incomplete eight-seed attack.
 - [pow-v1-frontier-pebbling-attacker.md](docs/pow-v1-frontier-pebbling-attacker.md) tests a second frozen half-memory strategy that retains expensive-to-recreate historical values instead of machine-state checkpoints.
+- [pow-v1-external-attack-challenge.md](docs/pow-v1-external-attack-challenge.md) publishes the bounded-memory attacker contract, qualification cases, fresh-case process, accounting rules, and decision policy for independent researchers.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
