@@ -1,0 +1,115 @@
+{
+  "format": "soveroot-pow-v1-frontier-pebbling-attacker-method-v0",
+  "version": "0.1",
+  "status": "COMPLETE NON-CONSENSUS SECOND BOUNDED ATTACK FAMILY; NO GATE ASSESSED",
+  "question": "Can a cost-aware frontier of exact historical values complete a canonical proof at half scratch memory without machine-state checkpoints or unbounded planning?",
+  "independent_strategy": {
+    "base": "arena-resident iterative dependency regeneration from genesis",
+    "difference_from_checkpoint_policy": "retain completed value pebbles by estimated regeneration cost instead of retaining machine-state bookmarks by time",
+    "machine_state_checkpoints": 0,
+    "checkpoint_bytes": 0,
+    "external_storage_bytes": 0,
+    "offline_graph_or_schedule": "none",
+    "native_recursive_calls": 0
+  },
+  "frontier_policy": {
+    "entry_encoding": "little-endian packed key:u32 plus value:u64",
+    "entry_bytes": 12,
+    "packed_key": "stop_iteration shifted left 15 bits, bitwise-or scratch word",
+    "capacity": 9944,
+    "candidate_count": 2,
+    "first_candidate": "((key * 0x9e3779b1) mod 2^32) mod 9944",
+    "second_candidate": "first plus 1 plus ((((key xor (key shifted right 16)) * 0x85ebca6b) mod 2^32) mod 9943), modulo 9944",
+    "lookup": "probe both distinct candidates in order and return the first exact key match",
+    "admission": "update an exact key; otherwise use the first empty candidate; otherwise the second empty candidate; otherwise select the candidate with lower stop, breaking equal-stop ties toward the first candidate",
+    "replacement": "replace the selected resident only when the incoming stop is strictly greater; reject equal-or-lower-stop values",
+    "cost_proxy": "larger stop_iteration means more genesis replay and is therefore more expensive to reconstruct",
+    "hidden_metadata_bytes": 0
+  },
+  "accounting_policy": {
+    "total_attack_budget_bytes": 131072,
+    "fixed_state_reserve_bytes": 512,
+    "allocator_allowance_bytes": 4096,
+    "arena_allocation_bytes": 126464,
+    "write_bitmap_bytes": 4096,
+    "primary_cache_capacity": 59,
+    "primary_cache_bytes": 944,
+    "explicit_frame_bytes": 104,
+    "explicit_frame_capacity": 20,
+    "explicit_work_stack_bytes_inside_arena": 2080,
+    "frontier_entry_bytes": 12,
+    "frontier_capacity": 9944,
+    "frontier_bytes": 119328,
+    "unused_arena_bytes": 16,
+    "rolling_transcript_state_bytes": 48,
+    "transcript_growth_bytes": 0,
+    "accounted_bytes": 131072
+  },
+  "operation_policy": {
+    "total_operation_limit": 5000000,
+    "charged_operations": [
+      "every logical value request",
+      "every replayed VM iteration",
+      "each of two frontier candidate probes on every lookup",
+      "each of two frontier candidate probes on every admission attempt"
+    ],
+    "invariant": "total_operations equals logical_value_requests plus replay_iterations plus frontier_probes",
+    "failure": "refuse before an operation that would exceed the ceiling and emit no proof"
+  },
+  "selected_configuration": {
+    "profile": "standard",
+    "nonce": 0,
+    "primary_allocation": "1/128 of possible 16-byte primary slots after allocator reserve",
+    "replay_iteration_safety_limit": 1000000,
+    "predeclared_holdout_seed_indices": [8, 9, 10, 11, 12, 13, 14, 15]
+  },
+  "fixed_vector_policy": {
+    "profile": "standard",
+    "operation_limit": 1000,
+    "seed_indices": [0, 1, 2],
+    "require_python_cpp_exact_match": true
+  },
+  "holdout_policy": {
+    "seed_indices": [8, 9, 10, 11, 12, 13, 14, 15],
+    "reported_metrics": [
+      "completed_iterations",
+      "reconstructed_misses",
+      "logical_value_requests",
+      "replay_iterations",
+      "frontier_probes",
+      "frontier_hits",
+      "frontier_admissions",
+      "frontier_replacements",
+      "frontier_rejections",
+      "total_operations",
+      "maximum_explicit_stack_depth",
+      "transcript_commitment",
+      "canonical_proof_completed"
+    ],
+    "selection_rule": "No parameter changes after any fixed-vector or holdout result is observed; retain all eight holdout rows, including unfavorable outcomes."
+  },
+  "holdout_result": {
+    "source_revision": "97cdc4b3fe9b6731fc5c88f7e3c5042bdd93ce30",
+    "minimum_completed_iterations": 714,
+    "median_completed_iterations": 794.0,
+    "maximum_completed_iterations": 828,
+    "completed_proofs": 0,
+    "full_job_iterations": 98304,
+    "maximum_fraction_of_job_percent": 0.8423,
+    "interpretation": "The value frontier records roughly 1.42 million hits per seed, but genesis replay and two charged probes per access consume the full operation allowance before one percent of the canonical job. Different holdout seeds prevent a controlled numeric comparison with the prior checkpoint ladder.",
+    "cases": [
+      {"seed_index": 8, "completed_iterations": 714, "reconstructed_misses": 18, "logical_value_requests": 1430435, "replay_iterations": 715209, "frontier_probes": 2854356, "frontier_hits": 1420675, "frontier_admissions": 1410, "frontier_replacements": 12, "frontier_rejections": 1828, "total_operations": 5000000, "maximum_explicit_stack_depth": 7, "transcript_commitment": "7574d01504c65a0468fd769486c64da56064b142a5e970f5cea61fd8091110e3aaf1db315e4ce53601842ea90e35b78e", "canonical_proof_completed": false},
+      {"seed_index": 9, "completed_iterations": 813, "reconstructed_misses": 36, "logical_value_requests": 1429987, "replay_iterations": 714975, "frontier_probes": 2855038, "frontier_hits": 1422586, "frontier_admissions": 1621, "frontier_replacements": 18, "frontier_rejections": 827, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "b737a3392fda3916a36e25dda818a9fd6a986ca3c23fc2abccbe3223c7359e96fac1e185a64d7897297eea015e415833", "canonical_proof_completed": false},
+      {"seed_index": 10, "completed_iterations": 809, "reconstructed_misses": 42, "logical_value_requests": 1429711, "replay_iterations": 714835, "frontier_probes": 2855454, "frontier_hits": 1423773, "frontier_admissions": 1607, "frontier_replacements": 15, "frontier_rejections": 353, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "b96518959ce79ddb2531084c8251b197f05e614fdb34751c311348ce667aaea6c495dec2b5c6ba112c9f0e02b393dc57", "canonical_proof_completed": false},
+      {"seed_index": 11, "completed_iterations": 820, "reconstructed_misses": 23, "logical_value_requests": 1429705, "replay_iterations": 714841, "frontier_probes": 2855454, "frontier_hits": 1423779, "frontier_admissions": 1622, "frontier_replacements": 13, "frontier_rejections": 338, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "b8d08aac87204af76d5a8eef911a936c6a8078a02ff11d191fe0b1389a2c325eaa94c90a0da9f70590644d64b8ba72e1", "canonical_proof_completed": false},
+      {"seed_index": 12, "completed_iterations": 759, "reconstructed_misses": 26, "logical_value_requests": 1430028, "replay_iterations": 715002, "frontier_probes": 2854970, "frontier_hits": 1422408, "frontier_admissions": 1484, "frontier_replacements": 11, "frontier_rejections": 1042, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "c2ab348e4c8c07d7e09095cfe19a720ab12cdcf89d8d6d15bc3dde588ca346c8ec78de004a46657a6b94bc3f6825b5bb", "canonical_proof_completed": false},
+      {"seed_index": 13, "completed_iterations": 779, "reconstructed_misses": 35, "logical_value_requests": 1429700, "replay_iterations": 714832, "frontier_probes": 2855468, "frontier_hits": 1423808, "frontier_admissions": 1538, "frontier_replacements": 9, "frontier_rejections": 415, "total_operations": 5000000, "maximum_explicit_stack_depth": 5, "transcript_commitment": "99c323b119a67093de16a2e839ee53f9a86b743f7a0417a081e25a5f8a8e08ed53e262068ecbaed812010d662cb5f29d", "canonical_proof_completed": false},
+      {"seed_index": 14, "completed_iterations": 770, "reconstructed_misses": 33, "logical_value_requests": 1430451, "replay_iterations": 715209, "frontier_probes": 2854340, "frontier_hits": 1420616, "frontier_admissions": 1509, "frontier_replacements": 12, "frontier_rejections": 1755, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "a7aad5f97d4c0a2f1f730d0352d33f2e357370ddb852fc15415bb6ccfb0fccb94ab319bae7f08455d3713ae671aa326b", "canonical_proof_completed": false},
+      {"seed_index": 15, "completed_iterations": 828, "reconstructed_misses": 42, "logical_value_requests": 1429891, "replay_iterations": 714925, "frontier_probes": 2855184, "frontier_hits": 1423005, "frontier_admissions": 1645, "frontier_replacements": 16, "frontier_rejections": 631, "total_operations": 5000000, "maximum_explicit_stack_depth": 6, "transcript_commitment": "9e3ef3fc92800cbdb2c46889c7883f0200f0297a8528ebe242310ac9724c88090dd47417e6e6f9abcd750aaf6a967f41", "canonical_proof_completed": false}
+    ]
+  },
+  "gate_mapping": {
+    "time_memory_tradeoff": "NOT_ASSESSED",
+    "reason": "The fixed vectors and holdout establish deterministic boundaries for this family, but no case emits a canonical proof. A gate assessment still requires an eligible exact attacker, controlled physical-host measurements, and independent review."
+  }
+}

@@ -68,6 +68,8 @@ The newest version removes that hidden recursive call chain. Think of it as repl
 
 We then made the bookmarks smarter. Instead of searching one tray of twelve bookmarks, the attacker uses four labeled drawers for short-, medium-, and long-distance history. A page number points to one place in each drawer, so a lookup always costs four checks. This raises the middle result from step 886 to 945.5 and the best from 952 to 982. One seed falls backward from 952 to 840, and we keep that unfavorable result. Every case again uses all five million tokens, the best still reaches less than 1% of the job, and no case produces a proof.
 
+We have also completed a second kind of half-memory attacker. Instead of saving calculator-state bookmarks, it saves expensive recreated notebook pages. Each page gets two possible lockers. The attacker always checks both and prefers later pages because they usually take more work to recreate. This produced about 1.42 million useful locker hits per case, but the two checks on every access and replay from the beginning still consumed all five million tokens. The eight fresh cases reached steps 714 through 828, with a middle result of 794. The best completed only 0.8423% of the job, and none produced a proof. These cases used different seeds from the bookmark experiment, so the numbers are not a fair speed contest between the two designs.
+
 That is encouraging because reducing memory was very expensive in this experiment. It is not yet proof of memory hardness. A smarter recovery method may exist, and controlled computers have not yet measured the complete process and allocator behavior.
 
 ## Where we are now
@@ -77,8 +79,8 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Bitcoin-derived node and command-line client | Working development foundation |
 | Private two-node lab network | Working in automated tests |
 | Proposed mining workload | Research prototype only |
-| Half-memory attack | Smarter four-level bookmarks improve progress but cannot finish |
-| Independent Python and C++ comparison | Passing for the current experiment |
+| Half-memory attack | Two frozen strategies cannot finish; the newest reaches at most 0.8423% |
+| Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
 | Decentralized pool system | Designed on paper; not implemented end to end |
@@ -87,7 +89,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 
 ## What happens next
 
-The explicit work stack and four-level checkpoint ladder are now implemented. The next engineering step is independent adversarial review and a second bounded-memory attack family whose rules are frozen before results. We should not keep tuning this ladder to the same eight public seeds. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
+The explicit work stack, four-level checkpoint ladder, and second cost-aware frontier strategy are now implemented. The next engineering step is an external attack challenge and independent adversarial review. We should publish the exact byte budget, work counter, proof requirement, and fixed vectors so outside reviewers can try a different bounded strategy. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. The candidate is useful only if independent implementations and hardware testing show that saving memory causes a large enough performance penalty without making verification expensive for ordinary nodes.
 
 Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
 
@@ -102,4 +104,4 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
 
-Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest hierarchical checkpoint-ladder result](pow-v1-hierarchical-checkpoint-ladder.md), and [research ledger](research-ledger.md).
+Readers who want the technical evidence can continue with the [proof-of-work research specification](pow-vm-research.md), [latest cost-aware frontier result](pow-v1-frontier-pebbling-attacker.md), and [research ledger](research-ledger.md).

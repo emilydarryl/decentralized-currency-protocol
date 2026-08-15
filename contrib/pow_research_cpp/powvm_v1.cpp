@@ -63,6 +63,7 @@ constexpr char DOMAIN_OPERATION_BOUNDED_DEPENDENCY_BUNDLE_REGENERATION[] = "Sove
 constexpr char DOMAIN_PHYSICALLY_ACCOUNTED_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/PhysicallyAccountedDependencyBundleRegeneration/v1\0";
 constexpr char DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION[] = "Soveroot/PowResearch/IterativeWorkStackDependencyBundleRegeneration/v1\0";
 constexpr char DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION[] = "Soveroot/PowResearch/HierarchicalCheckpointLadderRegeneration/v1\0";
+constexpr char DOMAIN_FRONTIER_PEBBLING_REGENERATION[] = "Soveroot/PowResearch/FrontierPebblingRegeneration/v1\0";
 constexpr std::size_t BOUNDED_FIXED_STATE_RESERVE_BYTES{512};
 constexpr std::size_t BOUNDED_CACHE_ENTRY_BYTES{16};
 constexpr std::size_t REPLAY_NUMERATOR{5};
@@ -565,6 +566,8 @@ struct RepeatedRecursiveRegenerationResult {
     std::uint64_t checkpoint_lookups{0}, checkpoint_hits{0}, checkpoint_captures{0};
     std::uint64_t checkpoint_replacements{0}, checkpoint_probes{0};
     std::uint64_t operation_limit{0}, total_operations{0};
+    std::uint64_t frontier_probes{0}, frontier_hits{0}, frontier_admissions{0};
+    std::uint64_t frontier_replacements{0}, frontier_rejections{0};
     bool physical_accounting{false};
     bool iterative_accounting{false};
     std::size_t physical_total_budget_bytes{0}, physical_arena_allocation_bytes{0};
@@ -1653,14 +1656,16 @@ public:
             m_layout.primary_cache_capacity * BOUNDED_CACHE_ENTRY_BYTES;
         const std::size_t auxiliary_bytes =
             m_layout.arena_bytes - m_layout.write_bitmap_bytes - m_layout.primary_cache_bytes;
-        m_layout.checkpoint_entry_bytes = dependency_bundles
+        m_layout.checkpoint_entry_bytes = checkpoint_capacity == 0
+            ? 0
+            : dependency_bundles
             ? DEPENDENCY_BUNDLE_ENTRY_BYTES
             : (target_checkpoints ? TARGET_CHECKPOINT_ENTRY_BYTES : CHECKPOINT_ENTRY_BYTES);
         m_layout.checkpoint_capacity = checkpoint_capacity;
         m_layout.checkpoint_bytes = checkpoint_capacity * m_layout.checkpoint_entry_bytes;
         m_layout.checkpoint_stride = checkpoint_stride;
-        if ((checkpoint_capacity == 0) != (checkpoint_stride == 0)) {
-            throw std::invalid_argument("checkpoint capacity and stride must both be zero or positive");
+        if (checkpoint_capacity != 0 && checkpoint_stride == 0) {
+            throw std::invalid_argument("positive checkpoint capacity requires positive stride");
         }
         if (auxiliary_bytes <=
             m_layout.checkpoint_bytes + RECURSIVE_FRAME_BYTES +
@@ -1845,11 +1850,13 @@ public:
         const Bytes& params_bytes,
         std::uint64_t work_limit,
         std::uint64_t operation_limit = 0,
-        bool hierarchical_checkpoint_ladder = false)
+        bool hierarchical_checkpoint_ladder = false,
+        bool frontier_pebbling = false)
         : m_owner(owner), m_context(context), m_header_digest(header_digest),
           m_nonce_bytes(nonce_bytes), m_params_bytes(params_bytes), m_work_limit(work_limit),
           m_operation_limit(operation_limit),
-          m_hierarchical_checkpoint_ladder(hierarchical_checkpoint_ladder)
+          m_hierarchical_checkpoint_ladder(hierarchical_checkpoint_ladder),
+          m_frontier_pebbling(frontier_pebbling)
     {
     }
 
@@ -2124,6 +2131,8 @@ public:
     std::uint64_t memo_evictions{0}, memo_probes{0}, memo_shifted_bytes{0};
     std::uint64_t checkpoint_lookups{0}, checkpoint_hits{0}, checkpoint_captures{0};
     std::uint64_t checkpoint_replacements{0}, checkpoint_probes{0};
+    std::uint64_t frontier_probes{0}, frontier_hits{0}, frontier_admissions{0};
+    std::uint64_t frontier_replacements{0}, frontier_rejections{0};
     std::uint64_t total_operations{0};
 
 private:
@@ -2228,6 +2237,7 @@ private:
         MachineState& state)
     {
         const RecursiveLayout& layout = m_owner.Layout();
+        if (m_frontier_pebbling) return false;
         if (layout.checkpoint_capacity == 0) return false;
         ++checkpoint_lookups;
         if (m_hierarchical_checkpoint_ladder) {
@@ -2366,6 +2376,7 @@ private:
         const MachineState& state)
     {
         const RecursiveLayout& layout = m_owner.Layout();
+        if (m_frontier_pebbling) return;
         if (layout.checkpoint_capacity == 0 || stop == 0) return;
         if (!m_hierarchical_checkpoint_ladder && stop % layout.checkpoint_stride != 0) return;
         const bool dependency_bundles =
@@ -2472,6 +2483,26 @@ private:
         std::uint64_t stop, std::uint64_t word, std::uint64_t depth,
         std::uint64_t& value)
     {
+        if (m_frontier_pebbling) {
+            const std::uint32_t key = m_owner.MemoKey(stop, word);
+            const auto candidates = FrontierCandidates(key);
+            bool found{false};
+            for (const std::size_t slot : candidates) {
+                ChargeOperation(stop, word, depth);
+                ++memo_probes;
+                ++frontier_probes;
+                const std::size_t offset = FrontierOffset(slot);
+                if (!found && ReadLE32(m_owner.Arena().data() + offset) == key) {
+                    value = ReadLE64(m_owner.Arena().data() + offset + 4);
+                    found = true;
+                }
+            }
+            if (found) {
+                ++cache_hits;
+                ++frontier_hits;
+            }
+            return found;
+        }
         ChargeOperation(stop, word, depth);
         ++memo_probes;
         const std::uint32_t key = m_owner.MemoKey(stop, word);
@@ -2491,6 +2522,48 @@ private:
         std::uint64_t stop, std::uint64_t word, std::uint64_t value,
         std::uint64_t depth)
     {
+        if (m_frontier_pebbling) {
+            const std::uint32_t key = m_owner.MemoKey(stop, word);
+            const auto candidates = FrontierCandidates(key);
+            std::array<std::uint32_t, 2> stored{};
+            for (std::size_t i{0}; i < candidates.size(); ++i) {
+                ChargeOperation(stop, word, depth);
+                ++memo_probes;
+                ++frontier_probes;
+                stored[i] = ReadLE32(
+                    m_owner.Arena().data() + FrontierOffset(candidates[i]));
+            }
+            std::size_t selected{2};
+            for (std::size_t i{0}; i < stored.size(); ++i) {
+                if (stored[i] == key) { selected = i; break; }
+            }
+            if (selected == 2) {
+                for (std::size_t i{0}; i < stored.size(); ++i) {
+                    if (stored[i] == RECURSIVE_EMPTY_MEMO_KEY) {
+                        selected = i;
+                        ++memo_entries;
+                        memo_peak_entries = std::max(memo_peak_entries, memo_entries);
+                        ++frontier_admissions;
+                        break;
+                    }
+                }
+            }
+            if (selected == 2) {
+                const std::uint32_t first_stop = stored[0] >> RECURSIVE_MEMO_WORD_BITS;
+                const std::uint32_t second_stop = stored[1] >> RECURSIVE_MEMO_WORD_BITS;
+                selected = first_stop <= second_stop ? 0 : 1;
+                if (stop <= (stored[selected] >> RECURSIVE_MEMO_WORD_BITS)) {
+                    ++frontier_rejections;
+                    return;
+                }
+                ++memo_evictions;
+                ++frontier_replacements;
+            }
+            const std::size_t offset = FrontierOffset(candidates[selected]);
+            WriteLE32(m_owner.Arena().data() + offset, key);
+            WriteLE64(m_owner.Arena().data() + offset + 4, value);
+            return;
+        }
         ChargeOperation(stop, word, depth);
         ++memo_probes;
         const std::uint32_t key = m_owner.MemoKey(stop, word);
@@ -2525,6 +2598,24 @@ private:
     std::uint64_t m_work_limit;
     std::uint64_t m_operation_limit;
     bool m_hierarchical_checkpoint_ladder;
+    bool m_frontier_pebbling;
+
+    std::array<std::size_t, 2> FrontierCandidates(std::uint32_t key) const
+    {
+        const std::size_t capacity = m_owner.Layout().memo_capacity;
+        const std::uint32_t first_mixed = key * std::uint32_t{0x9E3779B1U};
+        const std::size_t first = first_mixed % capacity;
+        const std::uint32_t spread_mixed =
+            (key ^ (key >> 16)) * std::uint32_t{0x85EBCA6BU};
+        const std::size_t spread = spread_mixed % (capacity - 1);
+        return {first, (first + 1 + spread) % capacity};
+    }
+
+    std::size_t FrontierOffset(std::size_t slot) const
+    {
+        return m_owner.MemoSetOffset(slot / RECURSIVE_MEMO_WAYS,
+                                     slot % RECURSIVE_MEMO_WAYS);
+    }
 };
 
 class PackedReplayExhausted final : public std::runtime_error {
@@ -4308,13 +4399,14 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     std::size_t external_reserve_bytes = 0,
     bool rolling_transcript = false,
     bool iterative_work_stack = false,
-    bool hierarchical_checkpoint_ladder = false)
+    bool hierarchical_checkpoint_ladder = false,
+    bool frontier_pebbling = false)
 {
     Validate(context.seed, context.params);
     if (header.empty() || header.size() > MAX_HEADER_BYTES) {
         throw std::invalid_argument("header size is outside the v1 research envelope");
     }
-    if (iterative_work_stack && !dependency_bundles) {
+    if (iterative_work_stack && !dependency_bundles && !frontier_pebbling) {
         throw std::invalid_argument("iterative work stack requires dependency bundles");
     }
     if (hierarchical_checkpoint_ladder && !iterative_work_stack) {
@@ -4323,6 +4415,12 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     if (hierarchical_checkpoint_ladder &&
         checkpoint_capacity != HIERARCHICAL_CHECKPOINT_CAPACITY) {
         throw std::invalid_argument("hierarchical checkpoint capacity must match frozen levels");
+    }
+    if (frontier_pebbling && checkpoint_capacity != 0) {
+        throw std::invalid_argument("frontier pebbling forbids machine-state checkpoints");
+    }
+    if (frontier_pebbling && dependency_bundles) {
+        throw std::invalid_argument("frontier pebbling forbids dependency bundles");
     }
     const Bytes params_bytes = EncodeParams(context.params);
     Bytes nonce_bytes;
@@ -4343,7 +4441,7 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
         external_reserve_bytes);
     RecursiveRegenerator regenerator(
         arena, context, header_digest, nonce_bytes, params_bytes, work_limit,
-        operation_limit, hierarchical_checkpoint_ladder);
+        operation_limit, hierarchical_checkpoint_ladder, frontier_pebbling);
     if (
         rolling_transcript
         && arena.ArenaCapacityBytes() >
@@ -4361,7 +4459,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     result.physical_total_budget_bytes = context.params.scratchpad_bytes / 2;
     result.physical_arena_allocation_bytes = arena.Layout().arena_bytes;
     result.layout = arena.Layout();
-    if (dependency_bundles && hierarchical_checkpoint_ladder) {
+    if (frontier_pebbling) {
+        result.status = "refused_frontier_pebbling_exhausted";
+    } else if (dependency_bundles && hierarchical_checkpoint_ladder) {
         result.status = "refused_hierarchical_checkpoint_ladder_exhausted";
     } else if (dependency_bundles && iterative_work_stack) {
         result.status = "refused_iterative_work_stack_dependency_bundle_exhausted";
@@ -4376,7 +4476,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     } else if (checkpoint_capacity != 0) {
         result.status = "refused_checkpoint_regeneration_exhausted";
     }
-    Bytes transcript_input = dependency_bundles && hierarchical_checkpoint_ladder
+    Bytes transcript_input = frontier_pebbling
+        ? DomainBytes(DOMAIN_FRONTIER_PEBBLING_REGENERATION)
+        : dependency_bundles && hierarchical_checkpoint_ladder
         ? DomainBytes(DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION)
         : dependency_bundles && iterative_work_stack
         ? DomainBytes(DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION)
@@ -4395,7 +4497,9 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
 
     auto boundary_commitment = [&](const BoundedReadMiss& miss,
                                    const std::uint64_t* value) {
-        Bytes encoded = dependency_bundles && hierarchical_checkpoint_ladder
+        Bytes encoded = frontier_pebbling
+            ? DomainBytes(DOMAIN_FRONTIER_PEBBLING_REGENERATION)
+            : dependency_bundles && hierarchical_checkpoint_ladder
             ? DomainBytes(DOMAIN_HIERARCHICAL_CHECKPOINT_LADDER_REGENERATION)
             : dependency_bundles && iterative_work_stack
             ? DomainBytes(DOMAIN_ITERATIVE_WORK_STACK_DEPENDENCY_BUNDLE_REGENERATION)
@@ -4563,6 +4667,11 @@ RepeatedRecursiveRegenerationResult ProbeRepeatedRecursiveRegeneration(
     result.checkpoint_captures = regenerator.checkpoint_captures;
     result.checkpoint_replacements = regenerator.checkpoint_replacements;
     result.checkpoint_probes = regenerator.checkpoint_probes;
+    result.frontier_probes = regenerator.frontier_probes;
+    result.frontier_hits = regenerator.frontier_hits;
+    result.frontier_admissions = regenerator.frontier_admissions;
+    result.frontier_replacements = regenerator.frontier_replacements;
+    result.frontier_rejections = regenerator.frontier_rejections;
     result.total_operations = regenerator.total_operations;
     result.transcript_commitment = rolling_transcript
         ? rolling_transcript_digest : Sha3_384(transcript_input);
@@ -5253,11 +5362,19 @@ void PrintRepeatedRecursiveRegeneration(
     std::uint64_t operation_limit = REGENERATION_OPERATION_LIMIT,
     bool physically_accounted = false,
     bool iterative_work_stack = false,
-    bool hierarchical_checkpoint_ladder = false)
+    bool hierarchical_checkpoint_ladder = false,
+    bool frontier_pebbling = false)
 {
-    const bool has_checkpoints = checkpoints || target_checkpoints || dependency_bundles;
+    const bool has_checkpoints =
+        checkpoints || target_checkpoints || dependency_bundles || frontier_pebbling;
     const RepeatedRecursiveRegenerationResult r =
-        dependency_bundles
+        frontier_pebbling
+        ? ProbeRepeatedRecursiveRegeneration(
+              PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
+              1, 128, 0, 1, false, false,
+              operation_bounded ? operation_limit : 0,
+              ITERATIVE_EXTERNAL_RESERVE_BYTES, true, true, false, true)
+        : dependency_bundles
         ? ProbeRepeatedRecursiveRegeneration(
               PrepareEpoch(seed, params), header, nonce, RECURSIVE_WORK_LIMIT,
               1, 128,
@@ -5305,7 +5422,9 @@ void PrintRepeatedRecursiveRegeneration(
     };
     std::cout << "{\n"
               << "  \"format\": \""
-              << (hierarchical_checkpoint_ladder
+              << (frontier_pebbling
+                  ? "soveroot-pow-v1-frontier-pebbling-attacker-v0"
+                  : hierarchical_checkpoint_ladder
                   ? "soveroot-pow-v1-hierarchical-checkpoint-ladder-v0"
                   : iterative_work_stack
                   ? "soveroot-pow-v1-iterative-work-stack-regeneration-v0"
@@ -5322,7 +5441,9 @@ void PrintRepeatedRecursiveRegeneration(
                       : "soveroot-pow-v1-repeated-recursive-regeneration-v0"))
               << "\",\n"
               << "  \"warning\": \""
-              << (hierarchical_checkpoint_ladder
+              << (frontier_pebbling
+                  ? "NON-CONSENSUS FRONTIER-PEBBLING ATTACK PILOT; no completed proof or gate result"
+                  : hierarchical_checkpoint_ladder
                   ? "NON-CONSENSUS HIERARCHICAL CHECKPOINT-LADDER PILOT; no completed proof or gate result"
                   : iterative_work_stack
                   ? "NON-CONSENSUS ITERATIVE WORK-STACK DEPENDENCY-BUNDLE PILOT; no completed proof or gate result"
@@ -5451,6 +5572,17 @@ void PrintRepeatedRecursiveRegeneration(
                       << ", \"base_slot\": " << level.base_slot << "}";
         }
         std::cout << "],\n";
+    }
+    if (frontier_pebbling) {
+        std::cout
+            << "  \"frontier_metrics\": {\"frontier_capacity\": "
+            << l.memo_capacity
+            << ", \"frontier_probes\": " << r.frontier_probes
+            << ", \"frontier_hits\": " << r.frontier_hits
+            << ", \"frontier_admissions\": " << r.frontier_admissions
+            << ", \"frontier_replacements\": " << r.frontier_replacements
+            << ", \"frontier_rejections\": " << r.frontier_rejections
+            << "},\n";
     }
     std::cout << "  \"first_reconstruction\": ";
     if (r.has_first) print_boundary(r.first_reconstruction); else std::cout << "null";
@@ -6045,6 +6177,22 @@ int main(int argc, char* argv[])
 {
     try {
         if ((argc == 8 || argc == 9) &&
+            std::string_view{argv[1]} == "recursive-regenerate-frontier-pebbling") {
+            const Bytes seed = ParseHex(argv[2]);
+            const Bytes header = ParseHex(argv[3]);
+            const std::uint64_t nonce = std::stoull(argv[4]);
+            const Params params{ParseSize(argv[5]), ParseSize(argv[6]), ParseSize(argv[7])};
+            const std::uint64_t operation_limit = argc == 9
+                ? std::stoull(argv[8]) : REGENERATION_OPERATION_LIMIT;
+            if (operation_limit == 0) {
+                throw std::invalid_argument("operation limit must be positive");
+            }
+            PrintRepeatedRecursiveRegeneration(
+                seed, header, nonce, params, false, false, false, true,
+                operation_limit, false, true, false, true);
+            return 0;
+        }
+        if ((argc == 8 || argc == 9) &&
             std::string_view{argv[1]} == "recursive-regenerate-hierarchical-checkpoint-ladder") {
             const Bytes seed = ParseHex(argv[2]);
             const Bytes header = ParseHex(argv[3]);
@@ -6288,6 +6436,7 @@ int main(int argc, char* argv[])
                       << "   or: powvm_v1_cpp recursive-regenerate-physically-accounted-bundle SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-iterative-work-stack SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp recursive-regenerate-hierarchical-checkpoint-ladder SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
+                      << "   or: powvm_v1_cpp recursive-regenerate-frontier-pebbling SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES [OPERATION_LIMIT]\n"
                       << "   or: powvm_v1_cpp half-spill SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp benchmark-half-spill SEED_HEX HEADER_HEX FIRST_NONCE ATTEMPTS DATASET_BYTES SCRATCHPAD_BYTES PASSES SPILL_DIRECTORY\n"
                       << "   or: powvm_v1_cpp half-recompute SEED_HEX HEADER_HEX NONCE DATASET_BYTES SCRATCHPAD_BYTES PASSES\n"
