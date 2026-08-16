@@ -20,6 +20,12 @@ bool IsChainAllowedByIsolationInterlock(const ChainType chain)
     return chain == ChainType::LABNET;
 }
 
+std::string ChainIsolationError()
+{
+    return "Inherited Bitcoin networks, including Bitcoin regtest, are disabled in this "
+           "experimental fork. Use -chain=labnet for isolated project development.";
+}
+
 std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn settings_abort_fn)
 {
     try {
@@ -51,9 +57,7 @@ std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn setting
         if (!IsChainAllowedByIsolationInterlock(chain)) {
             return ConfigError{
                 ConfigStatus::FAILED,
-                Untranslated(
-                    "Inherited Bitcoin networks, including Bitcoin regtest, are disabled in this "
-                    "experimental fork. Use -chain=labnet for isolated project development.")};
+                Untranslated(ChainIsolationError())};
         }
         SelectParams(chain);
 

@@ -318,7 +318,7 @@ if(BUILD_DAEMON)
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  install_binary_component(bitcoind)
+  install_binary_component(bitcoind HAS_MANPAGE MANPAGE sovrd)
 endif()
 if(ENABLE_IPC AND BUILD_DAEMON)
   add_executable(bitcoin-node
@@ -360,7 +360,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  install_binary_component(bitcoin-cli)
+  install_binary_component(bitcoin-cli HAS_MANPAGE MANPAGE sovr-cli)
 endif()
 
 

@@ -1,6 +1,6 @@
 # Soveroot Branding v1
 
-Status: Adopted engineering identity; formal legal clearance pending
+Status: Adopted engineering identity and CLI manual milestone; formal legal clearance pending
 
 ## Public names
 
@@ -19,13 +19,17 @@ The built daemon and RPC client are named `sovrd` and `sovr-cli`. Their internal
 
 The inherited `bitcoin` wrapper remains an internal compatibility surface, but its monolithic node and RPC commands launch the Soveroot executable names.
 
-Renamed manual pages are intentionally not installed in this milestone because the inherited pages still document the old command names. Correct Soveroot manual pages must be produced before release packaging is enabled.
+The public daemon and RPC client now install `sovrd(1)` and `sovr-cli(1)` manual pages under the same names users execute. The manual generator follows the built output names instead of looking for nonexistent `bitcoind` and `bitcoin-cli` binaries. CMake keeps the inherited internal target names but maps each target to its public manual explicitly, and configuration fails if a declared manual is missing.
+
+Both manuals fail closed in their examples and safety text: they require explicit `-chain=labnet`, state that labnet has no monetary value, and state that the proposed proof-of-work candidate is not in consensus. The RPC client now applies the same chain-isolation interlock as the daemon, preventing `sovr-cli` from controlling an inherited Bitcoin-network endpoint under a Soveroot name.
+
+The inherited auxiliary tools keep their upstream names and manuals in this milestone. Production release packaging remains blocked by the broader readiness gates, data-path migration, legal review, and independent consensus research; installing accurate daemon and CLI manuals does not make the software production-ready.
 
 ## Deliberately deferred identifiers
 
 This branding milestone does not change consensus-critical or network-separation values. The following remain unchanged until a dedicated, reviewed migration defines compatibility and test vectors:
 
-- configuration filename and base data-directory convention;
+- configuration filename and base data-directory convention (the new manuals disclose the inherited `bitcoin.conf` filename rather than hiding it);
 - the `dcp-labnet` on-disk network directory;
 - the `dcprt` labnet address human-readable prefix;
 - labnet message magic, ports, genesis block, and genesis timestamp text;

@@ -60,6 +60,7 @@ jobs:
             cmake \
             libboost-dev \
             libevent-dev \
+            help2man \
             libsqlite3-dev \
             ninja-build \
             pkgconf
@@ -194,6 +195,32 @@ jobs:
           test ! -e build/bin/bitcoin-cli
           build/bin/sovrd -chain=labnet -version
           build/bin/sovr-cli -chain=labnet -version
+
+      - name: Verify fail-closed CLI chain selection
+        shell: bash
+        run: |
+          if build/bin/sovr-cli -chain=main getblockcount 2>build/sovr-cli-main.err; then
+            echo "sovr-cli unexpectedly accepted inherited mainnet selection"
+            exit 1
+          fi
+          grep -F -- "Use -chain=labnet for isolated project development." build/sovr-cli-main.err
+
+      - name: Verify Soveroot manual generation and installation
+        shell: bash
+        run: |
+          mkdir -p build/generated-man build/stage
+          BUILDDIR="$PWD/build" MANDIR="$PWD/build/generated-man" \
+            python3 contrib/devtools/gen-manpages.py --skip-missing-binaries
+          test -s build/generated-man/sovrd.1
+          test -s build/generated-man/sovr-cli.1
+          grep -F -- "-chain=labnet" build/generated-man/sovrd.1
+          grep -F -- "-chain=labnet" build/generated-man/sovr-cli.1
+          cmake --install build --prefix "$PWD/build/stage" --component bitcoind
+          cmake --install build --prefix "$PWD/build/stage" --component bitcoin-cli
+          test -s build/stage/share/man/man1/sovrd.1
+          test -s build/stage/share/man/man1/sovr-cli.1
+          test ! -e build/stage/share/man/man1/bitcoind.1
+          test ! -e build/stage/share/man/man1/bitcoin-cli.1
 
       - name: Run project isolation unit tests
         shell: bash

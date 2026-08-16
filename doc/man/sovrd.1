@@ -1,0 +1,74 @@
+.TH SOVRD "1" "August 2026" "Soveroot experimental node" "User Commands"
+.SH NAME
+sovrd \- run the experimental Soveroot node daemon
+.SH SYNOPSIS
+.B sovrd
+.B \-chain=labnet
+.RI [ options ]
+.SH DESCRIPTION
+.B sovrd
+is the headless daemon for the experimental Soveroot reference implementation.
+It validates and relays blocks and transactions and exposes RPC, REST, and
+optional ZMQ services.
+.PP
+This build can start only the isolated, non-production
+.BR labnet .
+The chain must be selected explicitly with
+.BR \-chain=labnet .
+Inherited Bitcoin mainnet, testnet, signet, and regtest parameters are retained
+only as non-startable compatibility fixtures and are rejected by the application
+isolation interlock. Labnet coins have no monetary value.
+.PP
+The proposed Soveroot proof-of-work candidate is isolated research code and is
+not part of labnet consensus. Run
+.B sovrd \-help
+for the complete option list emitted by this build.
+.SH COMMON OPTIONS
+.TP
+.B \-chain=labnet
+Select the only startable network in this experimental fork.
+.TP
+.B \-conf=FILE
+Read configuration from FILE. The inherited default filename remains
+.I bitcoin.conf
+until a separately reviewed data-path migration is adopted.
+.TP
+.B \-datadir=DIR
+Store node data beneath DIR. Labnet data uses the
+.I dcp-labnet
+network subdirectory.
+.TP
+.B \-daemon
+Run in the background where supported.
+.TP
+.B \-help
+Print the complete, build-specific help text and exit.
+.TP
+.B \-version
+Print version and licensing information and exit.
+.SH EXAMPLES
+Start an isolated labnet daemon:
+.PP
+.EX
+sovrd -chain=labnet -daemon
+.EE
+.PP
+Query it with the RPC client:
+.PP
+.EX
+sovr-cli -chain=labnet getblockchaininfo
+.EE
+.SH SAFETY
+Soveroot is experimental software. This repository does not provide a live
+monetary network, production release, token sale, or security guarantee. Do not
+use labnet wallets or keys to protect assets of value.
+.SH COPYRIGHT
+Copyright (C) 2009-2026 The Bitcoin Core developers
+.br
+Copyright (C) 2026 The Soveroot developers
+.PP
+Distributed under the MIT software license; see the accompanying
+.I COPYING
+file.
+.SH SEE ALSO
+.BR sovr-cli (1)
