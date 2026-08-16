@@ -4,6 +4,8 @@ Status: **OPEN NON-CONSENSUS RESEARCH CHALLENGE; NO GATE ASSESSED**
 
 Soveroot is inviting independent researchers to break its experimental proof-of-work design. The target is not Bitcoin, a live Soveroot network, or real funds. It is the isolated v1 research workload described in [the candidate specification](pow-v1-candidate-spec.md).
 
+New participants should begin with the [public independent-research call](pow-v1-independent-research-call.md). Evaluators handling source, accounting, or untrusted execution should also follow the [external evaluator runbook](pow-v1-external-evaluator-runbook.md).
+
 The challenge asks a narrow question: can an exact miner use no more than 131,072 bytes of mutable per-attempt attack memory—half the standard scratchpad—and still produce the same canonical proof as the ordinary evaluator at a practical cost?
 
 No prize or bounty is currently offered. A missing submission, failed submission, or elapsed period without a published attack is not evidence that the design is secure.

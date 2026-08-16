@@ -1,0 +1,73 @@
+{
+  "format": "soveroot-pow-v1-independent-research-call-v0",
+  "version": "0.1",
+  "status": "OPEN",
+  "scope": "isolated non-consensus proof-of-work research",
+  "opened_on": "2026-08-15",
+  "challenge": {
+    "path": "contrib/pow_research_v1/external_attack_challenge_v0.json",
+    "version": "0.1",
+    "memory_budget_bytes": 131072,
+    "fresh_cases_per_track": 8,
+    "screening_operation_limit": 5000000,
+    "completion_operation_limit": null
+  },
+  "entry_points": {
+    "researcher_guide": "docs/pow-v1-independent-research-call.md",
+    "challenge_guide": "docs/pow-v1-external-attack-challenge.md",
+    "evaluator_runbook": "docs/pow-v1-external-evaluator-runbook.md",
+    "submission_template": ".github/ISSUE_TEMPLATE/pow-attack-submission.md",
+    "evaluator_template": ".github/ISSUE_TEMPLATE/pow-attack-evaluator.md",
+    "submission_manifest_template": "contrib/pow_research_v1/external_attack_submission_template_v0.json",
+    "results_template": "contrib/pow_research_v1/external_attack_results_template_v0.json",
+    "qualification_cases": "contrib/pow_research_v1/vectors/external_attack_qualification_v0.json"
+  },
+  "roles": {
+    "attacker": "Develop and disclose an attack strategy, source, manifest, accounting, build, results, limitations, and relationships to prior work.",
+    "case_evaluator": "Commit to a unique private salt before source freeze, reveal it after freeze, and publish the reproducible fresh case set.",
+    "code_reviewer": "Inspect every mutable allocation, worker, external dependency, forbidden capability, and charged operation.",
+    "execution_reviewer": "Build and run reviewed code only in a disposable network-disabled environment and retain complete evidence.",
+    "evidence_reviewer": "Validate artifacts and independently recompute every claimed canonical proof."
+  },
+  "tracks": [
+    "screening",
+    "completion"
+  ],
+  "independence_policy": {
+    "required_disclosures": [
+      "copied code",
+      "shared authorship",
+      "prior collaboration",
+      "private coordination",
+      "financial or employment conflicts",
+      "conceptual dependence on repository attacks"
+    ],
+    "separately_developed_model": "A language port, parameter change, or direct derivative is useful evidence but does not count as a separately developed second attack model.",
+    "pseudonymous_participation": true
+  },
+  "safety_policy": {
+    "execute_submissions_in_project_ci": false,
+    "required_execution_environment": "disposable and network-disabled",
+    "forbid_credentials_and_personal_data": true,
+    "treat_dependencies_as_untrusted": true
+  },
+  "reward_policy": {
+    "bounty_offered": false,
+    "prize_offered": false,
+    "token_allocation_offered": false,
+    "compensation_guaranteed": false
+  },
+  "public_counts": {
+    "submissions_received": 0,
+    "qualification_passes": 0,
+    "fresh_case_sets_issued": 0,
+    "exact_eligible_proofs": 0
+  },
+  "evidence_policy": {
+    "retain_all_rows": true,
+    "no_success_is_security_proof": false,
+    "artifact_validation_proves_physical_memory": false,
+    "current_gate_state": "OPEN",
+    "current_gate_assessment": "NOT_ASSESSED"
+  }
+}

@@ -20,6 +20,8 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 Start with [Mining Decentralization in Plain English](docs/mining-decentralization-in-plain-english.md). It explains the problem, the proposed hardware and pool safeguards, what the latest experiment actually showed, and what remains unfinished without requiring a mining or programming background.
 
+Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
+
 ## Documents
 
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
@@ -53,6 +55,8 @@ Start with [Mining Decentralization in Plain English](docs/mining-decentralizati
 - [pow-v1-hierarchical-checkpoint-ladder.md](docs/pow-v1-hierarchical-checkpoint-ladder.md) gives the bounded attacker four directly addressed checkpoint time scales and records the stronger but still incomplete eight-seed attack.
 - [pow-v1-frontier-pebbling-attacker.md](docs/pow-v1-frontier-pebbling-attacker.md) tests a second frozen half-memory strategy that retains expensive-to-recreate historical values instead of machine-state checkpoints.
 - [pow-v1-external-attack-challenge.md](docs/pow-v1-external-attack-challenge.md) publishes the bounded-memory attacker contract, qualification cases, fresh-case process, accounting rules, and decision policy for independent researchers.
+- [pow-v1-independent-research-call.md](docs/pow-v1-independent-research-call.md) is the public entry point for independent attackers and evaluators.
+- [pow-v1-external-evaluator-runbook.md](docs/pow-v1-external-evaluator-runbook.md) defines conflict disclosure, commit-reveal administration, source and accounting review, isolated execution, and evidence publication.
 - [research-results](docs/research-results/README.md) preserves raw measurements and explicitly scoped reports, including unfavorable findings.
 - [references.md](docs/references.md) lists the primary standards and research that informed the draft. It is non-normative.
 - [upstreams.md](docs/implementation/upstreams.md) pins the inherited Bitcoin Core baseline and Knots patch source.
