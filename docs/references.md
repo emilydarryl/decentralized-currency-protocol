@@ -7,6 +7,7 @@ These sources informed the v0.1 working draft. Their inclusion does not import t
 - Satoshi Nakamoto, [Bitcoin: A Peer-to-Peer Electronic Cash System](https://bitcoin.org/bitcoin.pdf).
 - Bitcoin Core, [reference implementation repository](https://github.com/bitcoin/bitcoin).
 - Bitcoin Knots, [implementation repository](https://github.com/bitcoinknots/bitcoin).
+- Bitcoin Knots, [draft BLAKE2b proof-of-work hard fork and XOR-key withholding construction](https://github.com/bitcoinknots/bitcoin/pull/359), reviewed at commit [`4e683f13f45093fcdac52e4f4762999e44ab12e1`](https://github.com/bitcoinknots/bitcoin/commit/4e683f13f45093fcdac52e4f4762999e44ab12e1).
 - Bitcoin Improvement Proposals repository, [BIP process and specifications](https://github.com/bitcoin/bips).
 - Bitcoin BIP 9, [Version bits with timeout and delay](https://github.com/bitcoin/bips/blob/master/bip-0009.mediawiki).
 - Bitcoin BIP 8, [Version bits with lock-in by height](https://github.com/bitcoin/bips/blob/master/bip-0008.mediawiki).

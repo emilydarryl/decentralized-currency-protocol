@@ -64,6 +64,14 @@ The thread does not define:
 
 Until those artifacts exist and are reviewed, the thread is a public design signal rather than a deployable protocol.
 
+## Later implementation evidence: Knots PR #359
+
+Bitcoin Knots [pull request #359](https://github.com/bitcoinknots/bitcoin/pull/359) now provides substantially more evidence than the August 11 social-media selection. The reviewed draft at commit [`4e683f13f45093fcdac52e4f4762999e44ab12e1`](https://github.com/bitcoinknots/bitcoin/commit/4e683f13f45093fcdac52e4f4762999e44ab12e1) defines a 164-byte version-two block header, four BLAKE2b ASIC input profiles, expanded nonce fields, a transaction-count commitment, a merge-mining hook, a one-time activation difficulty shift, test vectors, and an opt-in XOR-key construction intended to reduce worker block withholding.
+
+This changes the proposal from an algorithm label into a concrete external implementation experiment. It does not close Soveroot's proof-of-work gate. The pull request remains an unfinished draft, its claimed vendor compatibility is not yet mapped to a reviewable hardware table, and fixed ASIC profiles do not prevent operators from converging on the most efficient profile or new hardware.
+
+The XOR-key idea is being evaluated separately in the [XOR-Key Block-Withholding Study](xor-key-block-withholding-study.md). It may make selective sabotage by a pool worker harder, but the coordinator-held secret conflicts with Soveroot's requirement that a miner be able to publish a discovered block directly. Soveroot will not import the header or consensus code while that conflict remains unresolved.
+
 ## BLAKE2b decentralization assessment
 
 BLAKE2b is a well-known hash construction, but choosing a respected hash does not establish a decentralized proof of work. Proof-of-work centralization depends on the complete construction, hardware market, memory and bandwidth requirements, miner software, difficulty adjustment, pool protocol, energy economics, and supply chain.
@@ -140,6 +148,7 @@ This assessment creates the following bounded work items:
 5. Add cross-network and replay-safety vectors before any public-value network exists.
 6. Maintain an external-fork observation log using reproducible measurements and immutable source links.
 7. Keep the final PoW selection and difficulty formula as mainnet blockers.
+8. Evaluate the PR #359 XOR-key withholding construction without weakening miner-created templates, direct publication, or coordinator fallback.
 
 ## Plain-language conclusion
 
