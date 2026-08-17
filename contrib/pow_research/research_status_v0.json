@@ -69,7 +69,7 @@
       "id": "template_autonomy",
       "state": "OPEN",
       "assessment": "NOT_ASSESSED",
-      "gap": "The profile is specified but two interoperable mining implementations have not demonstrated it."
+      "gap": "One packaged labnet miner builds and directly publishes a block outside the daemon without a coordinator, but a second interoperable implementation, coordinator-failure proof, noncustodial payout path, and Stratum V2 or Job Declaration integration are absent."
     }
   ],
   "latest_evidence": [

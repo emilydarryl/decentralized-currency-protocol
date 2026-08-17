@@ -12,6 +12,7 @@ BIN_DIR="${SOVEROOT_BIN_DIR:-${SCRIPT_DIR}/bin}"
 DATA_DIR="${SOVEROOT_LABNET_HOME:-${HOME:?HOME must be set}/.soveroot-labnet-kit}"
 SOVRD="${BIN_DIR}/sovrd"
 SOVR_CLI="${BIN_DIR}/sovr-cli"
+AUTONOMY_MINER="${SOVEROOT_AUTONOMY_MINER:-${SCRIPT_DIR}/libexec/autonomous_labnet_miner.py}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
 COMMON_ARGS=(-chain=labnet "-datadir=${DATA_DIR}" "-conf=${CONFIG_FILE}")
 
@@ -26,6 +27,8 @@ Commands:
   status              Show chain status and loaded wallets.
   demo                Create miner/receiver wallets, mine test coins,
                       send one coin, and mine its confirmation.
+  autonomy-demo       Build, solve, and directly submit one block outside
+                      the daemon, without a pool coordinator.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -47,6 +50,11 @@ die() {
 require_binaries() {
     [[ -x "${SOVRD}" ]] || die "${SOVRD} is missing or not executable"
     [[ -x "${SOVR_CLI}" ]] || die "${SOVR_CLI} is missing or not executable"
+}
+
+require_autonomy_miner() {
+    command -v python3 >/dev/null 2>&1 || die "python3 is required for autonomy-demo"
+    [[ -r "${AUTONOMY_MINER}" ]] || die "${AUTONOMY_MINER} is missing or unreadable"
 }
 
 write_config() {
@@ -157,6 +165,27 @@ command_demo() {
     printf '%s\n' 'Demo complete. Labnet coins have no monetary value.'
 }
 
+command_autonomy_demo() {
+    require_binaries
+    require_autonomy_miner
+    require_running
+    ensure_wallet miner
+
+    local address before_height after_height
+    address="$(wallet_call miner getnewaddress)"
+    before_height="$(cli_call getblockcount)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${address}"
+    after_height="$(cli_call getblockcount)"
+    [[ "${after_height}" -eq "$((before_height + 1))" ]] || die "autonomous block did not advance the chain by one"
+    printf '%s\n' 'No pool coordinator was used: the external miner built and published this block directly.'
+    printf '%s\n' 'Labnet uses inherited easy development proof of work; this is not the final Soveroot PoW.'
+}
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -187,6 +216,10 @@ case "${command}" in
     demo)
         [[ "$#" -eq 1 ]] || die "demo takes no arguments"
         command_demo
+        ;;
+    autonomy-demo)
+        [[ "$#" -eq 1 ]] || die "autonomy-demo takes no arguments"
+        command_autonomy_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"

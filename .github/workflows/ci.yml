@@ -51,12 +51,17 @@ jobs:
         shell: bash
         run: python3 -m unittest discover -s test/pow_research -p 'test_*.py'
 
+      - name: Run labnet mining-autonomy tests
+        shell: bash
+        run: python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
+
       - name: Check Labnet Kit helper scripts
         shell: bash
         run: |
           bash -n contrib/labnet-kit/soveroot-labnet
           bash -n contrib/labnet-kit/package-linux.sh
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "local test-only node"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "autonomy-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -252,6 +257,7 @@ jobs:
           tar -xzf "$archive" -C build/labnet-kit-extract
           kit="$(find build/labnet-kit-extract -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -x "$kit/soveroot-labnet"
+          test -x "$kit/libexec/autonomous_labnet_miner.py"
           export SOVEROOT_LABNET_HOME="$PWD/build/labnet-kit-runtime"
           cleanup() { "$kit/soveroot-labnet" stop >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -259,6 +265,10 @@ jobs:
           demo_output="$("$kit/soveroot-labnet" demo)"
           printf '%s\n' "$demo_output"
           grep -F -- "Receiver balance: 1" <<<"$demo_output"
+          autonomy_output="$("$kit/soveroot-labnet" autonomy-demo)"
+          printf '%s\n' "$autonomy_output"
+          grep -F -- "Autonomous external block accepted:" <<<"$autonomy_output"
+          grep -F -- "No pool coordinator was used" <<<"$autonomy_output"
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT

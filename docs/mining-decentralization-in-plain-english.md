@@ -4,7 +4,7 @@ Status: **PUBLIC EXPLAINER FOR AN UNFINISHED RESEARCH PROTOCOL**
 
 Soveroot is trying to make mining power harder to concentrate, while being honest that no blockchain can guarantee that mining will remain decentralized forever.
 
-The project is not ready for public mining or monetary use. The Bitcoin-derived node and private two-node `labnet` work, but the proposed proof of work is still isolated research code and is not part of block consensus.
+The project is not ready for public mining or monetary use. The Bitcoin-derived node, private two-node `labnet`, and first outside-the-daemon labnet miner work, but the proposed proof of work is still isolated research code and is not part of block consensus.
 
 ## The problem we are trying to reduce
 
@@ -35,6 +35,14 @@ A mining pool can perform two separate jobs:
 Soveroot wants to separate those jobs. Under the proposed official mining profile, each miner chooses transactions using its own node, constructs its own block candidate, and uses an authenticated Stratum V2 connection only for share accounting and payouts. A P2Pool-like decentralized share system is also a required testnet workstream.
 
 This means miners could cooperate on predictable payouts without automatically giving one pool operator control over block contents.
+
+The first labnet prototype now demonstrates the independent half of this idea.
+A small program outside the node asks the miner's own node for transactions,
+builds the block, performs easy development proof of work, and publishes the
+block directly. It uses no pool. This is a real first step, but it does not yet
+include shared payouts, Stratum V2, or the test where an accounting coordinator
+is switched off while mining continues. The exact proof and limits are in
+[Mining autonomy on labnet](mining-autonomy-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
 
@@ -78,12 +86,13 @@ That is encouraging because reducing memory was very expensive in this experimen
 | --- | --- |
 | Bitcoin-derived node and command-line client | Working development foundation |
 | Private two-node lab network | Working in automated tests |
+| External miner-created labnet block | Working in the packaged automated test |
 | Proposed mining workload | Research prototype only |
 | Half-memory attack | Two frozen strategies cannot finish; the newest reaches at most 0.8423% |
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Designed on paper; not implemented end to end |
+| Decentralized pool system | Direct solo publication works; shared accounting and coordinator fallback remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 

@@ -10,12 +10,15 @@ without implying that Soveroot is ready for public money.
 - `bin/sovrd`: the Soveroot node daemon;
 - `bin/sovr-cli`: the command-line wallet and node client;
 - `soveroot-labnet`: a helper with safe local defaults;
+- `libexec/autonomous_labnet_miner.py`: the external labnet block builder and
+  miner used by `autonomy-demo`;
 - the `sovrd(1)` and `sovr-cli(1)` manual pages;
 - `BUILD-INFO.txt`, this guide, and the MIT license.
 
 The current bundle is built for **Ubuntu 24.04-compatible Linux on x86-64**.
 Windows users can run it inside an Ubuntu 24.04 WSL environment. Native Windows
-packaging is a later milestone.
+packaging is a later milestone. Python 3 is required for `autonomy-demo` and is
+included by default in Ubuntu 24.04.
 
 ## Important limitations
 
@@ -67,6 +70,18 @@ Run the complete demonstration:
 The demonstration creates independent `miner` and `receiver` wallets, mines
 enough blocks to make test coins spendable, sends one coin, mines its
 confirmation, and prints the receiver's balance.
+
+Run the separate mining-autonomy demonstration:
+
+```bash
+./soveroot-labnet autonomy-demo
+```
+
+In this second demonstration, a program outside the daemon obtains candidate
+transactions from the miner's own node, constructs the full block, searches
+for the labnet proof of work, and submits the winning block directly. No pool
+coordinator is used. See [Mining autonomy on labnet](mining-autonomy-labnet.md)
+for the plain-English boundary and the features that remain unfinished.
 
 Inspect the node and loaded wallets:
 
@@ -126,6 +141,10 @@ manually removing a disposable data directory, and verify the exact path first.
 
 A successful demonstration proves that this build can start an isolated
 labnet node, create and use descriptor wallets, generate development blocks,
-submit a wallet transaction, and confirm it locally. It does **not** prove
+submit a wallet transaction, and confirm it locally. A successful
+`autonomy-demo` additionally proves that the packaged external miner can build,
+solve, and directly publish one inherited-PoW labnet block without a pool
+coordinator. It does **not** prove Stratum V2 interoperability, decentralized
+share accounting, coordinator-failure continuity, final Soveroot proof of work,
 production consensus safety, privacy against network observers,
 post-quantum security, economic decentralization, or readiness for real value.
