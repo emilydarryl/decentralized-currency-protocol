@@ -25,6 +25,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 ## Documents
 
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
+- [bip110-blake2b-fork-assessment.md](docs/bip110-blake2b-fork-assessment.md) separates BIP110's reduced-data rules from the proposed BLAKE2b fork and records what Soveroot will adopt, modify, reject, and observe.
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
@@ -80,6 +81,7 @@ In descending order:
 
 - The reference implementation will be a code fork of a pinned Bitcoin Core release, not a fork of Bitcoin's live chain or UTXO set.
 - Bitcoin Knots will be maintained as a separate upstream patch source. Knots changes will be ported selectively with provenance, review, and tests; the project will not continuously merge two moving codebases.
+- BIP110 is a candidate source of reduced-data ideas and test cases, not a merge base. Its limits must be reviewed against Soveroot's post-quantum transaction formats, and its temporary Bitcoin deployment must not be inherited. The project retains its pinned Core v31 foundation and replaces rejected data-carrier policy explicitly rather than downgrading wholesale to v29.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
 - CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer.
