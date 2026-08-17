@@ -1,7 +1,9 @@
 # Soveroot Reduced-Data Consensus Profile
 
-Version: 0.1 candidate profile  
-Status: **NORMATIVE DESIGN CANDIDATE; NOT IMPLEMENTED; NOT MAINNET-AUTHORIZED**  
+Version: 0.1 candidate profile
+
+Status: **NORMATIVE DESIGN CANDIDATE; NOT IMPLEMENTED; NOT MAINNET-AUTHORIZED**
+
 Evidence cutoff: 2026-08-17
 
 ## 1. Purpose and boundary
