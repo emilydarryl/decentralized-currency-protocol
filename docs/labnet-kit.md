@@ -108,7 +108,9 @@ RPC listens only on `127.0.0.1:29443`, and peer traffic listens only on
 Bitcoin networks remain blocked by the daemon and client interlocks.
 The helper rewrites its dedicated `soveroot-labnet.conf` with these safe local
 settings each time it starts. Do not use that generated file for custom node
-configuration.
+configuration. Because a fresh private chain has no fee history, the generated
+labnet configuration uses a fallback fee rate of `0.0002` test coin per kvB.
+This setting applies only to the test-only labnet data directory.
 
 To use a separate disposable data directory, set it before every command:
 

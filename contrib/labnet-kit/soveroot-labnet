@@ -64,6 +64,7 @@ listenonion=0
 [labnet]
 bind=127.0.0.1:29444
 rpcbind=127.0.0.1
+fallbackfee=0.0002
 EOF
 }
 
