@@ -67,7 +67,7 @@ The machine-readable state is [`contrib/pow_research/research_status_v0.json`](.
 | FPGA over GPU | **OPEN** | No reviewed FPGA implementation or estimate. |
 | ASIC over GPU | **OPEN** | No two independently reviewed ASIC cost models. |
 | Quantum concentration | **OPEN** | No two independent reversible-circuit estimates or approved economic first-mover model. |
-| Template autonomy | **OPEN** | Specified behavior, but no two interoperable mining implementations. |
+| Template autonomy | **OPEN** | One packaged labnet miner now builds and directly publishes a block outside the daemon without a coordinator; no second interoperable implementation, coordinator-failure proof, or Stratum V2/Job Declaration integration yet. |
 
 Every gate must pass independently. A favorable cache statistic, slow naive attack, or shared-runner benchmark cannot substitute for missing evidence.
 
