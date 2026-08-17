@@ -87,4 +87,3 @@ Passing a research gate does not silently change consensus. Any consensus candid
 - Report favorable, unfavorable, failed, invalid, and ineligible results with the same evidence standard.
 
 There is currently no bounty, token reward, public mining program, or mainnet launch date.
-
