@@ -143,6 +143,12 @@ Every signature digest MUST commit to:
 
 No signature valid on a testnet, fork, mandate, message, or peer session may be valid as a mainnet transaction signature.
 
+### 4.5 Reduced-data consensus
+
+The candidate [reduced-data profile](reduced-data-profile.md) is authoritative for the design of version 0 data-object admission and accounting. Consensus SHALL accept only active, canonical, type-aware monetary or protocol objects; SHALL enforce aggregate transaction and block budgets; and SHALL expose no generic unbounded data-carrier path.
+
+Relay and mining policy MAY be stricter than consensus, but direct block submission and miner configuration MUST NOT bypass consensus limits. Exact object encodings, identifiers, byte ceilings, verification weights, and UTXO budgets are mainnet blockers derived from the canonical serialization review and reproducible low-cost-hardware benchmarks.
+
 ## 5. Cryptographic suite
 
 ### 5.1 Hashing
@@ -679,6 +685,7 @@ Before mainnet, the project MUST maintain:
 - cryptographic known-answer tests;
 - reorganization and difficulty simulations;
 - resource-exhaustion tests;
+- reduced-data boundary, fragmentation, unknown-type, and direct-miner-bypass tests;
 - wallet network-leak tests that observe operating-system packets;
 - mandate replay and prompt-injection tests;
 - sharechain withholding and partition simulations; and

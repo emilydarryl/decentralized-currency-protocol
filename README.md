@@ -28,6 +28,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
 - [bip110-blake2b-fork-assessment.md](docs/bip110-blake2b-fork-assessment.md) separates BIP110's reduced-data rules from the proposed BLAKE2b fork and records what Soveroot will adopt, modify, reject, and observe.
+- [reduced-data-profile.md](docs/reduced-data-profile.md) defines the candidate consensus rules that keep permanent chain costs monetary, type-aware, post-quantum-compatible, and enforceable against direct miner bypass.
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [labnet-kit.md](docs/labnet-kit.md) is the plain-English download and operation guide for the test-only local node, wallet, and mining demonstration.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
@@ -85,6 +86,7 @@ In descending order:
 - The reference implementation will be a code fork of a pinned Bitcoin Core release, not a fork of Bitcoin's live chain or UTXO set.
 - Bitcoin Knots will be maintained as a separate upstream patch source. Knots changes will be ported selectively with provenance, review, and tests; the project will not continuously merge two moving codebases.
 - BIP110 is a candidate source of reduced-data ideas and test cases, not a merge base. Its limits must be reviewed against Soveroot's post-quantum transaction formats, and its temporary Bitcoin deployment must not be inherited. The project retains its pinned Core v31 foundation and replaces rejected data-carrier policy explicitly rather than downgrading wholesale to v29.
+- The candidate reduced-data profile accepts only canonical, recognized monetary and protocol objects; separately meters bytes, cryptographic verification, and UTXO growth; and makes final limits consensus rules from genesis. Exact encodings and constants remain benchmark-gated mainnet blockers.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
 - CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon and CLI binaries.
@@ -120,6 +122,7 @@ The Bitcoin Core foundation does not remove the improvements developed in this d
 | Mining protocol | Require the standard mining stack to use an encrypted, authenticated Stratum V2 profile with custom job declaration; disable legacy Stratum V1 | Committed standard profile |
 | Pool custody | Prefer direct, noncustodial payouts and publicly verifiable shares | Committed goal; construction unresolved |
 | Post-quantum ownership | Use ML-DSA-65 authorization from genesis, with an independent SLH-DSA recovery/high-assurance path | Candidate suite; benchmark and review blocker |
+| Reduced-data consensus | Allow only canonical type-aware monetary objects, omit generic carrier paths, and enforce aggregate transaction and block budgets even for direct miner submission | Candidate profile; serialization, benchmark, and review blocker |
 | Hashing | Use SHA3-384 with domain separation for general protocol hashing; analyze the separate PoW construction under classical and quantum models | Candidate suite; review blocker |
 | Encrypted transport | Use hybrid classical plus ML-KEM-768 transport where the peer protocol requires confidentiality | Candidate suite |
 | Wallet network privacy | Official wallets never broadcast directly and fail closed unless an approved local anonymity route is operating | Committed standard profile |
@@ -142,7 +145,7 @@ The following must be resolved before an implementation can be considered a main
 3. Specify canonical binary serialization and complete consensus test vectors.
 4. Specify the exact difficulty adjustment formula and simulate adversarial timestamp and hash-rate shocks.
 5. Finalize issuance constants and analyze the long-term security budget.
-6. Benchmark ML-DSA validation, transaction sizes, hardware-wallet operation, and denial-of-service limits.
+6. Benchmark ML-DSA and candidate SLH-DSA validation, complete reduced-data object accounting, measure transaction sizes, verify hardware-wallet operation, and set denial-of-service limits.
 7. Design and test decentralized share accounting without creating a second centralized consensus system.
 8. Produce a post-quantum receiving-address design or define a safe interactive/pre-generated-key profile.
 9. Determine whether a practical transparent post-quantum shielded UTXO system exists within the node-resource budget.
