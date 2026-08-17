@@ -20,12 +20,15 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 Start with [Mining Decentralization in Plain English](docs/mining-decentralization-in-plain-english.md). It explains the problem, the proposed hardware and pool safeguards, what the latest experiment actually showed, and what remains unfinished without requiring a mining or programming background.
 
+To run the current test-only node, wallet, and mining demonstration, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, and run the demonstration safely on a local machine.
+
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
 ## Documents
 
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
+- [labnet-kit.md](docs/labnet-kit.md) is the plain-English download and operation guide for the test-only local node, wallet, and mining demonstration.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.
@@ -82,7 +85,7 @@ In descending order:
 - Bitcoin Knots will be maintained as a separate upstream patch source. Knots changes will be ported selectively with provenance, review, and tests; the project will not continuously merge two moving codebases.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
-- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer.
+- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon and CLI binaries.
 - The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; their installed manuals are `sovrd(1)` and `sovr-cli(1)`. Inherited CMake target names remain temporarily stable to simplify upstream maintenance.
 - The daemon and RPC client both fail closed unless `-chain=labnet` is selected explicitly. This prevents the Soveroot-branded CLI from controlling inherited Bitcoin-network endpoints; labnet has no monetary value.
 - Nakamoto-style proof-of-work remains the consensus mechanism.
