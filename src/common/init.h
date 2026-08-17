@@ -42,6 +42,9 @@ using SettingsAbortFn = std::function<bool(const bilingual_str& message, const s
  */
 bool IsChainAllowedByIsolationInterlock(ChainType chain);
 
+/** Human-readable reason returned when an application selects an inherited chain. */
+std::string ChainIsolationError();
+
 /* Read config files, and create datadir and settings.json if they don't exist. */
 std::optional<ConfigError> InitConfig(ArgsManager& args, SettingsAbortFn settings_abort_fn = nullptr);
 } // namespace common

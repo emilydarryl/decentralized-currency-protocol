@@ -1,0 +1,92 @@
+.TH SOVR-CLI "1" "August 2026" "Soveroot experimental RPC client" "User Commands"
+.SH NAME
+sovr-cli \- communicate with an experimental Soveroot node
+.SH SYNOPSIS
+.B sovr-cli
+.B \-chain=labnet
+.RI [ options ]
+.I command
+.RI [ parameters ]
+.PP
+.B sovr-cli
+.B \-chain=labnet \-named
+.I command
+.RI [ name=value ]...
+.SH DESCRIPTION
+.B sovr-cli
+sends JSON-RPC commands to a running
+.BR sovrd (1)
+process.
+.PP
+This experimental client is restricted to the isolated, non-production
+.BR labnet .
+Select it explicitly with
+.BR \-chain=labnet .
+The client rejects inherited Bitcoin mainnet, testnet, signet, and regtest
+selection so that the Soveroot-branded client cannot accidentally control an
+inherited-network node. Labnet coins have no monetary value.
+.PP
+Run
+.B sovr-cli \-help
+for the complete client option list, or
+.B sovr-cli \-chain=labnet help
+for the RPC command list exposed by the running node.
+.SH COMMON OPTIONS
+.TP
+.B \-chain=labnet
+Select the only network permitted by the application isolation interlock.
+.TP
+.B \-named
+Pass RPC parameters as
+.I name=value
+pairs instead of positional arguments.
+.TP
+.B \-rpcconnect=HOST
+Connect to the RPC server at HOST. The default is 127.0.0.1.
+.TP
+.B \-rpcport=PORT
+Connect to PORT. Labnet's provisional RPC default is 29443.
+.TP
+.B \-rpcwallet=NAME
+Send the command to the named wallet endpoint.
+.TP
+.B \-rpcwait
+Wait for the RPC server to become available.
+.TP
+.B \-help
+Print the complete, build-specific client help and exit.
+.TP
+.B \-version
+Print version and licensing information and exit.
+.SH EXAMPLES
+Show labnet chain information:
+.PP
+.EX
+sovr-cli -chain=labnet getblockchaininfo
+.EE
+.PP
+List loaded wallets:
+.PP
+.EX
+sovr-cli -chain=labnet listwallets
+.EE
+.PP
+Call an RPC with named parameters:
+.PP
+.EX
+sovr-cli -chain=labnet -named getblockhash height=1
+.EE
+.SH SAFETY
+Soveroot is experimental software. This repository does not provide a live
+monetary network, production release, token sale, or security guarantee. Do not
+use labnet wallets or keys to protect assets of value.
+.SH COPYRIGHT
+Copyright (C) 2009-2026 The Bitcoin Core developers
+.br
+Copyright (C) 2026 The Soveroot developers
+.PP
+Distributed under the MIT software license; see the accompanying
+.I COPYING
+file.
+.SH SEE ALSO
+.BR sovrd (1)

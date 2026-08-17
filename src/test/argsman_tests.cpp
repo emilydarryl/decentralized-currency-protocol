@@ -33,6 +33,7 @@ BOOST_AUTO_TEST_CASE(chain_isolation_interlock)
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::TESTNET4));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::SIGNET));
     BOOST_CHECK(!common::IsChainAllowedByIsolationInterlock(ChainType::REGTEST));
+    BOOST_CHECK(common::ChainIsolationError().find("-chain=labnet") != std::string::npos);
 }
 
 BOOST_AUTO_TEST_CASE(util_datadir)

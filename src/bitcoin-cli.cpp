@@ -8,6 +8,7 @@
 #include <chainparamsbase.h>
 #include <clientversion.h>
 #include <common/args.h>
+#include <common/init.h>
 #include <common/system.h>
 #include <compat/compat.h>
 #include <compat/stdin.h>
@@ -157,6 +158,7 @@ static int AppInitRPC(int argc, char* argv[])
         } else {
             strUsage += "\n"
                 "The sovr-cli utility provides a command line interface to interact with a " CLIENT_NAME " RPC server.\n"
+                "\nThis experimental client is restricted to the isolated labnet. Select it explicitly with -chain=labnet. Labnet has no monetary value.\n"
                 "\nIt can be used to query network information, manage wallets, create or broadcast transactions, and control the " CLIENT_NAME " server.\n"
                 "\nUse the \"help\" command to list all commands. Use \"help <command>\" to show help for that command.\n"
                 "The -named option allows you to specify parameters using the key=value format, eliminating the need to pass unused positional parameters.\n"
@@ -186,7 +188,12 @@ static int AppInitRPC(int argc, char* argv[])
     }
     // Check for chain settings (BaseParams() calls are only valid after this clause)
     try {
-        SelectBaseParams(gArgs.GetChainType());
+        const ChainType chain{gArgs.GetChainType()};
+        if (!common::IsChainAllowedByIsolationInterlock(chain)) {
+            tfm::format(std::cerr, "Error: %s\n", common::ChainIsolationError());
+            return EXIT_FAILURE;
+        }
+        SelectBaseParams(chain);
     } catch (const std::exception& e) {
         tfm::format(std::cerr, "Error: %s\n", e.what());
         return EXIT_FAILURE;

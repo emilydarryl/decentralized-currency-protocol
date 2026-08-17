@@ -148,6 +148,7 @@ static bool ProcessInitCommands(interfaces::Init& init, ArgsManager& args)
         } else {
             strUsage += "\n"
                 "The " CLIENT_NAME " daemon (sovrd) is a headless program that connects to the Soveroot network to validate and relay transactions and blocks, as well as relaying addresses.\n\n"
+                "This experimental daemon can start only the isolated labnet. Select it explicitly with -chain=labnet. Labnet has no monetary value.\n\n"
                 "It provides the backbone of the Soveroot network and its RPC, REST and ZMQ services can provide various transaction, block and address-related services.\n\n"
                 "There is an optional wallet component which provides transaction services.\n\n"
                 "It can be used in a headless environment or as part of a server setup.\n"

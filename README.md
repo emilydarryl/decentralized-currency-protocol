@@ -83,7 +83,8 @@ In descending order:
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
 - CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer.
-- The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; inherited CMake target names remain temporarily stable to simplify upstream maintenance.
+- The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; their installed manuals are `sovrd(1)` and `sovr-cli(1)`. Inherited CMake target names remain temporarily stable to simplify upstream maintenance.
+- The daemon and RPC client both fail closed unless `-chain=labnet` is selected explicitly. This prevents the Soveroot-branded CLI from controlling inherited Bitcoin-network endpoints; labnet has no monetary value.
 - Nakamoto-style proof-of-work remains the consensus mechanism.
 - Proof-of-work uses a permanent, deterministic algorithm family; human-selected periodic algorithm rotation is rejected.
 - The final proof-of-work construction is not yet selected and is a mainnet blocker.
