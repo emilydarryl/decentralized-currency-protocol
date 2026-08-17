@@ -133,7 +133,7 @@ These observations may invalidate Soveroot assumptions. They may not waive Sover
 
 This assessment creates the following bounded work items:
 
-1. Write a Soveroot reduced-data profile with canonical type-aware limits.
+1. Complete the candidate [Soveroot reduced-data profile](reduced-data-profile.md) with canonical encodings and benchmark-derived type-aware limits before consensus implementation.
 2. Benchmark full ML-DSA-65 and candidate SLH-DSA transactions before setting witness, transaction, and block budgets.
 3. Produce a BIP110 patch inventory against the pinned Knots source and classify every diff as consensus, policy, wallet, mining, test, or deployment code.
 4. Port only reusable tests first; do not port activation or consensus code until the specification review closes.
