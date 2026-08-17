@@ -51,6 +51,13 @@ jobs:
         shell: bash
         run: python3 -m unittest discover -s test/pow_research -p 'test_*.py'
 
+      - name: Check Labnet Kit helper scripts
+        shell: bash
+        run: |
+          bash -n contrib/labnet-kit/soveroot-labnet
+          bash -n contrib/labnet-kit/package-linux.sh
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "local test-only node"
+
       - name: Install minimal build dependencies
         shell: bash
         run: |
@@ -231,3 +238,38 @@ jobs:
       - name: Run two-node labnet smoke test through sovr-cli
         shell: bash
         run: build/test/functional/test_runner.py feature_labnet_smoke.py --jobs=1 --usecli
+
+      - name: Package Linux Labnet Kit
+        shell: bash
+        run: contrib/labnet-kit/package-linux.sh "$PWD/build" "$PWD/build/labnet-kit-artifacts"
+
+      - name: Exercise packaged Labnet Kit
+        shell: bash
+        run: |
+          mkdir -p build/labnet-kit-extract
+          archive="$(find build/labnet-kit-artifacts -maxdepth 1 -name '*.tar.gz' -print -quit)"
+          test -n "$archive"
+          tar -xzf "$archive" -C build/labnet-kit-extract
+          kit="$(find build/labnet-kit-extract -mindepth 1 -maxdepth 1 -type d -print -quit)"
+          test -x "$kit/soveroot-labnet"
+          export SOVEROOT_LABNET_HOME="$PWD/build/labnet-kit-runtime"
+          cleanup() { "$kit/soveroot-labnet" stop >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          "$kit/soveroot-labnet" start
+          demo_output="$("$kit/soveroot-labnet" demo)"
+          printf '%s\n' "$demo_output"
+          grep -F -- "Receiver balance: 1" <<<"$demo_output"
+          "$kit/soveroot-labnet" status >/dev/null
+          "$kit/soveroot-labnet" stop
+          trap - EXIT
+
+      - name: Retain Linux Labnet Kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: soveroot-labnet-kit-linux-x86_64-${{ github.run_id }}
+          path: |
+            build/labnet-kit-artifacts/*.tar.gz
+            build/labnet-kit-artifacts/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

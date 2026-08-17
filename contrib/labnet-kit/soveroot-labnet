@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# Copyright (c) 2026 The Soveroot developers
+# Distributed under the MIT software license, see the accompanying
+# file COPYING or https://opensource.org/license/mit/.
+
+set -euo pipefail
+
+script_path="${BASH_SOURCE[0]}"
+[[ "${script_path}" == */* ]] || script_path="./${script_path}"
+SCRIPT_DIR="$(cd -- "${script_path%/*}" && pwd)"
+BIN_DIR="${SOVEROOT_BIN_DIR:-${SCRIPT_DIR}/bin}"
+DATA_DIR="${SOVEROOT_LABNET_HOME:-${HOME:?HOME must be set}/.soveroot-labnet-kit}"
+SOVRD="${BIN_DIR}/sovrd"
+SOVR_CLI="${BIN_DIR}/sovr-cli"
+CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
+COMMON_ARGS=(-chain=labnet "-datadir=${DATA_DIR}" "-conf=${CONFIG_FILE}")
+
+usage() {
+    cat <<'EOF'
+Soveroot Labnet Kit - local test-only node, wallet, and mining helper
+
+Usage: ./soveroot-labnet <command> [arguments]
+
+Commands:
+  start               Start a loopback-only labnet node.
+  status              Show chain status and loaded wallets.
+  demo                Create miner/receiver wallets, mine test coins,
+                      send one coin, and mine its confirmation.
+  mine [blocks]       Mine blocks to the miner wallet (default: 1).
+  cli <args...>       Run an arbitrary sovr-cli command on this labnet.
+  stop                Stop the local labnet node cleanly.
+  help                Show this help.
+
+Environment:
+  SOVEROOT_BIN_DIR      Directory containing sovrd and sovr-cli.
+  SOVEROOT_LABNET_HOME Data directory (default: ~/.soveroot-labnet-kit).
+
+Labnet coins have no monetary value. This kit is not production software.
+EOF
+}
+
+die() {
+    printf 'Error: %s\n' "$*" >&2
+    exit 1
+}
+
+require_binaries() {
+    [[ -x "${SOVRD}" ]] || die "${SOVRD} is missing or not executable"
+    [[ -x "${SOVR_CLI}" ]] || die "${SOVR_CLI} is missing or not executable"
+}
+
+write_config() {
+    umask 077
+    mkdir -p -- "${DATA_DIR}"
+    cat >"${CONFIG_FILE}" <<'EOF'
+chain=labnet
+server=1
+listen=1
+discover=0
+dnsseed=0
+natpmp=0
+listenonion=0
+
+[labnet]
+bind=127.0.0.1:29444
+rpcbind=127.0.0.1
+EOF
+}
+
+cli_call() {
+    "${SOVR_CLI}" "${COMMON_ARGS[@]}" "$@"
+}
+
+wallet_call() {
+    local wallet="$1"
+    shift
+    "${SOVR_CLI}" "${COMMON_ARGS[@]}" "-rpcwallet=${wallet}" "$@"
+}
+
+node_is_running() {
+    cli_call getblockchaininfo >/dev/null 2>&1
+}
+
+require_running() {
+    node_is_running || die "the local labnet node is not running; use './soveroot-labnet start' first"
+}
+
+ensure_wallet() {
+    local wallet="$1"
+    if wallet_call "${wallet}" getwalletinfo >/dev/null 2>&1; then
+        return
+    fi
+    if cli_call loadwallet "${wallet}" >/dev/null 2>&1; then
+        return
+    fi
+    cli_call createwallet "${wallet}" >/dev/null
+}
+
+mine_blocks() {
+    local count="$1"
+    [[ "${count}" =~ ^[1-9][0-9]*$ ]] || die "block count must be a positive whole number"
+    require_binaries
+    require_running
+    ensure_wallet miner
+    local address height
+    address="$(wallet_call miner getnewaddress)"
+    cli_call generatetoaddress "${count}" "${address}" >/dev/null
+    height="$(cli_call getblockcount)"
+    printf 'Mined %s labnet block(s) to %s\n' "${count}" "${address}"
+    printf 'Current height: %s\n' "${height}"
+}
+
+command_start() {
+    require_binaries
+    write_config
+    if node_is_running; then
+        printf 'Soveroot labnet is already running.\n'
+        return
+    fi
+    "${SOVRD}" "${COMMON_ARGS[@]}" -server=1 -daemonwait
+    cli_call -rpcwait -rpcwaittimeout=60 getblockchaininfo >/dev/null
+    printf 'Soveroot labnet started.\n'
+    printf 'Data directory: %s\n' "${DATA_DIR}"
+    printf 'RPC: loopback only (127.0.0.1:29443)\n'
+    printf 'P2P: loopback only (127.0.0.1:29444)\n'
+}
+
+command_status() {
+    require_binaries
+    require_running
+    printf '%s\n' 'Chain status:'
+    cli_call getblockchaininfo
+    printf '\n%s\n' 'Loaded wallets:'
+    cli_call listwallets
+}
+
+command_demo() {
+    require_binaries
+    require_running
+    ensure_wallet miner
+    ensure_wallet receiver
+
+    printf '%s\n' 'Mining 101 fresh blocks so the miner wallet has spendable test coins...'
+    mine_blocks 101
+
+    local receiving_address txid mining_address balance
+    receiving_address="$(wallet_call receiver getnewaddress)"
+    txid="$(wallet_call miner sendtoaddress "${receiving_address}" 1)"
+    mining_address="$(wallet_call miner getnewaddress)"
+    cli_call generatetoaddress 1 "${mining_address}" >/dev/null
+    balance="$(wallet_call receiver getbalance)"
+
+    printf 'Sent 1 test-only coin to %s\n' "${receiving_address}"
+    printf 'Transaction: %s\n' "${txid}"
+    printf 'Receiver balance: %s\n' "${balance}"
+    printf '%s\n' 'Demo complete. Labnet coins have no monetary value.'
+}
+
+command_stop() {
+    require_binaries
+    if ! node_is_running; then
+        printf 'Soveroot labnet is already stopped.\n'
+        return
+    fi
+    cli_call stop >/dev/null
+    for _ in $(seq 1 60); do
+        if ! node_is_running; then
+            printf 'Soveroot labnet stopped.\n'
+            return
+        fi
+        sleep 1
+    done
+    die "the node did not stop within 60 seconds"
+}
+
+command="${1:-help}"
+case "${command}" in
+    start)
+        [[ "$#" -eq 1 ]] || die "start takes no arguments"
+        command_start
+        ;;
+    status)
+        [[ "$#" -eq 1 ]] || die "status takes no arguments"
+        command_status
+        ;;
+    demo)
+        [[ "$#" -eq 1 ]] || die "demo takes no arguments"
+        command_demo
+        ;;
+    mine)
+        [[ "$#" -le 2 ]] || die "mine accepts at most one block count"
+        mine_blocks "${2:-1}"
+        ;;
+    cli)
+        shift
+        [[ "$#" -gt 0 ]] || die "cli requires a sovr-cli command"
+        require_binaries
+        require_running
+        cli_call "$@"
+        ;;
+    stop)
+        [[ "$#" -eq 1 ]] || die "stop takes no arguments"
+        command_stop
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        die "unknown command '${command}'"
+        ;;
+esac
