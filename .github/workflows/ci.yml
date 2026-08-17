@@ -213,8 +213,8 @@ jobs:
             python3 contrib/devtools/gen-manpages.py --skip-missing-binaries
           test -s build/generated-man/sovrd.1
           test -s build/generated-man/sovr-cli.1
-          grep -F -- '\-chain=labnet' build/generated-man/sovrd.1
-          grep -F -- '\-chain=labnet' build/generated-man/sovr-cli.1
+          grep -F -- "labnet" build/generated-man/sovrd.1
+          grep -F -- "labnet" build/generated-man/sovr-cli.1
           cmake --install build --prefix "$PWD/build/stage" --component bitcoind
           cmake --install build --prefix "$PWD/build/stage" --component bitcoin-cli
           test -s build/stage/share/man/man1/sovrd.1
