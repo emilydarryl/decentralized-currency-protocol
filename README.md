@@ -20,7 +20,7 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 Start with [Mining Decentralization in Plain English](docs/mining-decentralization-in-plain-english.md). It explains the problem, the proposed hardware and pool safeguards, what the latest experiment actually showed, and what remains unfinished without requiring a mining or programming background.
 
-To run the current test-only node, wallet, and mining demonstration, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, and run the demonstration safely on a local machine.
+To run the current test-only node, wallet, and mining demonstrations, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, run a wallet transfer, and have a separate miner build and directly publish a labnet block without a pool coordinator.
 
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
@@ -31,6 +31,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 - [reduced-data-profile.md](docs/reduced-data-profile.md) defines the candidate consensus rules that keep permanent chain costs monetary, type-aware, post-quantum-compatible, and enforceable against direct miner bypass.
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [labnet-kit.md](docs/labnet-kit.md) is the plain-English download and operation guide for the test-only local node, wallet, and mining demonstration.
+- [mining-autonomy-labnet.md](docs/mining-autonomy-labnet.md) explains the first external-miner proof, what pool power it removes, and the coordinator and Stratum V2 work that remains.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.
@@ -89,7 +90,7 @@ In descending order:
 - The candidate reduced-data profile accepts only canonical, recognized monetary and protocol objects; separately meters bytes, cryptographic verification, and UTXO growth; and makes final limits consensus rules from genesis. Exact encodings and constants remain benchmark-gated mainnet blockers.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
-- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon and CLI binaries.
+- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon, CLI, and external miner. The packaged test also constructs and directly publishes one labnet block outside the daemon without a pool coordinator.
 - The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; their installed manuals are `sovrd(1)` and `sovr-cli(1)`. Inherited CMake target names remain temporarily stable to simplify upstream maintenance.
 - The daemon and RPC client both fail closed unless `-chain=labnet` is selected explicitly. This prevents the Soveroot-branded CLI from controlling inherited Bitcoin-network endpoints; labnet has no monetary value.
 - Nakamoto-style proof-of-work remains the consensus mechanism.
