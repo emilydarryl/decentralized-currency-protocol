@@ -19,6 +19,14 @@ BINARIES = [
 'bin/bitcoin-qt',
 ]
 
+# Arguments required to query a binary for documentation without weakening its
+# normal startup safeguards. The Soveroot daemon accepts only the explicitly
+# isolated labnet, including while its help and version output is generated.
+BINARY_ARGS = {
+    'bin/sovrd': ['-chain=labnet'],
+    'bin/sovr-cli': ['-chain=labnet'],
+}
+
 parser = argparse.ArgumentParser(
     formatter_class=argparse.RawDescriptionHelpFormatter,
 )
@@ -50,8 +58,9 @@ mandir = os.getenv('MANDIR', os.path.join(topdir, 'doc/man'))
 versions = []
 for relpath in BINARIES:
     abspath = os.path.join(builddir, relpath)
+    binary_args = BINARY_ARGS.get(relpath, [])
     try:
-        r = subprocess.run([abspath, "--version"], stdout=subprocess.PIPE, check=True, text=True)
+        r = subprocess.run([abspath, *binary_args, "--version"], stdout=subprocess.PIPE, check=True, text=True)
     except IOError:
         if(args.skip_missing_binaries):
             print(f'{abspath} not found or not an executable. Skipping...', file=sys.stderr)
@@ -69,13 +78,13 @@ for relpath in BINARIES:
     copyright = r.stdout.split('\n')[1:]
     assert copyright[0].startswith('Copyright (C)')
 
-    versions.append((abspath, verstr, copyright))
+    versions.append((abspath, binary_args, verstr, copyright))
 
 if not versions:
     print(f'No binaries found in {builddir}. Please ensure the binaries are present in {builddir}, or set another build path using the BUILDDIR env variable.')
     sys.exit(1)
 
-if any(verstr.endswith('-dirty') for (_, verstr, _) in versions):
+if any(verstr.endswith('-dirty') for (_, _, verstr, _) in versions):
     print("WARNING: Binaries were built from a dirty tree.")
     print('man pages generated from dirty binaries should NOT be committed.')
     print('To properly generate man pages, please commit your changes (or discard them), rebuild, then run this script again.')
@@ -85,7 +94,7 @@ with tempfile.NamedTemporaryFile('w', suffix='.h2m') as footer:
     # Create copyright footer, and write it to a temporary include file.
     # Copyright is the same for all binaries, so just use the first.
     footer.write('[COPYRIGHT]\n')
-    footer.write('\n'.join(versions[0][2]).strip())
+    footer.write('\n'.join(versions[0][3]).strip())
     # Create SEE ALSO section
     footer.write('\n[SEE ALSO]\n')
     footer.write(', '.join(s.rpartition('/')[2] + '(1)' for s in BINARIES))
@@ -93,7 +102,13 @@ with tempfile.NamedTemporaryFile('w', suffix='.h2m') as footer:
     footer.flush()
 
     # Call the binaries through help2man to produce a manual page for each of them.
-    for (abspath, verstr, _) in versions:
+    for (abspath, binary_args, verstr, _) in versions:
         outname = os.path.join(mandir, os.path.basename(abspath) + '.1')
         print(f'Generating {outname}…')
-        subprocess.run([help2man, '-N', '--version-string=' + verstr, '--include=' + footer.name, '-o', outname, abspath], check=True)
+        command = [help2man, '-N', '--version-string=' + verstr, '--include=' + footer.name, '-o', outname]
+        if binary_args:
+            command.extend([
+                '--help-option=' + ' '.join([*binary_args, '--help']),
+                '--version-option=' + ' '.join([*binary_args, '--version']),
+            ])
+        subprocess.run([*command, abspath], check=True)
