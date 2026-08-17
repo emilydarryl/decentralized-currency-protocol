@@ -239,6 +239,8 @@ The following invariants are release-blocking:
 
 **Residual risk:** Decentralized pooling has variance, bandwidth, payout-size, and temporary-majority problems. The final design is unresolved.
 
+Worker block withholding is distinct from ordinary share withholding. A worker may submit payable shares while discarding the rare shares that would form blocks. The [XOR-key study](xor-key-block-withholding-study.md) evaluates hiding the final block condition from a worker, but the construction is not an approved control. A coordinator-held reveal key can itself prevent direct publication during coordinator failure or refusal, and it does not prevent a coordinator from withholding blocks.
+
 ### T7. Proof-of-work specialization
 
 **Attack:** Secret ASIC, FPGA, firmware, memory, or quantum implementation gains a dominant efficiency advantage.
