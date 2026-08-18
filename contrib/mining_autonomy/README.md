@@ -12,6 +12,7 @@ It is packaged by the Labnet Kit and is normally run through:
 ./soveroot-labnet coordinator-failure-demo
 ./soveroot-labnet job-declaration-demo
 ./soveroot-labnet interoperability-demo
+./soveroot-labnet resilience-demo
 ```
 
 This prototype is evidence for one narrow property: a miner can construct and
@@ -40,6 +41,13 @@ with the reference path on authentication inputs, wire bytes, negative cases,
 the template commitment, or the complete solved block. See
 [`docs/mining-interoperability-labnet.md`](../../docs/mining-interoperability-labnet.md)
 for the exact independence boundary and limitations.
+
+The fifth command keeps one miner process alive through an accepted primary
+job, rejection, disconnect, stall, malformed state, downgrade, alternate
+coordinator failover, and final total coordinator loss. The accounting service
+binds verified receipts to miner-wallet payout scripts and emits deterministic
+claims without holding a key or publishing a block. See
+[`docs/noncustodial-payout-failover-labnet.md`](../../docs/noncustodial-payout-failover-labnet.md).
 
 ```bash
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check

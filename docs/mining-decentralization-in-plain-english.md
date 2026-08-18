@@ -50,9 +50,17 @@ the coordinator is stopped, and the same miner directly publishes its next
 block anyway. A second mining program was then written separately. The two
 programs must create the same protocol messages and complete block byte for
 byte, and each must publish its own block. This lowers the risk that one
-program's private interpretation or bug defines the rules. Shared payouts and
-switching safely among competing coordinators still do not exist. The exact
-proof and limits are in
+program's private interpretation or bug defines the rules.
+
+The newest test keeps one miner alive while its preferred coordinator rejects
+its job, disconnects, stalls, sends malformed information, and tries an older
+protocol. Each time, the miner takes the same self-created block to a backup
+coordinator. When both coordinators disappear, it mines and publishes directly.
+The accounting service records how much verified test work each wallet payout
+script contributed, but it never holds a wallet key or any coins. In everyday
+terms, it produces an auditable bill, not a bank account or a payment. A real
+decentralized system still needs replicated share records and a reviewed way
+to settle those bills without trusting one operator. The exact proof and limits are in
 [Mining autonomy on labnet](mining-autonomy-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
@@ -103,7 +111,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Two miners agree byte for byte and publish directly; decentralized payouts and coordinator switching remain unfinished |
+| Decentralized pool system | Ordered coordinator switching and noncustodial accounting claims work locally; replicated shares and actual payout settlement remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 

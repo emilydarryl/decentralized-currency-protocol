@@ -139,6 +139,21 @@ class Sv2ReferenceIntegrationTests(unittest.TestCase):
             {"declaration:transport:connection-closed", "declaration:transport:timeout"},
         )
 
+    def test_stalling_coordinator_times_out_into_fallback(self):
+        result, _ = self.run_scenario("stall")
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertIn("transport:timeout", result["reason"])
+
+    def test_malformed_state_is_rejected(self):
+        result, _ = self.run_scenario("malformed")
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertEqual(result["reason"], "declaration:request-mismatch")
+
+    def test_protocol_downgrade_is_rejected(self):
+        result, _ = self.run_scenario("downgrade")
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertEqual(result["reason"], "setup:downgrade")
+
     def test_wrong_pinned_authority_cannot_authenticate(self):
         with tempfile.TemporaryDirectory() as directory:
             wrong_file = pathlib.Path(directory) / "wrong.json"
@@ -153,6 +168,152 @@ class Sv2ReferenceIntegrationTests(unittest.TestCase):
         self.assertEqual(result["status"], "direct_fallback")
         self.assertEqual(result["transport_status"], "failed")
         self.assertIn("noise-authentication", result["reason"])
+
+    def test_ordered_scenario_accepts_once_then_exercises_every_failure(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            authority = root / "authority.json"
+            ready = root / "ready.json"
+            public_key = subprocess.run(
+                [self.helper, "generate-authority", "--output", authority],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout.strip()
+            endpoint = f"127.0.0.1:{free_loopback_port()}"
+            server = subprocess.Popen(
+                [
+                    self.helper,
+                    "serve",
+                    "--endpoint",
+                    endpoint,
+                    "--authority-file",
+                    authority,
+                    "--mode",
+                    "scenario",
+                    "--ready-file",
+                    ready,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                for _ in range(100):
+                    if ready.is_file():
+                        break
+                    time.sleep(0.02)
+                results = []
+                for _ in range(6):
+                    completed = subprocess.run(
+                        [
+                            self.helper,
+                            "declare",
+                            "--endpoint",
+                            endpoint,
+                            "--authority-public-key",
+                            public_key,
+                            "--timeout-ms",
+                            "500",
+                        ],
+                        input=json.dumps(candidate(), separators=(",", ":"), sort_keys=True),
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=4,
+                    )
+                    results.append(json.loads(completed.stdout))
+            finally:
+                server.terminate()
+                try:
+                    server.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    server.kill()
+                    server.wait(timeout=5)
+                if server.stderr is not None:
+                    server.stderr.close()
+        self.assertEqual(results[0]["status"], "accepted")
+        reasons = [result.get("reason", "") for result in results[1:]]
+        self.assertIn("policy-rejection", reasons[0])
+        self.assertTrue("connection-closed" in reasons[1] or "transport:timeout" in reasons[1])
+        self.assertIn("transport:timeout", reasons[2])
+        self.assertIn("request-mismatch", reasons[3])
+        self.assertEqual(reasons[4], "setup:downgrade")
+
+    def test_equivocating_coordinator_exposes_conflicting_view_commitments(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            authority = root / "authority.json"
+            ready = root / "ready.json"
+            public_key = subprocess.run(
+                [self.helper, "generate-authority", "--output", authority],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout.strip()
+            endpoint = f"127.0.0.1:{free_loopback_port()}"
+            server = subprocess.Popen(
+                [
+                    self.helper,
+                    "serve",
+                    "--endpoint",
+                    endpoint,
+                    "--authority-file",
+                    authority,
+                    "--mode",
+                    "equivocate",
+                    "--ready-file",
+                    ready,
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            try:
+                for _ in range(100):
+                    if ready.is_file():
+                        break
+                    time.sleep(0.02)
+                results = []
+                for _ in range(2):
+                    completed = subprocess.run(
+                        [
+                            self.helper,
+                            "declare",
+                            "--endpoint",
+                            endpoint,
+                            "--authority-public-key",
+                            public_key,
+                            "--timeout-ms",
+                            "1000",
+                        ],
+                        input=json.dumps(candidate(), separators=(",", ":"), sort_keys=True),
+                        check=True,
+                        capture_output=True,
+                        text=True,
+                        timeout=5,
+                    )
+                    results.append(json.loads(completed.stdout))
+            finally:
+                server.terminate()
+                try:
+                    server.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    server.kill()
+                    server.wait(timeout=5)
+                if server.stderr is not None:
+                    server.stderr.close()
+        self.assertEqual([result["status"] for result in results], ["accepted", "accepted"])
+        self.assertEqual(
+            {result["template_commitment_sha256"] for result in results},
+            {"11" * 32},
+        )
+        self.assertNotEqual(
+            results[0]["coordinator_state_commitment"],
+            results[1]["coordinator_state_commitment"],
+        )
 
 
 if __name__ == "__main__":

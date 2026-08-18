@@ -102,6 +102,8 @@ class ShareReporterTests(unittest.TestCase):
                 False,
                 height=1,
                 previous_block_hash="00" * 32,
+                payout_script_hex="51",
+                template_commitment_sha256="22" * 32,
             )
         self.assertEqual(reporter.delivered, 0)
         self.assertEqual(reporter.failed, 1)
@@ -138,6 +140,75 @@ class JobDeclaratorTests(unittest.TestCase):
             result = self.declarator().declare({"template_commitment_sha256": "11" * 32})
         self.assertEqual(result["status"], "direct_fallback")
         self.assertEqual(result["reason"], "template_commitment_mismatch")
+
+
+class CoordinatorSelectorTests(unittest.TestCase):
+    class FakeCoordinator:
+        def __init__(self, name, responses):
+            self.name = name
+            self.endpoint = f"127.0.0.1:{30000 + len(name)}"
+            self.responses = iter(responses)
+            self.templates = []
+
+        def declare(self, template):
+            self.templates.append(template.copy())
+            return next(self.responses)
+
+    def test_rejection_switches_coordinator_without_changing_template(self):
+        template = {"template_commitment_sha256": "11" * 32}
+        primary = self.FakeCoordinator(
+            "primary",
+            [{"status": "direct_fallback", "reason": "declaration:policy-rejection"}],
+        )
+        alternate = self.FakeCoordinator(
+            "alternate",
+            [
+                {
+                    "status": "accepted",
+                    "transport_status": "authenticated",
+                    "template_commitment_sha256": template["template_commitment_sha256"],
+                    "job_id": 9,
+                }
+            ],
+        )
+        result = MINER.CoordinatorSelector([primary, alternate]).declare(template)
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(result["coordinator"], "alternate")
+        self.assertTrue(result["failover_used"])
+        self.assertEqual(primary.templates, [template])
+        self.assertEqual(alternate.templates, [template])
+
+    def test_conflicting_views_quarantine_coordinator_for_two_miners(self):
+        template = {"template_commitment_sha256": "22" * 32}
+        registry = MINER.CoordinatorViewRegistry()
+        first = self.FakeCoordinator(
+            "equivocator",
+            [
+                {
+                    "status": "accepted",
+                    "transport_status": "authenticated",
+                    "coordinator_state_commitment": "aa" * 32,
+                }
+            ],
+        )
+        second = self.FakeCoordinator(
+            "equivocator",
+            [
+                {
+                    "status": "accepted",
+                    "transport_status": "authenticated",
+                    "coordinator_state_commitment": "bb" * 32,
+                }
+            ],
+        )
+        self.assertEqual(
+            MINER.CoordinatorSelector([first], registry).declare(template)["status"],
+            "accepted",
+        )
+        result = MINER.CoordinatorSelector([second], registry).declare(template)
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertEqual(result["reason"], "all_configured_coordinators_failed")
+        self.assertIn("equivocator", registry.quarantined)
 
 
 class FakeLabnetRpc:

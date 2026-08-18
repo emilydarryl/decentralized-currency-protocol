@@ -13,7 +13,9 @@ without implying that Soveroot is ready for public money.
 - `libexec/autonomous_labnet_miner.py`: the external labnet block builder and
   miner used by `autonomy-demo`;
 - `libexec/share_accounting_coordinator.py`: the loopback-only, accounting-only
-  test service used by `coordinator-failure-demo`;
+  test service used by `coordinator-failure-demo` and `resilience-demo`;
+- `libexec/build_resilience_evidence.py`: the fail-closed validator that retains
+  coordinator, template, publication, and noncustodial-claim evidence;
 - `libexec/soveroot-sv2-reference`: the pinned official-library Noise and Job
   Declaration helper used by `job-declaration-demo`;
 - `libexec/soveroot-sv2-independent-miner`: the separately written message and
@@ -126,6 +128,21 @@ byte on the published fixture. It then lets each miner declare, solve, and
 directly publish one block against the reference coordinator. It fails unless
 the chain advances by exactly two and retains a JSON evidence report.
 
+Exercise hostile coordinators, switching, and noncustodial accounting:
+
+```bash
+./soveroot-labnet resilience-demo
+```
+
+One still-running miner offers each self-created template to the preferred
+coordinator first. Across seven blocks, that coordinator accepts once and then
+rejects, disconnects, stalls, returns malformed state, and proposes a protocol
+downgrade. The miner retries the exact same committed template with the
+alternate coordinator. Before the final block, both coordinators and the
+accounting service are stopped; the miner must still solve and publish directly.
+The demo also writes deterministic work claims grouped by the payout script
+from the miner's wallet. Those claims neither hold nor transfer coins.
+
 Inspect the node and loaded wallets:
 
 ```bash
@@ -178,6 +195,10 @@ private authority key under a mode-`077` temporary
 The interoperability demonstration reuses loopback port `29446` after the Job
 Declaration demo has stopped and retains its logs and byte-level report in an
 `interoperability-demo.*` directory.
+The resilience demonstration uses primary coordinator port `29446`, alternate
+coordinator port `29447`, and accounting port `29445`. It retains all logs, the
+receipt ledger, payout claims, and `coordinator-resilience-evidence.json` in a
+unique `resilience-demo.*` directory.
 
 To use a separate disposable data directory, set it before every command:
 
@@ -201,10 +222,13 @@ coordinator exchange the pinned encrypted Job Declaration/custom-job messages
 and that coordinator loss cannot halt that miner. A successful
 `interoperability-demo` proves two separately written payload and block
 implementations agree on the canonical bytes and each directly publishes a
-labnet block. It does **not** prove decentralized share accounting or final
-Soveroot proof of work. A successful
+labnet block. A successful `resilience-demo` proves the same miner process
+preserves its own template across an ordered coordinator list, directly
+publishes during total coordinator loss, and emits deterministic accounting
+claims tied to wallet payout scripts. A successful
 `coordinator-failure-demo` proves the same packaged miner process advances the
-chain after its local accounting process is killed; it does not prove noncustodial
-payouts, malicious-coordinator resistance,
+chain after its local accounting process is killed. These demonstrations do
+**not** prove a decentralized share network, enforce payment of a claim, or
+protect against colluding coordinators, Sybil identities, block withholding,
 production consensus safety, privacy against network observers,
 post-quantum security, economic decentralization, or readiness for real value.

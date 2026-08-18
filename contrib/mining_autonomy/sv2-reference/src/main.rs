@@ -42,7 +42,7 @@ use std::{
 };
 use tokio::{
     net::{TcpListener, TcpStream},
-    time::timeout,
+    time::{sleep, timeout},
 };
 
 type Result<T> = std::result::Result<T, String>;
@@ -219,6 +219,8 @@ struct ClientResult<'a> {
     reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     job_id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    coordinator_state_commitment: Option<String>,
 }
 
 #[derive(SerdeDeserialize)]
@@ -275,6 +277,13 @@ struct DeclaredJob {
     used: bool,
 }
 
+#[derive(Default)]
+struct ServerState {
+    declared_job: Option<DeclaredJob>,
+    job_declaration_sessions: u32,
+    accepted_custom_jobs: u32,
+}
+
 impl DeclaredJob {
     fn consume_custom_job(&mut self, version: u32, token: &[u8]) -> bool {
         if self.used || self.version != version || self.token != token {
@@ -290,6 +299,28 @@ enum ServerMode {
     Accept,
     Reject,
     Drop,
+    Stall,
+    Malformed,
+    Downgrade,
+    Scenario,
+    Equivocate,
+}
+
+impl ServerMode {
+    fn action(self, session: u32) -> Self {
+        if self != Self::Scenario {
+            return self;
+        }
+        match session {
+            1 => Self::Accept,
+            2 => Self::Reject,
+            3 => Self::Drop,
+            4 => Self::Stall,
+            5 => Self::Malformed,
+            6 => Self::Downgrade,
+            _ => Self::Reject,
+        }
+    }
 }
 
 fn bytes_from_hex(value: &str, label: &str) -> Result<Vec<u8>> {
@@ -841,7 +872,7 @@ async fn handle_server_connection(
     public: Secp256k1PublicKey,
     private: Secp256k1SecretKey,
     mode: ServerMode,
-    state: Arc<Mutex<Option<DeclaredJob>>>,
+    state: Arc<Mutex<ServerState>>,
 ) -> Result<()> {
     let (receiver, sender) = encrypted_server(stream, public, private).await?;
     let mut setup_frame = receive(&receiver, Duration::from_secs(5)).await?;
@@ -854,6 +885,15 @@ async fn handle_server_connection(
         Protocol::JobDeclarationProtocol => JD_FLAGS,
         Protocol::MiningProtocol => MINING_FLAGS,
         _ => 0,
+    };
+    let action = if setup.protocol == Protocol::JobDeclarationProtocol {
+        let mut guard = state
+            .lock()
+            .map_err(|_| "coordinator state poisoned".to_string())?;
+        guard.job_declaration_sessions = guard.job_declaration_sessions.saturating_add(1);
+        mode.action(guard.job_declaration_sessions)
+    } else {
+        mode
     };
     if required == 0
         || setup.min_version > VERSION
@@ -870,6 +910,17 @@ async fn handle_server_connection(
         .await?;
         return Ok(());
     }
+    if action == ServerMode::Downgrade {
+        send(
+            &sender,
+            WireMessage::SetupSuccess(SetupConnectionSuccess {
+                used_version: 1,
+                flags: 0,
+            }),
+        )
+        .await?;
+        return Ok(());
+    }
     send(
         &sender,
         WireMessage::SetupSuccess(SetupConnectionSuccess {
@@ -879,8 +930,8 @@ async fn handle_server_connection(
     )
     .await?;
     match setup.protocol {
-        Protocol::JobDeclarationProtocol => handle_jd(&receiver, &sender, mode, state).await,
-        Protocol::MiningProtocol => handle_mining(&receiver, &sender, state).await,
+        Protocol::JobDeclarationProtocol => handle_jd(&receiver, &sender, action, state).await,
+        Protocol::MiningProtocol => handle_mining(&receiver, &sender, mode, state).await,
         _ => Ok(()),
     }
 }
@@ -889,7 +940,7 @@ async fn handle_jd(
     receiver: &FrameReceiver,
     sender: &FrameSender,
     mode: ServerMode,
-    state: Arc<Mutex<Option<DeclaredJob>>>,
+    state: Arc<Mutex<ServerState>>,
 ) -> Result<()> {
     let mut token_frame = receive(receiver, Duration::from_secs(5)).await?;
     if frame_type(&token_frame)? != MESSAGE_TYPE_ALLOCATE_MINING_JOB_TOKEN {
@@ -956,6 +1007,10 @@ async fn handle_jd(
     if mode == ServerMode::Drop {
         return Ok(());
     }
+    if mode == ServerMode::Stall {
+        sleep(Duration::from_secs(3)).await;
+        return Ok(());
+    }
     if mode == ServerMode::Reject {
         send(
             sender,
@@ -968,11 +1023,23 @@ async fn handle_jd(
         .await?;
         return Ok(());
     }
+    if mode == ServerMode::Malformed {
+        send(
+            sender,
+            WireMessage::DeclareSuccess(DeclareMiningJobSuccess {
+                request_id: declaration.request_id.saturating_add(1),
+                new_mining_job_token: vec![1_u8; 32].try_into().unwrap(),
+            }),
+        )
+        .await?;
+        return Ok(());
+    }
     let mut signed_token = vec![0_u8; 32];
     thread_rng().fill_bytes(&mut signed_token);
-    *state
+    state
         .lock()
-        .map_err(|_| "coordinator state poisoned".to_string())? = Some(DeclaredJob {
+        .map_err(|_| "coordinator state poisoned".to_string())?
+        .declared_job = Some(DeclaredJob {
         version: declaration.version,
         token: signed_token.clone(),
         used: false,
@@ -990,7 +1057,8 @@ async fn handle_jd(
 async fn handle_mining(
     receiver: &FrameReceiver,
     sender: &FrameSender,
-    state: Arc<Mutex<Option<DeclaredJob>>>,
+    mode: ServerMode,
+    state: Arc<Mutex<ServerState>>,
 ) -> Result<()> {
     let mut open_frame = receive(receiver, Duration::from_secs(5)).await?;
     if frame_type(&open_frame)? != MESSAGE_TYPE_OPEN_EXTENDED_MINING_CHANNEL {
@@ -1020,17 +1088,29 @@ async fn handle_mining(
             .lock()
             .map_err(|_| "coordinator state poisoned".to_string())?;
         guard
+            .declared_job
             .as_mut()
             .map(|job| job.consume_custom_job(custom.version, &custom.token.to_vec()))
             .unwrap_or(false)
     };
     if accepted {
+        let job_id = {
+            let mut guard = state
+                .lock()
+                .map_err(|_| "coordinator state poisoned".to_string())?;
+            guard.accepted_custom_jobs = guard.accepted_custom_jobs.saturating_add(1);
+            if mode == ServerMode::Equivocate {
+                8 + guard.accepted_custom_jobs
+            } else {
+                9
+            }
+        };
         send(
             sender,
             WireMessage::SetCustomSuccess(SetCustomMiningJobSuccess {
                 channel_id: custom.channel_id,
                 request_id: custom.request_id,
-                job_id: 9,
+                job_id,
             }),
         )
         .await
@@ -1151,6 +1231,11 @@ async fn real_main() -> Result<()> {
                 "accept" => ServerMode::Accept,
                 "reject" => ServerMode::Reject,
                 "drop" => ServerMode::Drop,
+                "stall" => ServerMode::Stall,
+                "malformed" => ServerMode::Malformed,
+                "downgrade" => ServerMode::Downgrade,
+                "scenario" => ServerMode::Scenario,
+                "equivocate" => ServerMode::Equivocate,
                 other => return Err(format!("unknown server mode {other}")),
             };
             let listener = TcpListener::bind(&endpoint)
@@ -1167,7 +1252,7 @@ async fn real_main() -> Result<()> {
                 )
                 .map_err(|e| format!("ready file: {e}"))?;
             }
-            let state = Arc::new(Mutex::new(None));
+            let state = Arc::new(Mutex::new(ServerState::default()));
             loop {
                 let (stream, _) = listener
                     .accept()
@@ -1204,6 +1289,13 @@ async fn real_main() -> Result<()> {
                     template_commitment_sha256: &candidate.template_commitment_sha256,
                     reason: None,
                     job_id: Some(job_id),
+                    coordinator_state_commitment: Some(encode_hex(&Sha256::digest(
+                        format!(
+                            "soveroot-coordinator-view-v0:{}:{job_id}",
+                            candidate.template_commitment_sha256
+                        )
+                        .as_bytes(),
+                    ))),
                 },
                 Err(reason) => {
                     let transport_status = if reason.starts_with("transport:") {
@@ -1217,6 +1309,7 @@ async fn real_main() -> Result<()> {
                         template_commitment_sha256: &candidate.template_commitment_sha256,
                         reason: Some(reason),
                         job_id: None,
+                        coordinator_state_commitment: None,
                     }
                 }
             };
