@@ -16,6 +16,9 @@ without implying that Soveroot is ready for public money.
   test service used by `coordinator-failure-demo` and `resilience-demo`;
 - `libexec/build_resilience_evidence.py`: the fail-closed validator that retains
   coordinator, template, publication, and noncustodial-claim evidence;
+- `libexec/share_replica_client.py` and
+  `libexec/build_share_settlement_evidence.py`: the loopback reconciliation
+  client and fail-closed direct-settlement evidence validator;
 - `libexec/soveroot-sv2-reference`: the pinned official-library Noise and Job
   Declaration helper used by `job-declaration-demo`;
 - `libexec/soveroot-sv2-independent-miner`: the separately written message and
@@ -143,6 +146,20 @@ accounting service are stopped; the miner must still solve and publish directly.
 The demo also writes deterministic work claims grouped by the payout script
 from the miner's wallet. Those claims neither hold nor transfer coins.
 
+Reconcile two accounting replicas and settle their identical plan directly:
+
+```bash
+./soveroot-labnet share-settlement-demo
+```
+
+The helper gives different wallet scripts work on replicas A and B, reconciles
+them, stops B, and mines another block while A remains available. After B
+restarts it must import the missing receipt. Both replicas must then return the
+same canonical payout plan before the miner creates a multi-output coinbase.
+The demo decodes that block and fails unless its positive-value outputs exactly
+match the plan. The replicas never hold a wallet key or receive the reward.
+See [Replicated share accounting and direct coinbase settlement](replicated-share-settlement-labnet.md).
+
 Inspect the node and loaded wallets:
 
 ```bash
@@ -199,6 +216,10 @@ The resilience demonstration uses primary coordinator port `29446`, alternate
 coordinator port `29447`, and accounting port `29445`. It retains all logs, the
 receipt ledger, payout claims, and `coordinator-resilience-evidence.json` in a
 unique `resilience-demo.*` directory.
+The share-settlement demonstration uses accounting replica ports `29445` and
+`29448`. It retains both ledgers, canonical snapshots and plans, outage and
+recovery logs, the decoded block, and `share-settlement-evidence.json` in a
+unique `share-settlement-demo.*` directory.
 
 To use a separate disposable data directory, set it before every command:
 
@@ -225,10 +246,13 @@ implementations agree on the canonical bytes and each directly publishes a
 labnet block. A successful `resilience-demo` proves the same miner process
 preserves its own template across an ordered coordinator list, directly
 publishes during total coordinator loss, and emits deterministic accounting
-claims tied to wallet payout scripts. A successful
+claims tied to wallet payout scripts. A successful `share-settlement-demo`
+proves two local receipt stores recover after one outage, return the identical
+deterministic plan, and cause the miner to publish that plan as direct coinbase
+outputs. A successful
 `coordinator-failure-demo` proves the same packaged miner process advances the
 chain after its local accounting process is killed. These demonstrations do
-**not** prove a decentralized share network, enforce payment of a claim, or
-protect against colluding coordinators, Sybil identities, block withholding,
+**not** prove a global decentralized sharechain, independent public operators,
+or protection against colluding coordinators, Sybil identities, block withholding,
 production consensus safety, privacy against network observers,
 post-quantum security, economic decentralization, or readiness for real value.

@@ -19,7 +19,10 @@ SV2_INDEPENDENT="${SOVEROOT_SV2_INDEPENDENT_MINER:-${SCRIPT_DIR}/libexec/soveroo
 INTEROP_RUNNER="${SOVEROOT_INTEROP_RUNNER:-${SCRIPT_DIR}/libexec/run_interoperability.py}"
 INTEROP_FIXTURE="${SOVEROOT_INTEROP_FIXTURE:-${SCRIPT_DIR}/libexec/sv2_interoperability_v0.json}"
 RESILIENCE_EVIDENCE_BUILDER="${SOVEROOT_RESILIENCE_EVIDENCE_BUILDER:-${SCRIPT_DIR}/libexec/build_resilience_evidence.py}"
+SHARE_REPLICA_CLIENT="${SOVEROOT_SHARE_REPLICA_CLIENT:-${SCRIPT_DIR}/libexec/share_replica_client.py}"
+SHARE_SETTLEMENT_EVIDENCE_BUILDER="${SOVEROOT_SHARE_SETTLEMENT_EVIDENCE_BUILDER:-${SCRIPT_DIR}/libexec/build_share_settlement_evidence.py}"
 ACCOUNTING_PORT="${SOVEROOT_ACCOUNTING_PORT:-29445}"
+ACCOUNTING_REPLICA_PORT="${SOVEROOT_ACCOUNTING_REPLICA_PORT:-29448}"
 SV2_PORT="${SOVEROOT_SV2_PORT:-29446}"
 SV2_ALTERNATE_PORT="${SOVEROOT_SV2_ALTERNATE_PORT:-29447}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
@@ -49,6 +52,9 @@ Commands:
                       require byte-exact vectors, and publish one block each.
   resilience-demo     Exercise hostile primary coordinators, ordered failover,
                       direct fallback, and noncustodial payout claims.
+  share-settlement-demo
+                      Reconcile two accounting replicas through one failure,
+                      then pay their identical plan directly in coinbase.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -104,6 +110,15 @@ require_resilience_tools() {
     [[ -r "${RESILIENCE_EVIDENCE_BUILDER}" ]] || die "${RESILIENCE_EVIDENCE_BUILDER} is missing or unreadable"
     ((SV2_ALTERNATE_PORT >= 1024 && SV2_ALTERNATE_PORT <= 65535)) || die "SOVEROOT_SV2_ALTERNATE_PORT must be between 1024 and 65535"
     [[ "${SV2_ALTERNATE_PORT}" -ne "${SV2_PORT}" ]] || die "the primary and alternate SV2 ports must differ"
+}
+
+require_share_settlement_tools() {
+    require_accounting_coordinator
+    [[ -r "${SHARE_REPLICA_CLIENT}" ]] || die "${SHARE_REPLICA_CLIENT} is missing or unreadable"
+    [[ -r "${SHARE_SETTLEMENT_EVIDENCE_BUILDER}" ]] || die "${SHARE_SETTLEMENT_EVIDENCE_BUILDER} is missing or unreadable"
+    [[ "${ACCOUNTING_REPLICA_PORT}" =~ ^[0-9]+$ ]] || die "SOVEROOT_ACCOUNTING_REPLICA_PORT must be a whole number"
+    ((ACCOUNTING_REPLICA_PORT >= 1024 && ACCOUNTING_REPLICA_PORT <= 65535)) || die "SOVEROOT_ACCOUNTING_REPLICA_PORT must be between 1024 and 65535"
+    [[ "${ACCOUNTING_REPLICA_PORT}" -ne "${ACCOUNTING_PORT}" ]] || die "the accounting replica ports must differ"
 }
 
 write_config() {
@@ -662,6 +677,146 @@ command_resilience_demo() (
     printf 'Resilience evidence retained in: %s\n' "${run_dir}"
 )
 
+command_share_settlement_demo() (
+    set -euo pipefail
+    require_binaries
+    require_share_settlement_tools
+    require_running
+    ensure_wallet miner
+
+    local run_dir ledger_a ledger_b claims_a claims_b ready_a ready_b log_a log_b
+    local endpoint_a endpoint_b pid_a pid_b start_height end_height address_a address_b
+    local offline_log settlement_log recovery receipt_set_a receipt_set_b plan_a plan_b
+    local coinbase_value block_hash decoded_block evidence
+    run_dir="$(mktemp -d "${DATA_DIR}/share-settlement-demo.XXXXXX")"
+    ledger_a="${run_dir}/replica-a-receipts.jsonl"
+    ledger_b="${run_dir}/replica-b-receipts.jsonl"
+    claims_a="${run_dir}/replica-a-claims.json"
+    claims_b="${run_dir}/replica-b-claims.json"
+    ready_a="${run_dir}/replica-a-ready"
+    ready_b="${run_dir}/replica-b-ready"
+    log_a="${run_dir}/replica-a.log"
+    log_b="${run_dir}/replica-b.log"
+    endpoint_a="http://127.0.0.1:${ACCOUNTING_PORT}"
+    endpoint_b="http://127.0.0.1:${ACCOUNTING_REPLICA_PORT}"
+    pid_a=""
+    pid_b=""
+
+    cleanup_share_settlement() {
+        if [[ -n "${pid_a}" ]] && kill -0 "${pid_a}" >/dev/null 2>&1; then
+            kill "${pid_a}" >/dev/null 2>&1 || true
+            wait "${pid_a}" >/dev/null 2>&1 || true
+        fi
+        if [[ -n "${pid_b}" ]] && kill -0 "${pid_b}" >/dev/null 2>&1; then
+            kill "${pid_b}" >/dev/null 2>&1 || true
+            wait "${pid_b}" >/dev/null 2>&1 || true
+        fi
+    }
+    trap cleanup_share_settlement EXIT
+
+    start_replica() {
+        local port="$1" ledger="$2" claims="$3" ready="$4" log="$5" result_var="$6"
+        local replica_pid
+        rm -f -- "${ready}"
+        python3 "${ACCOUNTING_COORDINATOR}" \
+            --bind 127.0.0.1 \
+            --port "${port}" \
+            --ledger "${ledger}" \
+            --claims "${claims}" \
+            --ready-file "${ready}" >>"${log}" 2>&1 &
+        replica_pid="$!"
+        for _ in $(seq 1 100); do
+            [[ -f "${ready}" ]] && break
+            kill -0 "${replica_pid}" >/dev/null 2>&1 || {
+                sed -n '1,80p' "${log}" >&2
+                die "accounting replica on port ${port} stopped before becoming ready"
+            }
+            sleep 0.05
+        done
+        [[ -f "${ready}" ]] || die "accounting replica on port ${port} did not become ready"
+        printf -v "${result_var}" '%s' "${replica_pid}"
+    }
+
+    start_replica "${ACCOUNTING_PORT}" "${ledger_a}" "${claims_a}" "${ready_a}" "${log_a}" pid_a
+    start_replica "${ACCOUNTING_REPLICA_PORT}" "${ledger_b}" "${claims_b}" "${ready_b}" "${log_b}" pid_b
+    start_height="$(cli_call getblockcount)"
+
+    address_a="$(wallet_call miner getnewaddress)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" --datadir "${DATA_DIR}" --conf "${CONFIG_FILE}" --wallet miner \
+        --address "${address_a}" --share-endpoint "${endpoint_a}/share" --worker replica-a-seed \
+        >"${run_dir}/seed-a-miner.log" 2>&1
+    address_b="$(wallet_call miner getnewaddress)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" --datadir "${DATA_DIR}" --conf "${CONFIG_FILE}" --wallet miner \
+        --address "${address_b}" --share-endpoint "${endpoint_b}/share" --worker replica-b-seed \
+        >"${run_dir}/seed-b-miner.log" 2>&1
+
+    python3 "${SHARE_REPLICA_CLIENT}" reconcile --target "${endpoint_a}" --peer "${endpoint_b}" >/dev/null
+    python3 "${SHARE_REPLICA_CLIENT}" reconcile --target "${endpoint_b}" --peer "${endpoint_a}" >/dev/null
+
+    kill "${pid_b}"
+    wait "${pid_b}" >/dev/null 2>&1 || true
+    pid_b=""
+    if python3 "${SHARE_REPLICA_CLIENT}" health --endpoint "${endpoint_b}" >/dev/null 2>&1; then
+        die "replica B remained reachable after shutdown"
+    fi
+
+    offline_log="${run_dir}/offline-miner.log"
+    address_a="$(wallet_call miner getnewaddress)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" --datadir "${DATA_DIR}" --conf "${CONFIG_FILE}" --wallet miner \
+        --address "${address_a}" --share-endpoint "${endpoint_a}/share" --worker replica-a-online \
+        >"${offline_log}" 2>&1
+
+    start_replica "${ACCOUNTING_REPLICA_PORT}" "${ledger_b}" "${claims_b}" "${ready_b}" "${log_b}" pid_b
+    recovery="${run_dir}/replica-b-recovery.json"
+    python3 "${SHARE_REPLICA_CLIENT}" reconcile --target "${endpoint_b}" --peer "${endpoint_a}" --output "${recovery}" >/dev/null
+    python3 "${SHARE_REPLICA_CLIENT}" reconcile --target "${endpoint_a}" --peer "${endpoint_b}" >/dev/null
+
+    receipt_set_a="${run_dir}/replica-a-receipts.json"
+    receipt_set_b="${run_dir}/replica-b-receipts.json"
+    python3 "${SHARE_REPLICA_CLIENT}" receipts --endpoint "${endpoint_a}" --output "${receipt_set_a}" >/dev/null
+    python3 "${SHARE_REPLICA_CLIENT}" receipts --endpoint "${endpoint_b}" --output "${receipt_set_b}" >/dev/null
+    cmp -s "${receipt_set_a}" "${receipt_set_b}" || die "accounting replicas did not converge byte for byte"
+
+    coinbase_value="$(cli_call getblocktemplate '{"rules":["segwit"]}' | python3 -c 'import json,sys; print(json.load(sys.stdin)["coinbasevalue"])')"
+    plan_a="${run_dir}/replica-a-plan.json"
+    plan_b="${run_dir}/replica-b-plan.json"
+    python3 "${SHARE_REPLICA_CLIENT}" plan --endpoint "${endpoint_a}" --coinbase-value "${coinbase_value}" --output "${plan_a}" >/dev/null
+    python3 "${SHARE_REPLICA_CLIENT}" plan --endpoint "${endpoint_b}" --coinbase-value "${coinbase_value}" --output "${plan_b}" >/dev/null
+    cmp -s "${plan_a}" "${plan_b}" || die "accounting replicas produced different payout plans"
+
+    settlement_log="${run_dir}/settlement-miner.log"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" --datadir "${DATA_DIR}" --conf "${CONFIG_FILE}" --wallet miner \
+        --address "${address_a}" --settlement-peer "${endpoint_a}" --settlement-peer "${endpoint_b}" \
+        >"${settlement_log}" 2>&1
+    block_hash="$(cli_call getbestblockhash)"
+    decoded_block="${run_dir}/settlement-block.json"
+    cli_call getblock "${block_hash}" 2 >"${decoded_block}"
+    end_height="$(cli_call getblockcount)"
+    evidence="${run_dir}/share-settlement-evidence.json"
+    python3 "${SHARE_SETTLEMENT_EVIDENCE_BUILDER}" \
+        --receipt-set-a "${receipt_set_a}" --receipt-set-b "${receipt_set_b}" \
+        --plan-a "${plan_a}" --plan-b "${plan_b}" --block "${decoded_block}" \
+        --settlement-log "${settlement_log}" \
+        --seed-a-miner-log "${run_dir}/seed-a-miner.log" \
+        --seed-b-miner-log "${run_dir}/seed-b-miner.log" \
+        --offline-miner-log "${offline_log}" \
+        --recovery "${recovery}" --start-height "${start_height}" --end-height "${end_height}" \
+        --output "${evidence}"
+    [[ "${end_height}" -eq "$((start_height + 4))" ]] || die "share settlement demo did not advance the chain by four"
+    grep -Fq '"replica_failure_recovery_proven": true' "${evidence}" || die "replica recovery evidence is missing"
+    grep -Fq '"direct_publication": true' "${evidence}" || die "direct settlement evidence is missing"
+
+    sed -n '1,120p' "${settlement_log}"
+    printf '%s\n' 'Two accounting replicas converged on the same verified receipt set and payout plan.'
+    printf '%s\n' 'Mining continued while one replica was offline, and the stale replica recovered the missing receipt.'
+    printf '%s\n' 'The directly published coinbase paid the two agreed wallet scripts without a pool-held key.'
+    printf 'Share settlement evidence retained in: %s\n' "${run_dir}"
+)
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -712,6 +867,10 @@ case "${command}" in
     resilience-demo)
         [[ "$#" -eq 1 ]] || die "resilience-demo takes no arguments"
         command_resilience_demo
+        ;;
+    share-settlement-demo)
+        [[ "$#" -eq 1 ]] || die "share-settlement-demo takes no arguments"
+        command_share_settlement_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"

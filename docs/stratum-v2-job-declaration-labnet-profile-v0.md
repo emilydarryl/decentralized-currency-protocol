@@ -198,9 +198,11 @@ python3 contrib/mining_autonomy/run_interoperability.py --help
 - **Traffic analysis and denial of service:** encryption hides contents, not endpoints, timing, volume, or availability.
 - **Classical authentication:** the pinned upstream Noise certificate uses secp256k1 and BIP340. It is not post-quantum authentication. This private-labnet profile must be replaced or wrapped by a separately reviewed cryptographically agile construction before any production claim.
 - **Accounting and payouts:** the labnet prototype emits deterministic claims
-  for target-valid receipts grouped by miner-wallet payout script. The service
-  holds no wallet key or funds. This is not decentralized replication,
-  settlement, an enforceable payout promise, or dispute resolution.
+  for target-valid receipts grouped by miner-wallet payout script. Two local
+  replicas can reconcile after one outage, agree on a payout plan, and let the
+  miner publish those outputs directly in coinbase. Neither service holds a
+  wallet key or funds. This is not a public sharechain, independent operation,
+  an enforceable payout promise, or dispute resolution.
 
 The multi-coordinator lab test records a helper-produced
 `coordinator_state_commitment` so two views of one coordinator and template can
@@ -214,6 +216,7 @@ This profile milestone is complete when the document, generator, checked corpus,
 
 The reference accepted path, same-process direct fallback, independent
 wire/block implementation, ordered adversarial switching, and noncustodial
-accounting-claim prototype are implemented and tested. Decentralized share
-replication and actual settlement remain separate gates, so Template Autonomy
-remains open.
+accounting-claim prototype are implemented and tested. A later lab milestone
+adds two local receipt replicas and direct coinbase settlement, but a globally
+ordered sharechain and independent networked implementation remain separate
+gates, so Template Autonomy remains open.

@@ -58,10 +58,21 @@ protocol. Each time, the miner takes the same self-created block to a backup
 coordinator. When both coordinators disappear, it mines and publishes directly.
 The accounting service records how much verified test work each wallet payout
 script contributed, but it never holds a wallet key or any coins. In everyday
-terms, it produces an auditable bill, not a bank account or a payment. A real
-decentralized system still needs replicated share records and a reviewed way
-to settle those bills without trusting one operator. The exact proof and limits are in
-[Mining autonomy on labnet](mining-autonomy-labnet.md).
+terms, it first produced an auditable bill, not a bank account or a payment.
+
+The newest test adds a second bookkeeper. Each stores its own work receipts.
+They compare records, one is switched off while mining continues, and the
+stale copy imports what it missed after restart. Both must calculate exactly
+the same payment list. The miner then puts both payments directly in the new
+block instead of sending the reward through a pool wallet. If either
+bookkeeper is missing or the lists differ, pooled settlement stops.
+
+This is meaningful progress, but both bookkeepers still run on one laboratory
+machine and know each other's address in advance. A real decentralized system
+still needs a public P2Pool-like share history, independent operators, and
+defenses against fake identities, selective message delivery, and collusion.
+The exact proof and limits are in [Replicated share accounting and direct
+coinbase settlement](replicated-share-settlement-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
 
@@ -111,7 +122,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Ordered coordinator switching and noncustodial accounting claims work locally; replicated shares and actual payout settlement remain unfinished |
+| Decentralized pool system | Two local replicas recover and agree, and direct coinbase payouts work on labnet; a public sharechain and independent operators remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 

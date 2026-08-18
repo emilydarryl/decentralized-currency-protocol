@@ -17,6 +17,34 @@ sys.modules[SPEC.name] = MINER
 SPEC.loader.exec_module(MINER)
 
 
+def payout_plan(coinbase_value=5_000_000_000):
+    body = {
+        "format": "soveroot-labnet-direct-payout-plan-v0",
+        "chain": "labnet",
+        "custody": "none",
+        "settlement_status": "direct_coinbase_test_plan",
+        "coinbase_value": coinbase_value,
+        "receipt_set_commitment_sha256": "33" * 32,
+        "eligible_receipt_count": 2,
+        "total_work_units": 3,
+        "outputs": [
+            {
+                "payout_script_hex": "51",
+                "value": 2_000_000_000,
+                "work_units": 1,
+                "receipt_ids": ["11" * 32],
+            },
+            {
+                "payout_script_hex": "52",
+                "value": coinbase_value - 2_000_000_000,
+                "work_units": 2,
+                "receipt_ids": ["22" * 32],
+            },
+        ],
+    }
+    return {**body, "payout_plan_commitment_sha256": MINER.canonical_template_commitment(body)}
+
+
 class EncodingTests(unittest.TestCase):
     def test_varint_boundaries(self):
         self.assertEqual(MINER.encode_varint(0xFC), b"\xfc")
@@ -50,6 +78,36 @@ class BlockConstructionTests(unittest.TestCase):
         self.assertEqual(coinbase.block_bytes[4:6], b"\x00\x01")
         self.assertIn(b"\x01\x20" + b"\x00" * 32, coinbase.block_bytes)
         self.assertEqual(len(coinbase.txid_hash), 32)
+
+    def test_coinbase_serializes_and_conserves_direct_payout_outputs(self):
+        outputs = [(2_000_000_000, b"\x51"), (3_000_000_000, b"\x52")]
+        coinbase = MINER.build_coinbase(
+            height=17,
+            value=5_000_000_000,
+            payout_outputs=outputs,
+        )
+        self.assertEqual(coinbase.serialized_outputs, MINER._serialize_outputs(outputs))
+        with self.assertRaisesRegex(MINER.MiningError, "conserve"):
+            MINER.build_coinbase(
+                height=17,
+                value=5_000_000_000,
+                payout_outputs=[(1, b"\x51"), (2, b"\x52")],
+            )
+
+    def test_payout_plan_rejects_output_substitution(self):
+        plan = payout_plan()
+        MINER.validate_payout_plan(plan, 5_000_000_000)
+        plan["outputs"][0]["payout_script_hex"] = "53"
+        with self.assertRaisesRegex(MINER.MiningError, "canonical order|commitment"):
+            MINER.validate_payout_plan(plan, 5_000_000_000)
+
+    def test_payout_plan_rejects_receipt_reuse(self):
+        plan = payout_plan()
+        plan["outputs"][1]["receipt_ids"] = ["11" * 32]
+        body = {key: value for key, value in plan.items() if key != "payout_plan_commitment_sha256"}
+        plan["payout_plan_commitment_sha256"] = MINER.canonical_template_commitment(body)
+        with self.assertRaisesRegex(MINER.MiningError, "multiple payout outputs"):
+            MINER.validate_payout_plan(plan, 5_000_000_000)
 
     def test_merkle_root_duplicates_an_odd_leaf(self):
         leaves = [bytes([value]) * 32 for value in (1, 2, 3)]
@@ -107,6 +165,47 @@ class ShareReporterTests(unittest.TestCase):
             )
         self.assertEqual(reporter.delivered, 0)
         self.assertEqual(reporter.failed, 1)
+
+
+class SettlementPlanProviderTests(unittest.TestCase):
+    class Response:
+        def __init__(self, document):
+            self.body = json.dumps(document).encode("utf-8")
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_arguments):
+            return False
+
+        def read(self, _limit):
+            return self.body
+
+    def test_conflicting_replica_plans_fail_closed(self):
+        first = payout_plan()
+        second = payout_plan()
+        second["outputs"][0]["value"] -= 1
+        second["outputs"][1]["value"] += 1
+        body = {key: value for key, value in second.items() if key != "payout_plan_commitment_sha256"}
+        second["payout_plan_commitment_sha256"] = MINER.canonical_template_commitment(body)
+        provider = MINER.SettlementPlanProvider(
+            ["http://127.0.0.1:29445", "http://127.0.0.1:29448"], 1.0
+        )
+        with mock.patch.object(
+            MINER.urllib.request,
+            "urlopen",
+            side_effect=[self.Response(first), self.Response(second)],
+        ):
+            with self.assertRaisesRegex(MINER.MiningError, "conflicting payout plans"):
+                provider.fetch(5_000_000_000)
+
+    def test_unavailable_replica_fails_pooled_settlement(self):
+        provider = MINER.SettlementPlanProvider(
+            ["http://127.0.0.1:29445", "http://127.0.0.1:29448"], 1.0
+        )
+        with mock.patch.object(MINER.urllib.request, "urlopen", side_effect=OSError("offline")):
+            with self.assertRaisesRegex(MINER.MiningError, "unavailable"):
+                provider.fetch(5_000_000_000)
 
 
 class JobDeclaratorTests(unittest.TestCase):
@@ -265,6 +364,31 @@ class MiningWorkflowTests(unittest.TestCase):
         self.assertEqual(rpc.test_wallet, "miner")
         self.assertIsNotNone(rpc.submitted_block)
         self.assertEqual(result["declaration_status"], "direct_fallback")
+
+    def test_agreed_plan_is_committed_and_paid_directly_in_coinbase(self):
+        class AgreedPlanProvider:
+            def fetch(self, coinbase_value):
+                self.requested_value = coinbase_value
+                return payout_plan(coinbase_value)
+
+        rpc = FakeLabnetRpc()
+        provider = AgreedPlanProvider()
+        result = MINER.mine_one_block(
+            rpc,
+            wallet="miner",
+            address="labnet-address",
+            max_nonce=100,
+            settlement_provider=provider,
+        )
+        self.assertEqual(provider.requested_value, 5_000_000_000)
+        self.assertEqual(
+            result["payout_plan_commitment_sha256"],
+            payout_plan()["payout_plan_commitment_sha256"],
+        )
+        expected_outputs = MINER._serialize_outputs(
+            [(2_000_000_000, b"\x51"), (3_000_000_000, b"\x52")]
+        )
+        self.assertIn(expected_outputs, rpc.submitted_block)
 
     def test_accepted_declaration_solves_and_directly_publishes_exact_committed_template(self):
         class AcceptingDeclarator:

@@ -10,12 +10,16 @@ import os
 import re
 import struct
 import sys
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Sequence
 
 
 WORKER_PATTERN = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
+MAX_REPLICA_BODY = 1_048_576
+MIN_DIRECT_PAYOUT = 546
 
 
 class AccountingError(ValueError):
@@ -24,6 +28,11 @@ class AccountingError(ValueError):
 
 def hash256(data: bytes) -> bytes:
     return hashlib.sha256(hashlib.sha256(data).digest()).digest()
+
+
+def canonical_hash(value: Any) -> str:
+    body = json.dumps(value, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return hashlib.sha256(body).hexdigest()
 
 
 def compact_target(bits: int) -> int:
@@ -107,8 +116,14 @@ def validate_receipt(document: Any) -> dict[str, Any]:
     block_candidate = int.from_bytes(digest, "little") <= compact_target(bits)
     if block_candidate != document["block_candidate"]:
         raise AccountingError("reported block-candidate status is incorrect")
+    work_identity = {
+        "chain": "labnet",
+        "height": height,
+        "header_hex": document["header_hex"].lower(),
+        "nonce": nonce,
+    }
     normalized = {
-        "format": "soveroot-labnet-work-receipt-v1",
+        "format": "soveroot-labnet-work-receipt-v2",
         "chain": "labnet",
         "worker": worker,
         "height": height,
@@ -120,23 +135,10 @@ def validate_receipt(document: Any) -> dict[str, Any]:
         "block_candidate": block_candidate,
         "payout_script_hex": payout_script.lower(),
         "template_commitment_sha256": commitment.lower(),
+        "work_id_sha256": canonical_hash(work_identity),
     }
-    receipt_body = json.dumps(normalized, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    normalized["receipt_id_sha256"] = hashlib.sha256(receipt_body).hexdigest()
+    normalized["receipt_id_sha256"] = canonical_hash(normalized)
     return normalized
-
-
-def append_receipt(ledger: Path, receipt: dict[str, Any]) -> None:
-    ledger.parent.mkdir(parents=True, exist_ok=True)
-    if ledger.exists():
-        for line in ledger.read_text(encoding="utf-8").splitlines():
-            existing = json.loads(line)
-            if existing.get("receipt_id_sha256") == receipt["receipt_id_sha256"]:
-                raise AccountingError("duplicate work receipt")
-    with ledger.open("a", encoding="utf-8", newline="\n") as output:
-        output.write(json.dumps(receipt, separators=(",", ":"), sort_keys=True) + "\n")
-        output.flush()
-        os.fsync(output.fileno())
 
 
 def load_receipts(ledger: Path) -> list[dict[str, Any]]:
@@ -148,10 +150,97 @@ def load_receipts(ledger: Path) -> list[dict[str, Any]]:
             receipt = json.loads(line)
         except json.JSONDecodeError as error:
             raise AccountingError(f"ledger line {number} is malformed JSON") from error
-        if not isinstance(receipt, dict) or receipt.get("format") != "soveroot-labnet-work-receipt-v1":
-            raise AccountingError(f"ledger line {number} is not a normalized v1 receipt")
+        if not isinstance(receipt, dict) or receipt.get("format") != "soveroot-labnet-work-receipt-v2":
+            raise AccountingError(f"ledger line {number} is not a normalized v2 receipt")
         receipts.append(receipt)
+    validate_receipt_collection(receipts)
     return receipts
+
+
+def validate_normalized_receipt(receipt: Any) -> dict[str, Any]:
+    if not isinstance(receipt, dict):
+        raise AccountingError("replicated receipt must be a JSON object")
+    normalized = validate_receipt(receipt)
+    if normalized != receipt:
+        raise AccountingError("replicated receipt is not canonical normalized v2 data")
+    return normalized
+
+
+def validate_receipt_collection(receipts: Sequence[dict[str, Any]]) -> None:
+    by_receipt: dict[str, dict[str, Any]] = {}
+    by_work: dict[str, dict[str, Any]] = {}
+    for raw_receipt in receipts:
+        receipt = validate_normalized_receipt(raw_receipt)
+        receipt_id = receipt["receipt_id_sha256"]
+        work_id = receipt["work_id_sha256"]
+        previous_receipt = by_receipt.get(receipt_id)
+        if previous_receipt is not None:
+            if previous_receipt != receipt:
+                raise AccountingError("conflicting content for one receipt identifier")
+            raise AccountingError("duplicate receipt identifier in receipt set")
+        previous_work = by_work.get(work_id)
+        if previous_work is not None and previous_work != receipt:
+            raise AccountingError("one work identity has conflicting receipt content")
+        by_receipt[receipt_id] = receipt
+        by_work[work_id] = receipt
+
+
+def merge_receipts(
+    existing: Sequence[dict[str, Any]], incoming: Sequence[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    validate_receipt_collection(existing)
+    validate_receipt_collection(incoming)
+    by_receipt = {receipt["receipt_id_sha256"]: receipt for receipt in existing}
+    by_work = {receipt["work_id_sha256"]: receipt for receipt in existing}
+    additions = []
+    for receipt in sorted(incoming, key=lambda item: item["receipt_id_sha256"]):
+        receipt_id = receipt["receipt_id_sha256"]
+        work_id = receipt["work_id_sha256"]
+        if receipt_id in by_receipt:
+            if by_receipt[receipt_id] != receipt:
+                raise AccountingError("conflicting content for one receipt identifier")
+            continue
+        if work_id in by_work and by_work[work_id] != receipt:
+            raise AccountingError("one work identity has conflicting receipt content")
+        by_receipt[receipt_id] = receipt
+        by_work[work_id] = receipt
+        additions.append(receipt)
+    return additions
+
+
+def append_receipts(ledger: Path, receipts: Sequence[dict[str, Any]]) -> int:
+    existing = load_receipts(ledger)
+    additions = merge_receipts(existing, receipts)
+    if not additions:
+        return 0
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    with ledger.open("a", encoding="utf-8", newline="\n") as output:
+        for receipt in additions:
+            output.write(json.dumps(receipt, separators=(",", ":"), sort_keys=True) + "\n")
+        output.flush()
+        os.fsync(output.fileno())
+    return len(additions)
+
+
+def append_receipt(ledger: Path, receipt: dict[str, Any]) -> None:
+    if append_receipts(ledger, [receipt]) != 1:
+        raise AccountingError("duplicate work receipt")
+
+
+def receipt_set_document(receipts: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    validate_receipt_collection(receipts)
+    ordered = sorted(receipts, key=lambda item: item["receipt_id_sha256"])
+    commitment_body = [
+        {"receipt_id_sha256": item["receipt_id_sha256"], "work_id_sha256": item["work_id_sha256"]}
+        for item in ordered
+    ]
+    return {
+        "format": "soveroot-labnet-receipt-set-v0",
+        "chain": "labnet",
+        "receipt_count": len(ordered),
+        "receipt_set_commitment_sha256": canonical_hash(commitment_body),
+        "receipts": ordered,
+    }
 
 
 def work_units(bits_hex: str) -> int:
@@ -160,6 +249,7 @@ def work_units(bits_hex: str) -> int:
 
 
 def build_claims(receipts: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    receipt_set = receipt_set_document(receipts)
     eligible = [receipt for receipt in receipts if receipt.get("block_candidate") is True]
     grouped: dict[str, dict[str, Any]] = {}
     for receipt in eligible:
@@ -190,8 +280,60 @@ def build_claims(receipts: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "settlement_status": "accounting_claims_only_not_money",
         "eligible_receipt_count": len(eligible),
         "total_work_units": total,
+        "receipt_set_commitment_sha256": receipt_set["receipt_set_commitment_sha256"],
         "claims": claims,
     }
+
+
+def build_payout_plan(receipts: Sequence[dict[str, Any]], coinbase_value: int) -> dict[str, Any]:
+    if not isinstance(coinbase_value, int) or isinstance(coinbase_value, bool):
+        raise AccountingError("coinbase_value must be an integer")
+    if not 0 < coinbase_value <= 0x7FFFFFFFFFFFFFFF:
+        raise AccountingError("coinbase_value is outside the signed int64 range")
+    claims = build_claims(receipts)
+    if not claims["claims"] or claims["total_work_units"] <= 0:
+        raise AccountingError("no eligible work exists for a payout plan")
+    total_work = claims["total_work_units"]
+    allocations = []
+    allocated = 0
+    for claim in claims["claims"]:
+        scaled = coinbase_value * claim["work_units"]
+        value, remainder = divmod(scaled, total_work)
+        allocations.append({**claim, "value": value, "rounding_remainder": remainder})
+        allocated += value
+    for allocation in sorted(
+        allocations,
+        key=lambda item: (-item["rounding_remainder"], item["payout_script_hex"]),
+    )[: coinbase_value - allocated]:
+        allocation["value"] += 1
+    outputs = []
+    for allocation in sorted(allocations, key=lambda item: item["payout_script_hex"]):
+        if allocation["value"] < MIN_DIRECT_PAYOUT:
+            raise AccountingError(
+                f"direct payout to {allocation['payout_script_hex']} is below {MIN_DIRECT_PAYOUT} satoshis"
+            )
+        outputs.append(
+            {
+                "payout_script_hex": allocation["payout_script_hex"],
+                "value": allocation["value"],
+                "work_units": allocation["work_units"],
+                "receipt_ids": allocation["receipt_ids"],
+            }
+        )
+    if sum(output["value"] for output in outputs) != coinbase_value:
+        raise AccountingError("payout plan does not conserve the coinbase value")
+    body = {
+        "format": "soveroot-labnet-direct-payout-plan-v0",
+        "chain": "labnet",
+        "custody": "none",
+        "settlement_status": "direct_coinbase_test_plan",
+        "coinbase_value": coinbase_value,
+        "receipt_set_commitment_sha256": claims["receipt_set_commitment_sha256"],
+        "eligible_receipt_count": claims["eligible_receipt_count"],
+        "total_work_units": total_work,
+        "outputs": outputs,
+    }
+    return {**body, "payout_plan_commitment_sha256": canonical_hash(body)}
 
 
 def write_claims(path: Path, claims: dict[str, Any]) -> None:
@@ -201,8 +343,55 @@ def write_claims(path: Path, claims: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def validate_replica_endpoint(endpoint: Any) -> str:
+    if not isinstance(endpoint, str):
+        raise AccountingError("replica endpoint must be a string")
+    parsed = urllib.parse.urlparse(endpoint)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "127.0.0.1"
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+        or parsed.path not in ("", "/")
+    ):
+        raise AccountingError("replica endpoint must be an http://127.0.0.1:PORT base URL")
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise AccountingError("replica endpoint port is malformed") from error
+    if port is None or not 1024 <= port <= 65535:
+        raise AccountingError("replica endpoint port must be between 1024 and 65535")
+    return f"http://127.0.0.1:{port}"
+
+
+def fetch_receipt_set(endpoint: str, timeout: float = 2.0) -> dict[str, Any]:
+    base = validate_replica_endpoint(endpoint)
+    try:
+        with urllib.request.urlopen(f"{base}/receipts", timeout=timeout) as response:
+            body = response.read(MAX_REPLICA_BODY + 1)
+    except Exception as error:
+        raise AccountingError(f"could not fetch replica receipt set: {error}") from error
+    if len(body) > MAX_REPLICA_BODY:
+        raise AccountingError("replica receipt set exceeds the size limit")
+    try:
+        document = json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError) as error:
+        raise AccountingError("replica returned malformed receipt-set JSON") from error
+    if not isinstance(document, dict) or document.get("format") != "soveroot-labnet-receipt-set-v0":
+        raise AccountingError("replica returned the wrong receipt-set format")
+    receipts = document.get("receipts")
+    if not isinstance(receipts, list):
+        raise AccountingError("replica receipt set is missing its receipt list")
+    expected = receipt_set_document(receipts)
+    if document != expected:
+        raise AccountingError("replica receipt-set commitment or metadata is inconsistent")
+    return document
+
+
 class AccountingHandler(BaseHTTPRequestHandler):
-    server_version = "SoverootLabnetAccounting/0"
+    server_version = "SoverootLabnetAccounting/1"
 
     def _send_json(self, status: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
@@ -213,16 +402,32 @@ class AccountingHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self) -> None:
-        if self.path == "/health":
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/health" and not parsed.query:
             self._send_json(200, {"chain": "labnet", "role": "accounting-only", "status": "ready"})
             return
-        if self.path == "/claims":
+        if parsed.path == "/claims" and not parsed.query:
             self._send_json(200, build_claims(load_receipts(self.server.ledger)))  # type: ignore[attr-defined]
+            return
+        if parsed.path == "/receipts" and not parsed.query:
+            self._send_json(200, receipt_set_document(load_receipts(self.server.ledger)))  # type: ignore[attr-defined]
+            return
+        if parsed.path == "/plan":
+            try:
+                query = urllib.parse.parse_qs(parsed.query, strict_parsing=True)
+                if set(query) != {"coinbase_value"} or len(query["coinbase_value"]) != 1:
+                    raise AccountingError("plan requires exactly one coinbase_value")
+                coinbase_value = int(query["coinbase_value"][0])
+                plan = build_payout_plan(load_receipts(self.server.ledger), coinbase_value)  # type: ignore[attr-defined]
+            except (AccountingError, ValueError) as error:
+                self._send_json(400, {"error": str(error)})
+                return
+            self._send_json(200, plan)
             return
         self._send_json(404, {"error": "not found"})
 
     def do_POST(self) -> None:
-        if self.path != "/share":
+        if self.path not in ("/share", "/reconcile"):
             self._send_json(404, {"error": "not found"})
             return
         try:
@@ -230,8 +435,30 @@ class AccountingHandler(BaseHTTPRequestHandler):
             if not 1 <= content_length <= 8192:
                 raise AccountingError("request body must contain 1-8192 bytes")
             document = json.loads(self.rfile.read(content_length))
-            receipt = validate_receipt(document)
-            append_receipt(self.server.ledger, receipt)  # type: ignore[attr-defined]
+            if self.path == "/share":
+                receipt = validate_receipt(document)
+                append_receipt(self.server.ledger, receipt)  # type: ignore[attr-defined]
+                response = {
+                    "accepted": True,
+                    "receipt_id_sha256": receipt["receipt_id_sha256"],
+                    "role": "accounting-only",
+                }
+            else:
+                if not isinstance(document, dict) or set(document) != {"peer_endpoint"}:
+                    raise AccountingError("reconcile requires exactly one peer_endpoint")
+                peer_endpoint = validate_replica_endpoint(document["peer_endpoint"])
+                if urllib.parse.urlparse(peer_endpoint).port == self.server.server_port:
+                    raise AccountingError("a replica cannot reconcile from itself")
+                peer_set = fetch_receipt_set(peer_endpoint)
+                added = append_receipts(self.server.ledger, peer_set["receipts"])  # type: ignore[attr-defined]
+                local_set = receipt_set_document(load_receipts(self.server.ledger))  # type: ignore[attr-defined]
+                response = {
+                    "accepted": True,
+                    "added_receipts": added,
+                    "receipt_count": local_set["receipt_count"],
+                    "receipt_set_commitment_sha256": local_set["receipt_set_commitment_sha256"],
+                    "role": "accounting-replica",
+                }
             write_claims(
                 self.server.claims,  # type: ignore[attr-defined]
                 build_claims(load_receipts(self.server.ledger)),  # type: ignore[attr-defined]
@@ -239,14 +466,7 @@ class AccountingHandler(BaseHTTPRequestHandler):
         except (AccountingError, json.JSONDecodeError, UnicodeDecodeError, ValueError) as error:
             self._send_json(400, {"error": str(error)})
             return
-        self._send_json(
-            202,
-            {
-                "accepted": True,
-                "receipt_id_sha256": receipt["receipt_id_sha256"],
-                "role": "accounting-only",
-            },
-        )
+        self._send_json(202, response)
 
     def log_message(self, message: str, *arguments: object) -> None:
         print(f"accounting: {self.address_string()} {message % arguments}", file=sys.stderr)
@@ -275,7 +495,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.ready_file is not None:
         args.ready_file.parent.mkdir(parents=True, exist_ok=True)
         args.ready_file.write_text("ready\n", encoding="utf-8")
-    print(f"Accounting-only coordinator listening on http://{args.bind}:{args.port}/share", flush=True)
+    print(f"Accounting replica listening on http://{args.bind}:{args.port}", flush=True)
     try:
         server.serve_forever()
     finally:
