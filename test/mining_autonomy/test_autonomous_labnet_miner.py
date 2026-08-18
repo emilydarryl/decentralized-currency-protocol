@@ -4,6 +4,7 @@ import importlib.util
 import pathlib
 import sys
 import unittest
+from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
@@ -61,6 +62,40 @@ class BlockConstructionTests(unittest.TestCase):
         self.assertEqual(len(header), 80)
         self.assertEqual(header[-4:], nonce.to_bytes(4, "little"))
         self.assertLessEqual(int.from_bytes(digest, "little"), MINER.compact_target(0x207FFFFF))
+
+    def test_attempt_observer_sees_the_winning_header(self):
+        observed = []
+        prefix = b"\x00" * 68 + (1).to_bytes(4, "little") + (0x207FFFFF).to_bytes(4, "little")
+        header, nonce, digest = MINER.solve_header(
+            prefix,
+            0x207FFFFF,
+            100,
+            lambda seen_header, seen_nonce, seen_digest, candidate: observed.append(
+                (seen_header, seen_nonce, seen_digest, candidate)
+            ),
+        )
+        self.assertTrue(observed[-1][3])
+        self.assertEqual(observed[-1][:3], (header, nonce, digest))
+
+
+class ShareReporterTests(unittest.TestCase):
+    def test_reporter_rejects_non_loopback_endpoint(self):
+        with self.assertRaisesRegex(MINER.MiningError, "loopback"):
+            MINER.ShareReporter("http://pool.example/share", "worker", 1, 0.25)
+
+    def test_delivery_failure_is_counted_without_raising(self):
+        reporter = MINER.ShareReporter("http://127.0.0.1:29445/share", "worker", 1, 0.25)
+        with mock.patch.object(MINER.urllib.request, "urlopen", side_effect=OSError("offline")):
+            reporter.observe(
+                b"\x00" * 80,
+                0,
+                b"\x11" * 32,
+                False,
+                height=1,
+                previous_block_hash="00" * 32,
+            )
+        self.assertEqual(reporter.delivered, 0)
+        self.assertEqual(reporter.failed, 1)
 
 
 class FakeLabnetRpc:

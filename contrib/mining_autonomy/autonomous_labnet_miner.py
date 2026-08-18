@@ -13,9 +13,12 @@ import json
 import struct
 import subprocess
 import sys
+import time
+import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 
 class MiningError(RuntimeError):
@@ -168,7 +171,12 @@ def build_coinbase(
     return Coinbase(txid_hash=hash256(base), block_bytes=block_bytes)
 
 
-def solve_header(prefix: bytes, bits: int, max_nonce: int) -> tuple[bytes, int, bytes]:
+def solve_header(
+    prefix: bytes,
+    bits: int,
+    max_nonce: int,
+    attempt_observer: Callable[[bytes, int, bytes, bool], None] | None = None,
+) -> tuple[bytes, int, bytes]:
     if len(prefix) != 76:
         raise MiningError("block header prefix must be 76 bytes")
     if max_nonce < 0 or max_nonce > 0xFFFFFFFF:
@@ -177,7 +185,10 @@ def solve_header(prefix: bytes, bits: int, max_nonce: int) -> tuple[bytes, int, 
     for nonce in range(max_nonce + 1):
         header = prefix + struct.pack("<I", nonce)
         digest = hash256(header)
-        if int.from_bytes(digest, "little") <= target:
+        meets_target = int.from_bytes(digest, "little") <= target
+        if attempt_observer is not None:
+            attempt_observer(header, nonce, digest, meets_target)
+        if meets_target:
             return header, nonce, digest
     raise MiningError(f"no valid nonce found in range 0..{max_nonce}")
 
@@ -216,6 +227,77 @@ class LabnetCli:
             return output
 
 
+class ShareReporter:
+    """Best-effort work-receipt reporter that never controls block creation."""
+
+    def __init__(self, endpoint: str, worker: str, interval: int, timeout: float) -> None:
+        parsed = urllib.parse.urlsplit(endpoint)
+        if (
+            parsed.scheme != "http"
+            or parsed.hostname not in {"127.0.0.1", "localhost"}
+            or parsed.path != "/share"
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise MiningError("share endpoint must be an unauthenticated loopback http://.../share URL")
+        if not worker or len(worker) > 64 or any(character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-" for character in worker):
+            raise MiningError("worker name must contain 1-64 letters, digits, dots, underscores, or hyphens")
+        if interval <= 0:
+            raise MiningError("share report interval must be positive")
+        if timeout <= 0 or timeout > 5:
+            raise MiningError("share report timeout must be greater than zero and at most five seconds")
+        self.endpoint = endpoint
+        self.worker = worker
+        self.interval = interval
+        self.timeout = timeout
+        self.attempts = 0
+        self.delivered = 0
+        self.failed = 0
+
+    def observe(
+        self,
+        header: bytes,
+        nonce: int,
+        digest: bytes,
+        block_candidate: bool,
+        *,
+        height: int,
+        previous_block_hash: str,
+    ) -> None:
+        self.attempts += 1
+        if self.attempts % self.interval != 0 and not block_candidate:
+            return
+        receipt = {
+            "chain": "labnet",
+            "worker": self.worker,
+            "height": height,
+            "previous_block_hash": previous_block_hash,
+            "header_hex": header.hex(),
+            "nonce": nonce,
+            "hash": digest[::-1].hex(),
+            "block_candidate": block_candidate,
+        }
+        body = json.dumps(receipt, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        request = urllib.request.Request(
+            self.endpoint,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                if response.status != 202:
+                    raise OSError(f"coordinator returned HTTP {response.status}")
+                response.read(1024)
+            self.delivered += 1
+        except Exception:
+            # Accounting is optional. A broken or absent coordinator must not
+            # gain the ability to halt block construction or publication.
+            self.failed += 1
+
+
 def require_dict(value: Any, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise MiningError(f"{label} RPC response must be a JSON object")
@@ -228,6 +310,7 @@ def mine_one_block(
     wallet: str,
     address: str,
     max_nonce: int,
+    share_reporter: ShareReporter | None = None,
 ) -> dict[str, Any]:
     chain_info = require_dict(rpc.call("getblockchaininfo"), "getblockchaininfo")
     if chain_info.get("chain") != "labnet":
@@ -304,7 +387,17 @@ def mine_one_block(
         + struct.pack("<I", block_time)
         + struct.pack("<I", bits)
     )
-    header, nonce, digest = solve_header(header_prefix, bits, max_nonce)
+    observer = None
+    if share_reporter is not None:
+        observer = lambda header, nonce, digest, block_candidate: share_reporter.observe(
+            header,
+            nonce,
+            digest,
+            block_candidate,
+            height=height,
+            previous_block_hash=template["previousblockhash"],
+        )
+    header, nonce, digest = solve_header(header_prefix, bits, max_nonce, observer)
     block = header + encode_varint(len(transaction_bytes)) + b"".join(transaction_bytes)
     block_hash = digest[::-1].hex()
 
@@ -318,6 +411,8 @@ def mine_one_block(
         "height": height,
         "nonce": nonce,
         "transactions": len(transaction_bytes),
+        "share_reports_delivered": share_reporter.delivered if share_reporter is not None else 0,
+        "share_reports_failed": share_reporter.failed if share_reporter is not None else 0,
     }
 
 
@@ -331,6 +426,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--wallet", default="miner", help="wallet containing the payout address")
     parser.add_argument("--address", required=True, help="labnet payout address")
     parser.add_argument("--max-nonce", type=int, default=10_000_000, help="largest nonce to try")
+    parser.add_argument("--share-endpoint", help="optional loopback accounting endpoint ending in /share")
+    parser.add_argument("--worker", default="labnet-miner", help="accounting-only worker label")
+    parser.add_argument("--share-report-interval", type=int, default=1, help="report every Nth work attempt")
+    parser.add_argument("--share-timeout", type=float, default=0.25, help="maximum seconds per optional report")
+    parser.add_argument("--blocks", type=int, default=1, help="number of blocks to mine in this process")
+    parser.add_argument("--inter-block-delay", type=float, default=0, help="test-only pause between blocks")
     return parser.parse_args(argv)
 
 
@@ -338,16 +439,36 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(sys.argv[1:] if argv is None else argv)
     if not args.cli.is_file():
         raise MiningError(f"sovr-cli was not found at {args.cli}")
-    result = mine_one_block(
-        LabnetCli(args.cli, args.datadir, args.conf),
-        wallet=args.wallet,
-        address=args.address,
-        max_nonce=args.max_nonce,
-    )
-    print(f"Autonomous external block accepted: {result['block_hash']}")
-    print(f"Height: {result['height']}")
-    print(f"Nonce: {result['nonce']}")
-    print(f"Transactions selected from the miner's own node: {result['transactions']}")
+    if not 1 <= args.blocks <= 100:
+        raise MiningError("block count must be between 1 and 100")
+    if not 0 <= args.inter_block_delay <= 60:
+        raise MiningError("inter-block delay must be between zero and 60 seconds")
+    share_reporter = None
+    if args.share_endpoint:
+        share_reporter = ShareReporter(
+            args.share_endpoint,
+            args.worker,
+            args.share_report_interval,
+            args.share_timeout,
+        )
+    rpc = LabnetCli(args.cli, args.datadir, args.conf)
+    for block_index in range(args.blocks):
+        result = mine_one_block(
+            rpc,
+            wallet=args.wallet,
+            address=args.address,
+            max_nonce=args.max_nonce,
+            share_reporter=share_reporter,
+        )
+        print(f"Autonomous external block accepted: {result['block_hash']}", flush=True)
+        print(f"Height: {result['height']}", flush=True)
+        print(f"Nonce: {result['nonce']}", flush=True)
+        print(f"Transactions selected from the miner's own node: {result['transactions']}", flush=True)
+        if share_reporter is not None:
+            print(f"Share reports delivered: {result['share_reports_delivered']}", flush=True)
+            print(f"Share reports failed without stopping mining: {result['share_reports_failed']}", flush=True)
+        if block_index + 1 < args.blocks and args.inter_block_delay:
+            time.sleep(args.inter_block_delay)
     return 0
 
 

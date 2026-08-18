@@ -13,6 +13,8 @@ DATA_DIR="${SOVEROOT_LABNET_HOME:-${HOME:?HOME must be set}/.soveroot-labnet-kit
 SOVRD="${BIN_DIR}/sovrd"
 SOVR_CLI="${BIN_DIR}/sovr-cli"
 AUTONOMY_MINER="${SOVEROOT_AUTONOMY_MINER:-${SCRIPT_DIR}/libexec/autonomous_labnet_miner.py}"
+ACCOUNTING_COORDINATOR="${SOVEROOT_ACCOUNTING_COORDINATOR:-${SCRIPT_DIR}/libexec/share_accounting_coordinator.py}"
+ACCOUNTING_PORT="${SOVEROOT_ACCOUNTING_PORT:-29445}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
 COMMON_ARGS=(-chain=labnet "-datadir=${DATA_DIR}" "-conf=${CONFIG_FILE}")
 
@@ -29,6 +31,9 @@ Commands:
                       send one coin, and mine its confirmation.
   autonomy-demo       Build, solve, and directly submit one block outside
                       the daemon, without a pool coordinator.
+  coordinator-failure-demo
+                      Report work to optional accounting, stop the
+                      coordinator, then prove direct mining continues.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -55,6 +60,13 @@ require_binaries() {
 require_autonomy_miner() {
     command -v python3 >/dev/null 2>&1 || die "python3 is required for autonomy-demo"
     [[ -r "${AUTONOMY_MINER}" ]] || die "${AUTONOMY_MINER} is missing or unreadable"
+}
+
+require_accounting_coordinator() {
+    require_autonomy_miner
+    [[ -r "${ACCOUNTING_COORDINATOR}" ]] || die "${ACCOUNTING_COORDINATOR} is missing or unreadable"
+    [[ "${ACCOUNTING_PORT}" =~ ^[0-9]+$ ]] || die "SOVEROOT_ACCOUNTING_PORT must be a whole number"
+    ((ACCOUNTING_PORT >= 1024 && ACCOUNTING_PORT <= 65535)) || die "SOVEROOT_ACCOUNTING_PORT must be between 1024 and 65535"
 }
 
 write_config() {
@@ -186,6 +198,106 @@ command_autonomy_demo() {
     printf '%s\n' 'Labnet uses inherited easy development proof of work; this is not the final Soveroot PoW.'
 }
 
+command_coordinator_failure_demo() (
+    set -euo pipefail
+    require_binaries
+    require_accounting_coordinator
+    require_running
+    ensure_wallet miner
+
+    local run_dir ledger ready_file coordinator_log coordinator_pid endpoint miner_log miner_pid
+    local before_height after_height current_height address online_receipts final_receipts accepted_blocks
+    run_dir="$(mktemp -d "${DATA_DIR}/accounting-failure-demo.XXXXXX")"
+    ledger="${run_dir}/work-receipts.jsonl"
+    ready_file="${run_dir}/ready"
+    coordinator_log="${run_dir}/coordinator.log"
+    coordinator_pid=""
+    miner_pid=""
+    endpoint="http://127.0.0.1:${ACCOUNTING_PORT}/share"
+
+    cleanup_coordinator() {
+        if [[ -n "${miner_pid}" ]] && kill -0 "${miner_pid}" >/dev/null 2>&1; then
+            kill "${miner_pid}" >/dev/null 2>&1 || true
+            wait "${miner_pid}" >/dev/null 2>&1 || true
+        fi
+        if [[ -n "${coordinator_pid}" ]] && kill -0 "${coordinator_pid}" >/dev/null 2>&1; then
+            kill "${coordinator_pid}" >/dev/null 2>&1 || true
+            wait "${coordinator_pid}" >/dev/null 2>&1 || true
+        fi
+    }
+    trap cleanup_coordinator EXIT
+
+    python3 "${ACCOUNTING_COORDINATOR}" \
+        --bind 127.0.0.1 \
+        --port "${ACCOUNTING_PORT}" \
+        --ledger "${ledger}" \
+        --ready-file "${ready_file}" >"${coordinator_log}" 2>&1 &
+    coordinator_pid="$!"
+    for _ in $(seq 1 100); do
+        [[ -f "${ready_file}" ]] && break
+        kill -0 "${coordinator_pid}" >/dev/null 2>&1 || {
+            sed -n '1,20p' "${coordinator_log}" >&2
+            die "accounting coordinator stopped before becoming ready"
+        }
+        sleep 0.05
+    done
+    [[ -f "${ready_file}" ]] || die "accounting coordinator did not become ready"
+
+    before_height="$(cli_call getblockcount)"
+    address="$(wallet_call miner getnewaddress)"
+    miner_log="${run_dir}/miner.log"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${address}" \
+        --share-endpoint "${endpoint}" \
+        --worker coordinator-proof \
+        --blocks 2 \
+        --inter-block-delay 2 >"${miner_log}" 2>&1 &
+    miner_pid="$!"
+    for _ in $(seq 1 200); do
+        current_height="$(cli_call getblockcount)"
+        if [[ -s "${ledger}" ]] && [[ "${current_height}" -ge "$((before_height + 1))" ]]; then
+            break
+        fi
+        kill -0 "${miner_pid}" >/dev/null 2>&1 || {
+            sed -n '1,40p' "${miner_log}" >&2
+            die "miner stopped before its first coordinated block"
+        }
+        sleep 0.05
+    done
+    current_height="$(cli_call getblockcount)"
+    [[ -s "${ledger}" ]] || die "coordinator did not record the miner's first block work"
+    [[ "${current_height}" -ge "$((before_height + 1))" ]] || die "miner did not publish its first block"
+    read -r online_receipts < <(wc -l <"${ledger}")
+    ((online_receipts >= 1)) || die "coordinator receipt ledger is empty"
+
+    kill "${coordinator_pid}"
+    wait "${coordinator_pid}" >/dev/null 2>&1 || true
+    coordinator_pid=""
+    printf '%s\n' 'Accounting coordinator stopped before the second block.'
+    wait "${miner_pid}" || {
+        sed -n '1,80p' "${miner_log}" >&2
+        die "the continuing miner process failed after coordinator shutdown"
+    }
+    miner_pid=""
+    sed -n '1,80p' "${miner_log}"
+    grep -Eq 'Share reports failed without stopping mining: [1-9][0-9]*' "${miner_log}" || die "offline report failure was not observed"
+    accepted_blocks="$(grep -c '^Autonomous external block accepted:' "${miner_log}")"
+    [[ "${accepted_blocks}" -eq 2 ]] || die "the same miner process did not publish two blocks"
+
+    after_height="$(cli_call getblockcount)"
+    [[ "${after_height}" -eq "$((before_height + 2))" ]] || die "two external blocks did not advance the chain by two"
+    read -r final_receipts < <(wc -l <"${ledger}")
+    [[ "${final_receipts}" -eq "${online_receipts}" ]] || die "ledger changed after the coordinator stopped"
+    printf 'Coordinator accepted %s verified work receipt(s) before shutdown.\n' "${online_receipts}"
+    printf 'Mining continued after coordinator shutdown: chain advanced to height %s.\n' "${after_height}"
+    printf '%s\n' 'The coordinator supplied no template and published no block.'
+    printf 'Evidence retained in: %s\n' "${run_dir}"
+)
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -220,6 +332,10 @@ case "${command}" in
     autonomy-demo)
         [[ "$#" -eq 1 ]] || die "autonomy-demo takes no arguments"
         command_autonomy_demo
+        ;;
+    coordinator-failure-demo)
+        [[ "$#" -eq 1 ]] || die "coordinator-failure-demo takes no arguments"
+        command_coordinator_failure_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"
