@@ -32,6 +32,14 @@ must produce the same authentication inputs, protocol payloads, template
 commitment, and complete solved block byte for byte. Each then declares, solves,
 and directly publishes its own block against the reference coordinator.
 
+A fifth demonstration keeps one miner process alive for seven blocks. Its
+preferred coordinator accepts once and then rejects, disconnects, stalls,
+returns malformed state, and attempts a downgrade. The miner offers the exact
+same template to an alternate coordinator. When both coordinators and the
+accounting service are stopped, it still publishes directly. Verified receipts
+also become deterministic claims tied to the miner wallet's payout script;
+the accounting process holds no key, wallet, funds, or publication authority.
+
 ## What is implemented
 
 The external miner in
@@ -54,6 +62,9 @@ The external miner in
 8. When configured, it sends best-effort, cryptographically checked work
    receipts to a loopback accounting process. Delivery failures are counted
    but cannot interrupt block construction or publication.
+9. When several coordinators are configured, it tries them in declared order
+   without changing the template. Conflicting coordinator-state commitments
+   quarantine the affected coordinator, while direct fallback remains usable.
 
 The daemon's convenient `generatetoaddress` RPC is not used by this autonomy
 demonstration. The distinction matters: the separate miner, rather than the
@@ -109,6 +120,19 @@ independent Rust miner to publish one block each, for an exact two-block chain
 advance. The detailed evidence boundary is in
 [Independent miner interoperability on labnet](mining-interoperability-labnet.md).
 
+Run the coordinator-resilience and accounting-claim demonstration:
+
+```bash
+./soveroot-labnet resilience-demo
+```
+
+Success requires seven direct publications by one running miner, the five
+ordered hostile behaviors, alternate-coordinator acceptance of unchanged
+templates, one final direct fallback with no coordinator available, visible
+accounting failure without mining failure, and a validated canonical evidence
+file. The exact boundary is in
+[Noncustodial payout accounting and coordinator failover](noncustodial-payout-failover-labnet.md).
+
 Labnet coins have no value. The node listens only on the local machine, and
 this experiment should never be pointed at assets or secrets of real value.
 
@@ -122,10 +146,10 @@ demonstrations on every pull request.
 
 It does **not** yet prove:
 
-- decentralized share accounting or noncustodial pool payouts—the included
-  coordinator is one local append-only test service, not a pool design;
-- resilience to network partitions, malicious coordinators, forged payout
-  records, or multiple competing coordinators;
+- decentralized share replication or settlement—the included service produces
+  accounting claims but does not move coins or compel payment;
+- resilience to public-network partitions, colluding coordinators, forged
+  identities, or a dishonest accounting majority;
 - resistance to block withholding or payout manipulation;
 - that Soveroot's experimental proof of work is safe or selected;
 - production consensus, economic decentralization, or mainnet readiness.
@@ -136,8 +160,10 @@ The research ledger therefore keeps the Template Autonomy gate open.
 
 The [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md)
 pins the upstream specification. Issue #60 supplied the reference accepted path
-and same-process loss/rejection fallback. Issue #61 now supplies a separately
+and same-process loss/rejection fallback. Issue #61 supplies a separately
 written miner and parser, exact cross-implementation vectors, live protocol
-tests, and two direct block publications. The next bounded work is
-noncustodial payout accounting and adversarial multi-coordinator switching;
-interoperable block construction alone does not establish decentralized mining.
+tests, and two direct block publications. Issue #62 adds deterministic
+noncustodial accounting claims and same-process switching across adversarial
+coordinators without surrendering template or publication authority. The next
+bounded work is independently replicated share state and actual settlement;
+local accounting claims alone do not establish decentralized mining.

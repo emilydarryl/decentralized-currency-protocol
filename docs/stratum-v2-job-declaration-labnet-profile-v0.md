@@ -197,13 +197,23 @@ python3 contrib/mining_autonomy/run_interoperability.py --help
 - **Template substitution:** commitment matching and byte-level block reconstruction tests forbid silent coordinator replacement in official software. Consensus cannot prove how third-party software obtained its template.
 - **Traffic analysis and denial of service:** encryption hides contents, not endpoints, timing, volume, or availability.
 - **Classical authentication:** the pinned upstream Noise certificate uses secp256k1 and BIP340. It is not post-quantum authentication. This private-labnet profile must be replaced or wrapped by a separately reviewed cryptographically agile construction before any production claim.
-- **Accounting and payouts:** v0 does not define decentralized accounting, noncustodial payouts, or payout dispute resolution.
+- **Accounting and payouts:** the labnet prototype emits deterministic claims
+  for target-valid receipts grouped by miner-wallet payout script. The service
+  holds no wallet key or funds. This is not decentralized replication,
+  settlement, an enforceable payout promise, or dispute resolution.
+
+The multi-coordinator lab test records a helper-produced
+`coordinator_state_commitment` so two views of one coordinator and template can
+be compared and the coordinator quarantined on conflict. That value is
+test-profile observability, not an upstream Stratum V2 wire field, consensus
+commitment, or global equivocation proof.
 
 ## 11. Exit and change rules
 
 This profile milestone is complete when the document, generator, checked corpus, tests, roadmap, and research ledger agree. It does not close the Template Autonomy gate.
 
-The reference accepted path, same-process direct fallback, and independent
-wire/block implementation are now implemented and checked byte for byte.
-Adversarial coordinator switching and noncustodial payout work remain separate
-gates, so Template Autonomy remains open.
+The reference accepted path, same-process direct fallback, independent
+wire/block implementation, ordered adversarial switching, and noncustodial
+accounting-claim prototype are implemented and tested. Decentralized share
+replication and actual settlement remain separate gates, so Template Autonomy
+remains open.

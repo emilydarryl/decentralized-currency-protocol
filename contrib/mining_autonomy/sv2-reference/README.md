@@ -10,8 +10,9 @@ The helper has three commands:
 
 - `generate-authority` creates a new test coordinator key file and prints only
   its public key;
-- `serve` runs a loopback-only accepted, rejected, or disconnecting test Job
-  Declarator Server; and
+- `serve` runs a loopback-only test Job Declarator Server with accepted,
+  rejected, disconnecting, stalling, malformed-state, downgrade, ordered
+  scenario, and equivocation modes; and
 - `declare` reads one miner-created semantic template from standard input,
   authenticates the pinned server over Noise NX, negotiates version 2, obtains
   a token, sends `DeclareMiningJob`, supplies each transaction requested through

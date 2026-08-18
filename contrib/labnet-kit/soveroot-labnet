@@ -18,8 +18,10 @@ SV2_REFERENCE="${SOVEROOT_SV2_REFERENCE:-${SCRIPT_DIR}/libexec/soveroot-sv2-refe
 SV2_INDEPENDENT="${SOVEROOT_SV2_INDEPENDENT_MINER:-${SCRIPT_DIR}/libexec/soveroot-sv2-independent-miner}"
 INTEROP_RUNNER="${SOVEROOT_INTEROP_RUNNER:-${SCRIPT_DIR}/libexec/run_interoperability.py}"
 INTEROP_FIXTURE="${SOVEROOT_INTEROP_FIXTURE:-${SCRIPT_DIR}/libexec/sv2_interoperability_v0.json}"
+RESILIENCE_EVIDENCE_BUILDER="${SOVEROOT_RESILIENCE_EVIDENCE_BUILDER:-${SCRIPT_DIR}/libexec/build_resilience_evidence.py}"
 ACCOUNTING_PORT="${SOVEROOT_ACCOUNTING_PORT:-29445}"
 SV2_PORT="${SOVEROOT_SV2_PORT:-29446}"
+SV2_ALTERNATE_PORT="${SOVEROOT_SV2_ALTERNATE_PORT:-29447}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
 COMMON_ARGS=(-chain=labnet "-datadir=${DATA_DIR}" "-conf=${CONFIG_FILE}")
 
@@ -45,6 +47,8 @@ Commands:
   interoperability-demo
                       Run the reference and independently written miners,
                       require byte-exact vectors, and publish one block each.
+  resilience-demo     Exercise hostile primary coordinators, ordered failover,
+                      direct fallback, and noncustodial payout claims.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -92,6 +96,14 @@ require_interoperability_tools() {
     [[ -x "${SV2_INDEPENDENT}" ]] || die "${SV2_INDEPENDENT} is missing or not executable"
     [[ -r "${INTEROP_RUNNER}" ]] || die "${INTEROP_RUNNER} is missing or unreadable"
     [[ -r "${INTEROP_FIXTURE}" ]] || die "${INTEROP_FIXTURE} is missing or unreadable"
+}
+
+require_resilience_tools() {
+    require_interoperability_tools
+    require_accounting_coordinator
+    [[ -r "${RESILIENCE_EVIDENCE_BUILDER}" ]] || die "${RESILIENCE_EVIDENCE_BUILDER} is missing or unreadable"
+    ((SV2_ALTERNATE_PORT >= 1024 && SV2_ALTERNATE_PORT <= 65535)) || die "SOVEROOT_SV2_ALTERNATE_PORT must be between 1024 and 65535"
+    [[ "${SV2_ALTERNATE_PORT}" -ne "${SV2_PORT}" ]] || die "the primary and alternate SV2 ports must differ"
 }
 
 write_config() {
@@ -230,10 +242,11 @@ command_coordinator_failure_demo() (
     require_running
     ensure_wallet miner
 
-    local run_dir ledger ready_file coordinator_log coordinator_pid endpoint miner_log miner_pid
+    local run_dir ledger claims ready_file coordinator_log coordinator_pid endpoint miner_log miner_pid
     local before_height after_height current_height address online_receipts final_receipts accepted_blocks
     run_dir="$(mktemp -d "${DATA_DIR}/accounting-failure-demo.XXXXXX")"
     ledger="${run_dir}/work-receipts.jsonl"
+    claims="${run_dir}/noncustodial-claims.json"
     ready_file="${run_dir}/ready"
     coordinator_log="${run_dir}/coordinator.log"
     coordinator_pid=""
@@ -256,6 +269,7 @@ command_coordinator_failure_demo() (
         --bind 127.0.0.1 \
         --port "${ACCOUNTING_PORT}" \
         --ledger "${ledger}" \
+        --claims "${claims}" \
         --ready-file "${ready_file}" >"${coordinator_log}" 2>&1 &
     coordinator_pid="$!"
     for _ in $(seq 1 100); do
@@ -518,6 +532,136 @@ command_interoperability_demo() (
     printf 'Interoperability evidence retained in: %s\n' "${run_dir}"
 )
 
+command_resilience_demo() (
+    set -euo pipefail
+    require_binaries
+    require_resilience_tools
+    require_running
+    ensure_wallet miner
+
+    local run_dir primary_authority alternate_authority primary_ready alternate_ready accounting_ready
+    local primary_log alternate_log accounting_log miner_log ledger claims evidence
+    local primary_pid alternate_pid accounting_pid miner_pid primary_key alternate_key address endpoint
+    local before_height current_height after_height accepted_blocks
+    run_dir="$(mktemp -d "${DATA_DIR}/resilience-demo.XXXXXX")"
+    primary_authority="${run_dir}/primary-authority.json"
+    alternate_authority="${run_dir}/alternate-authority.json"
+    primary_ready="${run_dir}/primary-ready.json"
+    alternate_ready="${run_dir}/alternate-ready.json"
+    accounting_ready="${run_dir}/accounting-ready"
+    primary_log="${run_dir}/primary-coordinator.log"
+    alternate_log="${run_dir}/alternate-coordinator.log"
+    accounting_log="${run_dir}/accounting.log"
+    miner_log="${run_dir}/miner.log"
+    ledger="${run_dir}/work-receipts.jsonl"
+    claims="${run_dir}/noncustodial-claims.json"
+    evidence="${run_dir}/coordinator-resilience-evidence.json"
+    primary_pid=""
+    alternate_pid=""
+    accounting_pid=""
+    miner_pid=""
+    endpoint="http://127.0.0.1:${ACCOUNTING_PORT}/share"
+
+    cleanup_resilience() {
+        for pid in "${miner_pid}" "${primary_pid}" "${alternate_pid}" "${accounting_pid}"; do
+            if [[ -n "${pid}" ]] && kill -0 "${pid}" >/dev/null 2>&1; then
+                kill "${pid}" >/dev/null 2>&1 || true
+                wait "${pid}" >/dev/null 2>&1 || true
+            fi
+        done
+    }
+    trap cleanup_resilience EXIT
+
+    umask 077
+    primary_key="$("${SV2_REFERENCE}" generate-authority --output "${primary_authority}")"
+    alternate_key="$("${SV2_REFERENCE}" generate-authority --output "${alternate_authority}")"
+    "${SV2_REFERENCE}" serve \
+        --endpoint "127.0.0.1:${SV2_PORT}" \
+        --authority-file "${primary_authority}" \
+        --mode scenario \
+        --ready-file "${primary_ready}" >"${primary_log}" 2>&1 &
+    primary_pid="$!"
+    "${SV2_REFERENCE}" serve \
+        --endpoint "127.0.0.1:${SV2_ALTERNATE_PORT}" \
+        --authority-file "${alternate_authority}" \
+        --mode accept \
+        --ready-file "${alternate_ready}" >"${alternate_log}" 2>&1 &
+    alternate_pid="$!"
+    python3 "${ACCOUNTING_COORDINATOR}" \
+        --bind 127.0.0.1 \
+        --port "${ACCOUNTING_PORT}" \
+        --ledger "${ledger}" \
+        --claims "${claims}" \
+        --ready-file "${accounting_ready}" >"${accounting_log}" 2>&1 &
+    accounting_pid="$!"
+
+    for _ in $(seq 1 200); do
+        [[ -f "${primary_ready}" && -f "${alternate_ready}" && -f "${accounting_ready}" ]] && break
+        sleep 0.05
+    done
+    [[ -f "${primary_ready}" && -f "${alternate_ready}" && -f "${accounting_ready}" ]] || die "resilience services did not become ready"
+
+    before_height="$(cli_call getblockcount)"
+    address="$(wallet_call miner getnewaddress)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${address}" \
+        --share-endpoint "${endpoint}" \
+        --worker resilient-miner \
+        --sv2-helper "${SV2_REFERENCE}" \
+        --sv2-coordinator "primary,127.0.0.1:${SV2_PORT},${primary_key}" \
+        --sv2-coordinator "alternate,127.0.0.1:${SV2_ALTERNATE_PORT},${alternate_key}" \
+        --sv2-timeout-ms 500 \
+        --blocks 7 \
+        --inter-block-delay 2 >"${miner_log}" 2>&1 &
+    miner_pid="$!"
+
+    for _ in $(seq 1 1200); do
+        accepted_blocks="$(grep -c '^Autonomous external block accepted:' "${miner_log}" 2>/dev/null || true)"
+        [[ "${accepted_blocks}" -ge 6 ]] && break
+        kill -0 "${miner_pid}" >/dev/null 2>&1 || {
+            sed -n '1,240p' "${miner_log}" >&2
+            die "miner stopped before completing six coordinated scenarios"
+        }
+        sleep 0.05
+    done
+    [[ "${accepted_blocks}" -ge 6 ]] || die "six coordinated blocks were not observed"
+
+    kill "${primary_pid}" "${alternate_pid}" "${accounting_pid}" >/dev/null 2>&1 || true
+    wait "${primary_pid}" >/dev/null 2>&1 || true
+    wait "${alternate_pid}" >/dev/null 2>&1 || true
+    wait "${accounting_pid}" >/dev/null 2>&1 || true
+    primary_pid=""
+    alternate_pid=""
+    accounting_pid=""
+    printf '%s\n' 'Both coordinators and optional accounting were stopped before the final block.'
+
+    wait "${miner_pid}" || {
+        sed -n '1,320p' "${miner_log}" >&2
+        die "the same miner process failed during total coordinator unavailability"
+    }
+    miner_pid=""
+    after_height="$(cli_call getblockcount)"
+    python3 "${RESILIENCE_EVIDENCE_BUILDER}" \
+        --miner-log "${miner_log}" \
+        --claims "${claims}" \
+        --start-height "${before_height}" \
+        --end-height "${after_height}" \
+        --output "${evidence}"
+    grep -Fq '"direct_publications": 7' "${evidence}" || die "resilience evidence did not retain seven publications"
+    grep -Fq '"custody": "none"' "${evidence}" || die "noncustodial claim evidence is missing"
+    current_height="$(cli_call getblockcount)"
+    [[ "${current_height}" -eq "$((before_height + 7))" ]] || die "resilience demo did not advance the chain by seven"
+    sed -n '1,320p' "${miner_log}"
+    printf '%s\n' 'Primary rejection, disconnect, stall, malformed state, and downgrade all failed over without template substitution.'
+    printf '%s\n' 'The same miner directly published while every coordinator and accounting service were unavailable.'
+    printf '%s\n' 'Claims bind verified work to the miner wallet payout script; the accounting service held no key or funds.'
+    printf 'Resilience evidence retained in: %s\n' "${run_dir}"
+)
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -564,6 +708,10 @@ case "${command}" in
     interoperability-demo)
         [[ "$#" -eq 1 ]] || die "interoperability-demo takes no arguments"
         command_interoperability_demo
+        ;;
+    resilience-demo)
+        [[ "$#" -eq 1 ]] || die "resilience-demo takes no arguments"
+        command_resilience_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"

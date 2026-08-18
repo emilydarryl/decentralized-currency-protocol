@@ -215,6 +215,7 @@ class JobDeclarator:
         endpoint: str,
         authority_public_key: str,
         timeout_ms: int,
+        name: str = "coordinator",
     ) -> None:
         if not helper.is_file():
             raise MiningError(f"Stratum V2 helper was not found at {helper}")
@@ -225,6 +226,12 @@ class JobDeclarator:
             raise MiningError("the Stratum V2 authority public key is malformed")
         if timeout_ms <= 0 or timeout_ms > 10_000:
             raise MiningError("the Stratum V2 timeout must be between 1 and 10000 milliseconds")
+        if not name or len(name) > 64 or any(
+            character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+            for character in name
+        ):
+            raise MiningError("coordinator name must contain 1-64 safe label characters")
+        self.name = name
         self.helper = helper
         self.endpoint = endpoint
         self.authority_public_key = authority_public_key
@@ -267,6 +274,99 @@ class JobDeclarator:
         if response["status"] == "accepted" and response["transport_status"] != "authenticated":
             return {"status": "direct_fallback", "reason": "unauthenticated_acceptance"}
         return response
+
+
+class CoordinatorViewRegistry:
+    """Detect conflicting test-profile views without trusting a coordinator."""
+
+    def __init__(self) -> None:
+        self._views: dict[tuple[str, str], str] = {}
+        self.quarantined: set[str] = set()
+
+    def observe(self, coordinator: str, template_commitment: str, state_commitment: str) -> bool:
+        if coordinator in self.quarantined:
+            return False
+        key = (coordinator, template_commitment)
+        previous = self._views.setdefault(key, state_commitment)
+        if previous != state_commitment:
+            self.quarantined.add(coordinator)
+            return False
+        return True
+
+
+class CoordinatorSelector:
+    """Try configured coordinators in order without changing the miner's job."""
+
+    def __init__(
+        self,
+        coordinators: Sequence[JobDeclarator],
+        view_registry: CoordinatorViewRegistry | None = None,
+    ) -> None:
+        if not coordinators:
+            raise MiningError("at least one coordinator is required")
+        names = [coordinator.name for coordinator in coordinators]
+        if len(set(names)) != len(names):
+            raise MiningError("coordinator names must be unique")
+        self.coordinators = list(coordinators)
+        self.view_registry = view_registry or CoordinatorViewRegistry()
+        self.endpoint = ",".join(coordinator.endpoint for coordinator in coordinators)
+        self.last_accepted: str | None = None
+
+    def declare(self, template: dict[str, Any]) -> dict[str, Any]:
+        attempts = []
+        for index, coordinator in enumerate(self.coordinators):
+            if coordinator.name in self.view_registry.quarantined:
+                result = {"status": "direct_fallback", "reason": "coordinator_quarantined"}
+            else:
+                result = coordinator.declare(template)
+            attempt = {
+                "coordinator": coordinator.name,
+                "status": result.get("status", "direct_fallback"),
+                "reason": result.get("reason"),
+                "template_commitment_sha256": template["template_commitment_sha256"],
+            }
+            attempts.append(attempt)
+            structured_event("coordination", "coordinator_attempt_result", **attempt)
+            if result.get("status") != "accepted":
+                continue
+            state_commitment = result.get("coordinator_state_commitment")
+            if state_commitment is not None and (
+                not isinstance(state_commitment, str)
+                or not self.view_registry.observe(
+                    coordinator.name,
+                    template["template_commitment_sha256"],
+                    state_commitment,
+                )
+            ):
+                attempts[-1]["status"] = "direct_fallback"
+                attempts[-1]["reason"] = "coordinator_equivocation"
+                structured_event(
+                    "coordination",
+                    "coordinator_quarantined",
+                    coordinator=coordinator.name,
+                    reason="coordinator_equivocation",
+                    template_commitment_sha256=template["template_commitment_sha256"],
+                )
+                continue
+            previous = self.last_accepted
+            self.last_accepted = coordinator.name
+            return {
+                **result,
+                "coordinator": coordinator.name,
+                "failover_used": index > 0,
+                "switched": previous is not None and previous != coordinator.name,
+                "attempts": attempts,
+            }
+        return {
+            "status": "direct_fallback",
+            "transport_status": "failed",
+            "reason": "all_configured_coordinators_failed",
+            "template_commitment_sha256": template["template_commitment_sha256"],
+            "coordinator": None,
+            "failover_used": bool(attempts),
+            "switched": False,
+            "attempts": attempts,
+        }
 
 
 def structured_event(component: str, event: str, **fields: Any) -> None:
@@ -374,6 +474,8 @@ class ShareReporter:
         *,
         height: int,
         previous_block_hash: str,
+        payout_script_hex: str,
+        template_commitment_sha256: str,
     ) -> None:
         self.attempts += 1
         if self.attempts % self.interval != 0 and not block_candidate:
@@ -387,6 +489,8 @@ class ShareReporter:
             "nonce": nonce,
             "hash": digest[::-1].hex(),
             "block_candidate": block_candidate,
+            "payout_script_hex": payout_script_hex,
+            "template_commitment_sha256": template_commitment_sha256,
         }
         body = json.dumps(receipt, separators=(",", ":"), sort_keys=True).encode("utf-8")
         request = urllib.request.Request(
@@ -420,7 +524,7 @@ def mine_one_block(
     address: str,
     max_nonce: int,
     share_reporter: ShareReporter | None = None,
-    job_declarator: JobDeclarator | None = None,
+    job_declarator: JobDeclarator | CoordinatorSelector | None = None,
 ) -> dict[str, Any]:
     chain_info = require_dict(rpc.call("getblockchaininfo"), "getblockchaininfo")
     if chain_info.get("chain") != "labnet":
@@ -553,6 +657,8 @@ def mine_one_block(
             block_candidate,
             height=height,
             previous_block_hash=template["previousblockhash"],
+            payout_script_hex=payout_script.hex(),
+            template_commitment_sha256=semantic_template["template_commitment_sha256"],
         )
     structured_event(
         "solving",
@@ -620,6 +726,13 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--sv2-endpoint", help="loopback host:port for the test Job Declarator Server")
     parser.add_argument("--sv2-authority-public-key", help="pinned coordinator Noise authority public key")
     parser.add_argument("--sv2-timeout-ms", type=int, default=2000, help="bounded declaration timeout")
+    parser.add_argument(
+        "--sv2-coordinator",
+        action="append",
+        default=[],
+        metavar="NAME,HOST:PORT,PUBLIC_KEY",
+        help="repeatable ordered coordinator; retries preserve the exact miner-created template",
+    )
     parser.add_argument("--blocks", type=int, default=1, help="number of blocks to mine in this process")
     parser.add_argument("--inter-block-delay", type=float, default=0, help="test-only pause between blocks")
     return parser.parse_args(argv)
@@ -641,9 +754,30 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.share_report_interval,
             args.share_timeout,
         )
-    job_declarator = None
+    job_declarator: JobDeclarator | CoordinatorSelector | None = None
     sv2_values = (args.sv2_helper, args.sv2_endpoint, args.sv2_authority_public_key)
-    if any(value is not None for value in sv2_values):
+    if args.sv2_coordinator:
+        if args.sv2_endpoint is not None or args.sv2_authority_public_key is not None:
+            raise MiningError("legacy endpoint/key options cannot be combined with --sv2-coordinator")
+        if args.sv2_helper is None:
+            raise MiningError("--sv2-helper is required with --sv2-coordinator")
+        coordinators = []
+        for value in args.sv2_coordinator:
+            parts = value.split(",", 2)
+            if len(parts) != 3:
+                raise MiningError("--sv2-coordinator must be NAME,HOST:PORT,PUBLIC_KEY")
+            name, endpoint, public_key = parts
+            coordinators.append(
+                JobDeclarator(
+                    args.sv2_helper,
+                    endpoint,
+                    public_key,
+                    args.sv2_timeout_ms,
+                    name=name,
+                )
+            )
+        job_declarator = CoordinatorSelector(coordinators)
+    elif any(value is not None for value in sv2_values):
         if not all(value is not None for value in sv2_values):
             raise MiningError(
                 "--sv2-helper, --sv2-endpoint, and --sv2-authority-public-key must be supplied together"

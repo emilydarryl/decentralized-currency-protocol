@@ -110,6 +110,7 @@ jobs:
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "coordinator-failure-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "job-declaration-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "interoperability-demo"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "resilience-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -307,6 +308,7 @@ jobs:
           test -x "$kit/soveroot-labnet"
           test -x "$kit/libexec/autonomous_labnet_miner.py"
           test -x "$kit/libexec/share_accounting_coordinator.py"
+          test -x "$kit/libexec/build_resilience_evidence.py"
           test -x "$kit/libexec/soveroot-sv2-reference"
           test -x "$kit/libexec/soveroot-sv2-independent-miner"
           test -x "$kit/libexec/run_interoperability.py"
@@ -336,6 +338,14 @@ jobs:
           printf '%s\n' "$interoperability_output"
           grep -F -- "Reference and independent authentication and wire vectors matched byte-for-byte." <<<"$interoperability_output"
           grep -F -- "Both independently built miner-created jobs were accepted and directly published." <<<"$interoperability_output"
+          resilience_output="$("$kit/soveroot-labnet" resilience-demo)"
+          printf '%s\n' "$resilience_output"
+          grep -F -- "Primary rejection, disconnect, stall, malformed state, and downgrade all failed over without template substitution." <<<"$resilience_output"
+          grep -F -- "The same miner directly published while every coordinator and accounting service were unavailable." <<<"$resilience_output"
+          grep -F -- "Claims bind verified work to the miner wallet payout script; the accounting service held no key or funds." <<<"$resilience_output"
+          resilience_evidence="$(find "$SOVEROOT_LABNET_HOME" -path '*/resilience-demo.*/coordinator-resilience-evidence.json' -print -quit)"
+          test -s "$resilience_evidence"
+          cp "$resilience_evidence" build/labnet-kit-artifacts/coordinator-resilience-evidence.json
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT
@@ -347,6 +357,7 @@ jobs:
           path: |
             build/labnet-kit-artifacts/*.tar.gz
             build/labnet-kit-artifacts/*.sha256
+            build/labnet-kit-artifacts/coordinator-resilience-evidence.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
