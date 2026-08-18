@@ -36,6 +36,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [labnet-kit.md](docs/labnet-kit.md) is the plain-English download and operation guide for the test-only local node, wallet, and mining demonstration.
 - [mining-autonomy-labnet.md](docs/mining-autonomy-labnet.md) explains the external-miner and coordinator-failure proofs, what pool power they remove, and the interoperability, payout, and Stratum V2 work that remains.
+- [stratum-v2-job-declaration-labnet-profile-v0.md](docs/stratum-v2-job-declaration-labnet-profile-v0.md) freezes the authenticated private-labnet Job Declaration subset, direct-publication invariant, failure behavior, and canonical semantic transcripts.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
 - [upgrade-activation.md](docs/upgrade-activation.md) defines a conservative, non-miner-exclusive lifecycle for future consensus changes.

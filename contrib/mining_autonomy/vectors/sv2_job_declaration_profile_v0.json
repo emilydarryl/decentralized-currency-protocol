@@ -1,0 +1,1021 @@
+{
+  "format": "soveroot-sv2-jd-semantic-v0",
+  "profile_id": "soveroot-sv2-jd-labnet-v0",
+  "scenarios": [
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "coinbase_output_max_additional_size": 0,
+          "direction": "coordinator_to_miner",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 7,
+          "seq": 6,
+          "type": "allocate_mining_job_token_success",
+          "upstream_message_type": "0x51"
+        },
+        {
+          "coinbase_prefix_hex": "0200000001",
+          "coinbase_suffix_hex": "ffffffff",
+          "direction": "miner_to_coordinator",
+          "excess_data_hex": "",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "tx_short_hash_list": [],
+          "type": "declare_mining_job",
+          "upstream_message_type": "0x57",
+          "version": 4
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "new_mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 8,
+          "type": "declare_mining_job_success",
+          "upstream_message_type": "0x58"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 9,
+          "seq": 9,
+          "type": "open_extended_mining_channel",
+          "upstream_message_type": "0x13",
+          "user_identity": "labnet-miner-a"
+        },
+        {
+          "channel_id": 1,
+          "direction": "coordinator_to_miner",
+          "request_id": 9,
+          "seq": 10,
+          "type": "open_extended_mining_channel_success",
+          "upstream_message_type": "0x14"
+        },
+        {
+          "channel_id": 1,
+          "direction": "miner_to_coordinator",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 10,
+          "seq": 11,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "set_custom_mining_job",
+          "upstream_message_type": "0x22"
+        },
+        {
+          "channel_id": 1,
+          "direction": "coordinator_to_miner",
+          "job_id": "labnet-job-0001",
+          "request_id": 10,
+          "seq": 12,
+          "type": "set_custom_mining_job_success",
+          "upstream_message_type": "0x23"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 13,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 14,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "coordinator_accepted_direct_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "accepted_custom_job",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "e716e9e3f5323b685aa78027ab60a0e4d2895f991bcfc4473150c97ea07eaf98",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "coinbase_output_max_additional_size": 0,
+          "direction": "coordinator_to_miner",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 7,
+          "seq": 6,
+          "type": "allocate_mining_job_token_success",
+          "upstream_message_type": "0x51"
+        },
+        {
+          "coinbase_prefix_hex": "0200000001",
+          "coinbase_suffix_hex": "ffffffff",
+          "direction": "miner_to_coordinator",
+          "excess_data_hex": "",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "tx_short_hash_list": [],
+          "type": "declare_mining_job",
+          "upstream_message_type": "0x57",
+          "version": 4
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "error_code": "invalid-job-declaration",
+          "error_details": "fixture-rejection",
+          "request_id": 8,
+          "seq": 8,
+          "type": "declare_mining_job_error",
+          "upstream_message_type": "0x59"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "coordinator_rejected_custom_job",
+          "seq": 9,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 10,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 11,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "rejected_custom_job",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "2c84eee4f6a0ff15ec0e4847730d404542b21eb05ad5d54d6de22051594b000c",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "direction": "local",
+          "request_id": 7,
+          "seq": 6,
+          "timeout_ms": 2000,
+          "type": "token_timeout"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "coordinator_token_timeout",
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 8,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 9,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "token_timeout",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "ff7d6c793f5033b7cc3a1b67028fa22820606d374d75a59230979763e93457b5",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "coinbase_output_max_additional_size": 0,
+          "direction": "coordinator_to_miner",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 7,
+          "seq": 6,
+          "type": "allocate_mining_job_token_success",
+          "upstream_message_type": "0x51"
+        },
+        {
+          "coinbase_prefix_hex": "0200000001",
+          "coinbase_suffix_hex": "ffffffff",
+          "direction": "miner_to_coordinator",
+          "excess_data_hex": "",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "tx_short_hash_list": [],
+          "type": "declare_mining_job",
+          "upstream_message_type": "0x57",
+          "version": 4
+        },
+        {
+          "direction": "network_to_miner",
+          "phase": "awaiting_declaration_reply",
+          "seq": 8,
+          "type": "disconnect"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "coordinator_disconnected",
+          "seq": 9,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 10,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 11,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "disconnect_after_declaration",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "566104c0a396843c903140aa189d687ff5c62bb1d8e5f71f908ba2e075d17d1c",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "error_code": "unsupported-protocol",
+          "flags": 0,
+          "offered_version": 1,
+          "seq": 4,
+          "type": "setup_connection_error",
+          "upstream_message_type": "0x02"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "protocol_downgrade_refused",
+          "seq": 5,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 6,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "protocol_downgrade",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "82f97a13b13c8ec40c1b55946a932ff642a1cc7e1c53d0b2e941bf73b80a66ed",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "claimed_message_type": "0x51",
+          "direction": "coordinator_to_miner",
+          "reason": "token_length_is_31_not_32",
+          "seq": 6,
+          "type": "malformed_reply"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "malformed_coordinator_reply",
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 8,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 9,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "malformed_reply",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "df8da4f9ef462b9166c0dbe8d731e022329e563bcce1b43ad4d0b8d52e571513",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "coinbase_output_max_additional_size": 0,
+          "direction": "coordinator_to_miner",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 7,
+          "seq": 6,
+          "type": "allocate_mining_job_token_success",
+          "upstream_message_type": "0x51"
+        },
+        {
+          "coinbase_prefix_hex": "0200000001",
+          "coinbase_suffix_hex": "ffffffff",
+          "direction": "miner_to_coordinator",
+          "excess_data_hex": "",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "tx_short_hash_list": [],
+          "type": "declare_mining_job",
+          "upstream_message_type": "0x57",
+          "version": 4
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "new_mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 8,
+          "type": "declare_mining_job_success",
+          "upstream_message_type": "0x58"
+        },
+        {
+          "conflicting_job_id": "labnet-job-conflict",
+          "direction": "local",
+          "first_job_id": "labnet-job-0001",
+          "request_id": 8,
+          "seq": 9,
+          "type": "equivocation_detected"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "coordinator_equivocation",
+          "seq": 10,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 11,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 12,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "coordinator_equivocation",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "e5568ab635fb403a8bc5ecfa7983c6d80c0bb786a4cc4bba5160801e1a66a947",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "certificate_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+          "direction": "coordinator_to_miner",
+          "pattern": "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+          "seq": 2,
+          "type": "noise_server_authenticated"
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "firmware": "soveroot-sv2-jd-labnet-v0",
+          "flags": 1,
+          "max_version": 2,
+          "min_version": 2,
+          "protocol": 1,
+          "seq": 3,
+          "type": "setup_connection",
+          "upstream_message_type": "0x00",
+          "vendor": "Soveroot"
+        },
+        {
+          "direction": "coordinator_to_miner",
+          "flags": 0,
+          "seq": 4,
+          "type": "setup_connection_success",
+          "upstream_message_type": "0x01",
+          "used_version": 2
+        },
+        {
+          "direction": "miner_to_coordinator",
+          "request_id": 7,
+          "seq": 5,
+          "type": "allocate_mining_job_token",
+          "upstream_message_type": "0x50",
+          "user_identifier": "labnet-miner-a"
+        },
+        {
+          "coinbase_output_max_additional_size": 0,
+          "direction": "coordinator_to_miner",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 7,
+          "seq": 6,
+          "type": "allocate_mining_job_token_success",
+          "upstream_message_type": "0x51"
+        },
+        {
+          "coinbase_prefix_hex": "0200000001",
+          "coinbase_suffix_hex": "ffffffff",
+          "direction": "miner_to_coordinator",
+          "excess_data_hex": "",
+          "job_id": "labnet-job-0001",
+          "mining_job_token": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+          "request_id": 8,
+          "seq": 7,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "tx_short_hash_list": [],
+          "type": "declare_mining_job",
+          "upstream_message_type": "0x57",
+          "version": 4
+        },
+        {
+          "active_request_id": 8,
+          "direction": "coordinator_to_miner",
+          "replayed_message_type": "0x58",
+          "request_id": 6,
+          "seq": 8,
+          "type": "replay_detected"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "replayed_coordinator_message",
+          "seq": 9,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 10,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 11,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "replayed_acceptance",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "6d4065b2fb151484a6154c30e1f290f3f188161fec45b0380e9be0d89fb5bf17",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    },
+    {
+      "chain": "labnet",
+      "events": [
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 1,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "miner_created_template"
+        },
+        {
+          "direction": "network_to_miner",
+          "expected_authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+          "observed_certificate_sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+          "seq": 2,
+          "type": "noise_authentication_failed"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "reason": "coordinator_authentication_failed",
+          "seq": 3,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_fallback"
+        },
+        {
+          "direction": "local",
+          "job_id": "labnet-job-0001",
+          "seq": 4,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "solve_miner_created_template"
+        },
+        {
+          "chain": "labnet",
+          "direction": "miner_to_node",
+          "job_id": "labnet-job-0001",
+          "rpc": "submitblock",
+          "seq": 5,
+          "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+          "type": "direct_publish"
+        }
+      ],
+      "expected_result": "direct_fallback_publication",
+      "miner_created_template": {
+        "bits": "207fffff",
+        "chain": "labnet",
+        "coinbase_prefix_hex": "0200000001",
+        "coinbase_suffix_hex": "ffffffff",
+        "coinbase_value": 5000000000,
+        "curtime": 1750000000,
+        "height": 101,
+        "ordered_txids": [],
+        "payout_script_hex": "51",
+        "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+        "template_commitment_sha256": "9ff6b3cf6a9dc0eae9f1e623329c8a20a3bf4e35756484f481b50120d22ac59d",
+        "transaction_data_hex": [],
+        "version": 4,
+        "witness_commitment_hex": "6a24aa21a9ed0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "name": "mitm_authentication_failure",
+      "profile_id": "soveroot-sv2-jd-labnet-v0",
+      "transcript_sha256": "f70f59526e6648320ec254eeecf0c37d912970f6251f3b254611f91303bacb18",
+      "upstream_revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+    }
+  ],
+  "upstream": {
+    "repository": "https://github.com/stratum-mining/sv2-spec",
+    "revision": "066971c7c750eded11b57aecd4ecdbd6e722c631"
+  },
+  "warning": "PRIVATE LABNET ONLY; NOT NOISE WIRE VECTORS; NOT SAFE FOR MONETARY USE"
+}
