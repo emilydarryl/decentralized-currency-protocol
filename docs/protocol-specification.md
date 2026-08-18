@@ -393,6 +393,12 @@ A P2Pool-like sharechain or share DAG is a required testnet workstream. Its goal
 
 The share system is not part of base consensus in v0.1. Making it consensus-native requires a separate proposal and threat model.
 
+Implementation note: the [sharechain private-lab profile v0](sharechain-v0.md)
+freezes an offline canonical entry, proof binding, accumulated-work fork choice,
+finality and payout window, and 15 adversarial vectors checked by two separately
+written validators. It does not yet define peer transport, discovery, Sybil or
+eclipse defenses, public operation, or production settlement.
+
 ### 11.4 Automatic fallback
 
 Standard miner software SHOULD switch to another accounting service or decentralized sharechain when a valid custom job is rejected. Observed concentration warnings MAY influence defaults, but MUST NOT be represented as proof of real-world ownership.

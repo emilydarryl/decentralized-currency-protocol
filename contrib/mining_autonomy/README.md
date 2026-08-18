@@ -28,6 +28,14 @@ locally stored receipt sets through one outage, requires identical payout
 plans, and places the agreed outputs directly in coinbase. It is not a global
 sharechain, the experimental Soveroot PoW, or production software.
 
+`sharechain_v0.py` now freezes an offline P2Pool-like share format, fixed share
+target, accumulated-work fork choice, two-share finality depth, four-share
+payout window, and 15 accepted or rejected histories. The separately written
+`independent_sharechain_v0.py` imports no reference code and must reach the
+same result for every case. This is a file-based private-lab conformance gate,
+not peer synchronization or a public pool. See
+[`docs/sharechain-v0.md`](../../docs/sharechain-v0.md).
+
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
@@ -60,4 +68,6 @@ decoded settlement coinbase. See
 
 ```bash
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check
+python3 contrib/mining_autonomy/sharechain_v0.py --check
+python3 contrib/mining_autonomy/independent_sharechain_v0.py --check
 ```
