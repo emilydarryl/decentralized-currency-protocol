@@ -36,12 +36,13 @@ Soveroot wants to separate those jobs. Under the proposed official mining profil
 
 This means miners could cooperate on predictable payouts without automatically giving one pool operator control over block contents.
 
-The first labnet prototype now demonstrates the independent half of this idea.
+The labnet prototype now demonstrates the independent half of this idea.
 A small program outside the node asks the miner's own node for transactions,
 builds the block, performs easy development proof of work, and publishes the
-block directly. It uses no pool. This is a real first step, but it does not yet
-include shared payouts, Stratum V2, or the test where an accounting coordinator
-is switched off while mining continues. The exact proof and limits are in
+block directly. A second test lets it report work to a simple accounting
+process, switches that process off, and proves the miner still publishes the
+next block without restarting. This is real progress, but it does not yet include shared payouts,
+Stratum V2, or independent interoperable miners. The exact proof and limits are in
 [Mining autonomy on labnet](mining-autonomy-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
@@ -92,7 +93,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Direct solo publication works; shared accounting and coordinator fallback remain unfinished |
+| Decentralized pool system | Direct publication and local coordinator-failure fallback work; decentralized payouts remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 

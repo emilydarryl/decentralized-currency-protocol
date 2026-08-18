@@ -62,6 +62,7 @@ jobs:
           bash -n contrib/labnet-kit/package-linux.sh
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "local test-only node"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "autonomy-demo"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "coordinator-failure-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -258,6 +259,7 @@ jobs:
           kit="$(find build/labnet-kit-extract -mindepth 1 -maxdepth 1 -type d -print -quit)"
           test -x "$kit/soveroot-labnet"
           test -x "$kit/libexec/autonomous_labnet_miner.py"
+          test -x "$kit/libexec/share_accounting_coordinator.py"
           export SOVEROOT_LABNET_HOME="$PWD/build/labnet-kit-runtime"
           cleanup() { "$kit/soveroot-labnet" stop >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -269,6 +271,11 @@ jobs:
           printf '%s\n' "$autonomy_output"
           grep -F -- "Autonomous external block accepted:" <<<"$autonomy_output"
           grep -F -- "No pool coordinator was used" <<<"$autonomy_output"
+          coordinator_output="$("$kit/soveroot-labnet" coordinator-failure-demo)"
+          printf '%s\n' "$coordinator_output"
+          grep -F -- "Accounting coordinator stopped before the second block." <<<"$coordinator_output"
+          grep -F -- "Mining continued after coordinator shutdown:" <<<"$coordinator_output"
+          grep -F -- "The coordinator supplied no template and published no block." <<<"$coordinator_output"
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT
