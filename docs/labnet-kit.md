@@ -12,6 +12,8 @@ without implying that Soveroot is ready for public money.
 - `soveroot-labnet`: a helper with safe local defaults;
 - `libexec/autonomous_labnet_miner.py`: the external labnet block builder and
   miner used by `autonomy-demo`;
+- `libexec/share_accounting_coordinator.py`: the loopback-only, accounting-only
+  test service used by `coordinator-failure-demo`;
 - the `sovrd(1)` and `sovr-cli(1)` manual pages;
 - `BUILD-INFO.txt`, this guide, and the MIT license.
 
@@ -83,6 +85,18 @@ for the labnet proof of work, and submits the winning block directly. No pool
 coordinator is used. See [Mining autonomy on labnet](mining-autonomy-labnet.md)
 for the plain-English boundary and the features that remain unfinished.
 
+Prove that optional accounting cannot stop the miner:
+
+```bash
+./soveroot-labnet coordinator-failure-demo
+```
+
+The helper starts a local accounting process on `127.0.0.1:29445`, mines one
+external block while verified work receipts are recorded, kills accounting,
+then requires the same still-running miner process to directly publish another
+block. It refuses success unless the chain advances by two and the receipt
+ledger stops changing after shutdown.
+
 Inspect the node and loaded wallets:
 
 ```bash
@@ -126,6 +140,9 @@ settings each time it starts. Do not use that generated file for custom node
 configuration. Because a fresh private chain has no fee history, the generated
 labnet configuration uses a fallback fee rate of `0.0002` test coin per kvB.
 This setting applies only to the test-only labnet data directory.
+The accounting-failure demonstration temporarily uses loopback port `29445`
+and retains its receipt ledger and log in a uniquely named
+`accounting-failure-demo.*` directory below the same Labnet Kit data directory.
 
 To use a separate disposable data directory, set it before every command:
 
@@ -145,6 +162,9 @@ submit a wallet transaction, and confirm it locally. A successful
 `autonomy-demo` additionally proves that the packaged external miner can build,
 solve, and directly publish one inherited-PoW labnet block without a pool
 coordinator. It does **not** prove Stratum V2 interoperability, decentralized
-share accounting, coordinator-failure continuity, final Soveroot proof of work,
+share accounting, or final Soveroot proof of work. A successful
+`coordinator-failure-demo` proves the same packaged miner process advances the
+chain after its local accounting process is killed; it does not prove noncustodial
+payouts, multi-miner interoperability, malicious-coordinator resistance,
 production consensus safety, privacy against network observers,
 post-quantum security, economic decentralization, or readiness for real value.
