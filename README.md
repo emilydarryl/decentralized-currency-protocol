@@ -20,12 +20,15 @@ The project does not claim that decentralization, anonymity, or quantum safety c
 
 Start with [Mining Decentralization in Plain English](docs/mining-decentralization-in-plain-english.md). It explains the problem, the proposed hardware and pool safeguards, what the latest experiment actually showed, and what remains unfinished without requiring a mining or programming background.
 
+Follow the [public roadmap](docs/roadmap.md) for the current laboratory status, evidence-gated milestones, immediate deliverables, and the path from isolated research to any future testnet or mainnet-readiness review.
+
 To run the current test-only node, wallet, and mining demonstrations, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, run a wallet transfer, and have a separate miner build and directly publish a labnet block without a pool coordinator.
 
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
 ## Documents
 
+- [roadmap.md](docs/roadmap.md) is the concise public view of current status, milestone exit criteria, immediate deliverables, and mainnet-readiness dependencies.
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
 - [bip110-blake2b-fork-assessment.md](docs/bip110-blake2b-fork-assessment.md) separates BIP110's reduced-data rules from the proposed BLAKE2b fork and records what Soveroot will adopt, modify, reject, and observe.
 - [reduced-data-profile.md](docs/reduced-data-profile.md) defines the candidate consensus rules that keep permanent chain costs monetary, type-aware, post-quantum-compatible, and enforceable against direct miner bypass.
