@@ -16,6 +16,10 @@ without implying that Soveroot is ready for public money.
   test service used by `coordinator-failure-demo`;
 - `libexec/soveroot-sv2-reference`: the pinned official-library Noise and Job
   Declaration helper used by `job-declaration-demo`;
+- `libexec/soveroot-sv2-independent-miner`: the separately written message and
+  block implementation used by `interoperability-demo`;
+- `libexec/run_interoperability.py` and its canonical vector: the byte-level
+  cross-implementation gate;
 - the `sovrd(1)` and `sovr-cli(1)` manual pages;
 - `BUILD-INFO.txt`, this guide, and the MIT license.
 
@@ -111,6 +115,17 @@ coordinator. The same miner process must publish the first accepted job and a
 second direct-fallback block through its own node. The demo fails unless both
 block publications and both distinct declaration states are visible.
 
+Exercise two independent implementations:
+
+```bash
+./soveroot-labnet interoperability-demo
+```
+
+The helper requires the reference and independent miners to agree byte for
+byte on the published fixture. It then lets each miner declare, solve, and
+directly publish one block against the reference coordinator. It fails unless
+the chain advances by exactly two and retains a JSON evidence report.
+
 Inspect the node and loaded wallets:
 
 ```bash
@@ -160,6 +175,9 @@ and retains its receipt ledger and log in a uniquely named
 The Job Declaration demonstration uses loopback port `29446`, creates its
 private authority key under a mode-`077` temporary
 `job-declaration-demo.*` directory, and never prints that private key.
+The interoperability demonstration reuses loopback port `29446` after the Job
+Declaration demo has stopped and retains its logs and byte-level report in an
+`interoperability-demo.*` directory.
 
 To use a separate disposable data directory, set it before every command:
 
@@ -180,11 +198,13 @@ submit a wallet transaction, and confirm it locally. A successful
 solve, and directly publish one inherited-PoW labnet block without a pool
 coordinator. A successful `job-declaration-demo` proves one reference miner and
 coordinator exchange the pinned encrypted Job Declaration/custom-job messages
-and that coordinator loss cannot halt that miner. It does **not** prove
-independent Stratum V2 interoperability, decentralized share accounting, or
-final Soveroot proof of work. A successful
+and that coordinator loss cannot halt that miner. A successful
+`interoperability-demo` proves two separately written payload and block
+implementations agree on the canonical bytes and each directly publishes a
+labnet block. It does **not** prove decentralized share accounting or final
+Soveroot proof of work. A successful
 `coordinator-failure-demo` proves the same packaged miner process advances the
 chain after its local accounting process is killed; it does not prove noncustodial
-payouts, multi-miner interoperability, malicious-coordinator resistance,
+payouts, malicious-coordinator resistance,
 production consensus safety, privacy against network observers,
 post-quantum security, economic decentralization, or readiness for real value.

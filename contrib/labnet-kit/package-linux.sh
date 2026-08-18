@@ -14,10 +14,12 @@ OUTPUT_DIR="${2:-${BUILD_DIR}/labnet-kit-artifacts}"
 SOVRD="${BUILD_DIR}/bin/sovrd"
 SOVR_CLI="${BUILD_DIR}/bin/sovr-cli"
 SV2_REFERENCE="${SOVEROOT_SV2_REFERENCE_BINARY:-${SOURCE_DIR}/contrib/mining_autonomy/sv2-reference/target/release/soveroot-sv2-reference}"
+SV2_INDEPENDENT="${SOVEROOT_SV2_INDEPENDENT_BINARY:-${SOURCE_DIR}/contrib/mining_autonomy/sv2-independent-miner/target/release/soveroot-sv2-independent-miner}"
 
 [[ -x "${SOVRD}" ]] || { printf 'Missing executable: %s\n' "${SOVRD}" >&2; exit 1; }
 [[ -x "${SOVR_CLI}" ]] || { printf 'Missing executable: %s\n' "${SOVR_CLI}" >&2; exit 1; }
 [[ -x "${SV2_REFERENCE}" ]] || { printf 'Missing executable: %s\n' "${SV2_REFERENCE}" >&2; exit 1; }
+[[ -x "${SV2_INDEPENDENT}" ]] || { printf 'Missing executable: %s\n' "${SV2_INDEPENDENT}" >&2; exit 1; }
 
 architecture="$(uname -m)"
 [[ "${architecture}" == "x86_64" ]] || {
@@ -41,6 +43,9 @@ install -m 0755 "${SCRIPT_DIR}/soveroot-labnet" "${kit_root}/soveroot-labnet"
 install -m 0755 "${SOURCE_DIR}/contrib/mining_autonomy/autonomous_labnet_miner.py" "${kit_root}/libexec/autonomous_labnet_miner.py"
 install -m 0755 "${SOURCE_DIR}/contrib/mining_autonomy/share_accounting_coordinator.py" "${kit_root}/libexec/share_accounting_coordinator.py"
 install -m 0755 "${SV2_REFERENCE}" "${kit_root}/libexec/soveroot-sv2-reference"
+install -m 0755 "${SV2_INDEPENDENT}" "${kit_root}/libexec/soveroot-sv2-independent-miner"
+install -m 0755 "${SOURCE_DIR}/contrib/mining_autonomy/run_interoperability.py" "${kit_root}/libexec/run_interoperability.py"
+install -m 0644 "${SOURCE_DIR}/contrib/mining_autonomy/vectors/sv2_interoperability_v0.json" "${kit_root}/libexec/sv2_interoperability_v0.json"
 install -m 0644 "${SOURCE_DIR}/docs/labnet-kit.md" "${kit_root}/README.md"
 install -m 0644 "${SOURCE_DIR}/docs/mining-autonomy-labnet.md" "${kit_root}/mining-autonomy-labnet.md"
 install -m 0644 "${SOURCE_DIR}/doc/man/sovrd.1" "${kit_root}/share/man/man1/sovrd.1"

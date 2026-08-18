@@ -61,11 +61,44 @@ jobs:
           cargo test --locked --release --manifest-path contrib/mining_autonomy/sv2-reference/Cargo.toml
           cargo build --locked --release --manifest-path contrib/mining_autonomy/sv2-reference/Cargo.toml
 
+      - name: Build and test independent miner implementation
+        shell: bash
+        run: |
+          cargo test --locked --release --manifest-path contrib/mining_autonomy/sv2-independent-miner/Cargo.toml
+          cargo build --locked --release --manifest-path contrib/mining_autonomy/sv2-independent-miner/Cargo.toml
+
       - name: Exercise authenticated Stratum V2 accept and fallback paths
         shell: bash
         env:
           SOVEROOT_SV2_HELPER: ${{ github.workspace }}/contrib/mining_autonomy/sv2-reference/target/release/soveroot-sv2-reference
         run: python3 -m unittest discover -s test/mining_autonomy -p 'test_sv2_reference_integration.py' -v
+
+      - name: Exercise cross-implementation authentication and rejection paths
+        shell: bash
+        env:
+          SOVEROOT_SV2_HELPER: ${{ github.workspace }}/contrib/mining_autonomy/sv2-reference/target/release/soveroot-sv2-reference
+          SOVEROOT_SV2_INDEPENDENT_MINER: ${{ github.workspace }}/contrib/mining_autonomy/sv2-independent-miner/target/release/soveroot-sv2-independent-miner
+        run: python3 -m unittest discover -s test/mining_autonomy -p 'test_sv2_interoperability.py' -v
+
+      - name: Produce byte-level mining interoperability evidence
+        shell: bash
+        run: |
+          mkdir -p build
+          python3 contrib/mining_autonomy/run_interoperability.py \
+            --reference-helper contrib/mining_autonomy/sv2-reference/target/release/soveroot-sv2-reference \
+            --independent-miner contrib/mining_autonomy/sv2-independent-miner/target/release/soveroot-sv2-independent-miner \
+            --reference-miner contrib/mining_autonomy/autonomous_labnet_miner.py \
+            --fixture contrib/mining_autonomy/vectors/sv2_interoperability_v0.json \
+            --output build/sv2-interoperability-evidence.json
+          python3 -c "import json; d=json.load(open('build/sv2-interoperability-evidence.json')); assert d['all_exact_results_match']; assert all(d['comparisons'].values())"
+
+      - name: Retain mining interoperability evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: sv2-miner-interoperability-${{ github.run_id }}
+          path: build/sv2-interoperability-evidence.json
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Check Labnet Kit helper scripts
         shell: bash
@@ -76,6 +109,7 @@ jobs:
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "autonomy-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "coordinator-failure-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "job-declaration-demo"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "interoperability-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -274,6 +308,9 @@ jobs:
           test -x "$kit/libexec/autonomous_labnet_miner.py"
           test -x "$kit/libexec/share_accounting_coordinator.py"
           test -x "$kit/libexec/soveroot-sv2-reference"
+          test -x "$kit/libexec/soveroot-sv2-independent-miner"
+          test -x "$kit/libexec/run_interoperability.py"
+          test -s "$kit/libexec/sv2_interoperability_v0.json"
           export SOVEROOT_LABNET_HOME="$PWD/build/labnet-kit-runtime"
           cleanup() { "$kit/soveroot-labnet" stop >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -295,6 +332,10 @@ jobs:
           grep -F -- "Job declaration status: accepted" <<<"$declaration_output"
           grep -F -- "Job declaration status: direct_fallback" <<<"$declaration_output"
           grep -F -- "Same miner continued in direct fallback" <<<"$declaration_output"
+          interoperability_output="$("$kit/soveroot-labnet" interoperability-demo)"
+          printf '%s\n' "$interoperability_output"
+          grep -F -- "Reference and independent authentication and wire vectors matched byte-for-byte." <<<"$interoperability_output"
+          grep -F -- "Both independently built miner-created jobs were accepted and directly published." <<<"$interoperability_output"
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT

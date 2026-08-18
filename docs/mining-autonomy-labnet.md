@@ -26,6 +26,12 @@ opens an extended channel, and receives `SetCustomMiningJob.Success`. The
 helper then kills the coordinator. The same miner process must build, solve,
 and directly publish a second block in visible direct fallback.
 
+A fourth demonstration adds a separately written Rust miner. It does not reuse
+the reference message parser, encoder, or block builder. The two implementations
+must produce the same authentication inputs, protocol payloads, template
+commitment, and complete solved block byte for byte. Each then declares, solves,
+and directly publishes its own block against the reference coordinator.
+
 ## What is implemented
 
 The external miner in
@@ -91,6 +97,18 @@ coordinator before the second block. Success requires exactly one accepted
 declaration, exactly one direct fallback, two direct block publications, and a
 two-block chain advance from the same miner process.
 
+Run the independent interoperability demonstration:
+
+```bash
+./soveroot-labnet interoperability-demo
+```
+
+This first compares both implementations against one canonical fixture and
+stops on any byte disagreement. It then requires the reference miner and the
+independent Rust miner to publish one block each, for an exact two-block chain
+advance. The detailed evidence boundary is in
+[Independent miner interoperability on labnet](mining-interoperability-labnet.md).
+
 Labnet coins have no value. The node listens only on the local machine, and
 this experiment should never be pointed at assets or secrets of real value.
 
@@ -104,7 +122,6 @@ demonstrations on every pull request.
 
 It does **not** yet prove:
 
-- interoperability between two independently written mining programs;
 - decentralized share accounting or noncustodial pool payouts—the included
   coordinator is one local append-only test service, not a pool design;
 - resilience to network partitions, malicious coordinators, forged payout
@@ -118,10 +135,9 @@ The research ledger therefore keeps the Template Autonomy gate open.
 ## Next engineering step
 
 The [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md)
-pins the upstream specification and the reference helper pins the official
-Stratum V2 v1.4.0 Rust implementation. Issue #60 now supplies the reference
-accepted path and same-process loss/rejection fallback. The next bounded gate
-is an independently written miner and parser reproducing the wire behavior
-without importing this helper. Noncustodial payout accounting and adversarial
-multi-coordinator switching remain separate requirements; one reference
-connection alone does not establish decentralized mining.
+pins the upstream specification. Issue #60 supplied the reference accepted path
+and same-process loss/rejection fallback. Issue #61 now supplies a separately
+written miner and parser, exact cross-implementation vectors, live protocol
+tests, and two direct block publications. The next bounded work is
+noncustodial payout accounting and adversarial multi-coordinator switching;
+interoperable block construction alone does not establish decentralized mining.

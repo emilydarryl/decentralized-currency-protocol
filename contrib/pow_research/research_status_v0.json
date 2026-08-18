@@ -1,6 +1,6 @@
 {
   "format": "soveroot-research-status-v0",
-  "as_of": "2026-08-15",
+  "as_of": "2026-08-18",
   "evidence_cutoff_revision": "02efd12038c1a7f58d67b2449778f640db5286ec",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
@@ -69,7 +69,7 @@
       "id": "template_autonomy",
       "state": "OPEN",
       "assessment": "NOT_ASSESSED",
-      "gap": "One packaged labnet miner process directly publishes, completes the pinned reference Noise and Job Declaration/custom-job flow, and survives coordinator loss through direct fallback. A second interoperable implementation, noncustodial payouts, and adversarial multi-coordinator switching are absent."
+      "gap": "Two independently written miners exactly agree on the frozen authenticated message payloads, template commitment, and solved block, and each directly publishes a labnet block. Noncustodial payouts and adversarial multi-coordinator switching are absent."
     }
   ],
   "latest_evidence": [

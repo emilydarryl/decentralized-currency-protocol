@@ -47,9 +47,12 @@ acceptance, rejection, timeout, disconnect, downgrade, malformed data,
 equivocation, replay, and failed server authentication. A reference connection
 now uses those real encrypted messages: the first miner-created job is accepted,
 the coordinator is stopped, and the same miner directly publishes its next
-block anyway. That proves one implementation follows the blueprint; it does not
-prove two independently written miners can interoperate. Shared payouts and an
-independent miner still do not exist. The exact proof and limits are in
+block anyway. A second mining program was then written separately. The two
+programs must create the same protocol messages and complete block byte for
+byte, and each must publish its own block. This lowers the risk that one
+program's private interpretation or bug defines the rules. Shared payouts and
+switching safely among competing coordinators still do not exist. The exact
+proof and limits are in
 [Mining autonomy on labnet](mining-autonomy-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
@@ -100,7 +103,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Direct publication and local coordinator-failure fallback work; decentralized payouts remain unfinished |
+| Decentralized pool system | Two miners agree byte for byte and publish directly; decentralized payouts and coordinator switching remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 

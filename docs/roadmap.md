@@ -59,7 +59,7 @@ Build an end-to-end test profile in which miners construct their own block templ
 
 This is an official mining-software profile, not a block-consensus claim. Nodes cannot verify which off-chain transport or real-world organization produced a proof of work.
 
-The first bounded profile is frozen in the [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md): exact upstream revision, authenticated server identity, supported message subset, miner-created template fields, accepted flow, direct fallback, and nine canonical semantic transcripts. Issue #60 now implements the reference Noise-authenticated binary connection, accepted custom job, and same-process direct fallback. The next gate is issue #61: an independently written implementation must reproduce the wire behavior without importing the reference parser, encoder, or block builder.
+The first bounded profile is frozen in the [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md): exact upstream revision, authenticated server identity, supported message subset, miner-created template fields, accepted flow, direct fallback, and nine canonical semantic transcripts. Issue #60 implements the reference Noise-authenticated binary connection, accepted custom job, and same-process direct fallback. Issue #61 adds a separately written miner, exact binary and block vectors, live cross-implementation tests, and one direct publication from each miner. The remaining bounded gates are noncustodial payout accounting and adversarial multi-coordinator switching.
 
 ## Research gates that remain open
 

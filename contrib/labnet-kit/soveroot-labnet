@@ -15,6 +15,9 @@ SOVR_CLI="${BIN_DIR}/sovr-cli"
 AUTONOMY_MINER="${SOVEROOT_AUTONOMY_MINER:-${SCRIPT_DIR}/libexec/autonomous_labnet_miner.py}"
 ACCOUNTING_COORDINATOR="${SOVEROOT_ACCOUNTING_COORDINATOR:-${SCRIPT_DIR}/libexec/share_accounting_coordinator.py}"
 SV2_REFERENCE="${SOVEROOT_SV2_REFERENCE:-${SCRIPT_DIR}/libexec/soveroot-sv2-reference}"
+SV2_INDEPENDENT="${SOVEROOT_SV2_INDEPENDENT_MINER:-${SCRIPT_DIR}/libexec/soveroot-sv2-independent-miner}"
+INTEROP_RUNNER="${SOVEROOT_INTEROP_RUNNER:-${SCRIPT_DIR}/libexec/run_interoperability.py}"
+INTEROP_FIXTURE="${SOVEROOT_INTEROP_FIXTURE:-${SCRIPT_DIR}/libexec/sv2_interoperability_v0.json}"
 ACCOUNTING_PORT="${SOVEROOT_ACCOUNTING_PORT:-29445}"
 SV2_PORT="${SOVEROOT_SV2_PORT:-29446}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
@@ -39,6 +42,9 @@ Commands:
   job-declaration-demo
                       Declare a miner-built job over authenticated Stratum V2,
                       stop the coordinator, and prove direct fallback.
+  interoperability-demo
+                      Run the reference and independently written miners,
+                      require byte-exact vectors, and publish one block each.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -79,6 +85,13 @@ require_sv2_reference() {
     [[ -x "${SV2_REFERENCE}" ]] || die "${SV2_REFERENCE} is missing or not executable"
     [[ "${SV2_PORT}" =~ ^[0-9]+$ ]] || die "SOVEROOT_SV2_PORT must be a whole number"
     ((SV2_PORT >= 1024 && SV2_PORT <= 65535)) || die "SOVEROOT_SV2_PORT must be between 1024 and 65535"
+}
+
+require_interoperability_tools() {
+    require_sv2_reference
+    [[ -x "${SV2_INDEPENDENT}" ]] || die "${SV2_INDEPENDENT} is missing or not executable"
+    [[ -r "${INTEROP_RUNNER}" ]] || die "${INTEROP_RUNNER} is missing or unreadable"
+    [[ -r "${INTEROP_FIXTURE}" ]] || die "${INTEROP_FIXTURE} is missing or unreadable"
 }
 
 write_config() {
@@ -409,6 +422,102 @@ command_job_declaration_demo() (
     printf 'Evidence retained in: %s\n' "${run_dir}"
 )
 
+command_interoperability_demo() (
+    set -euo pipefail
+    require_binaries
+    require_interoperability_tools
+    require_running
+    ensure_wallet miner
+
+    local run_dir authority_file ready_file coordinator_log coordinator_pid endpoint public_key
+    local reference_log independent_log vector_evidence before_height after_height reference_address independent_address
+    run_dir="$(mktemp -d "${DATA_DIR}/interoperability-demo.XXXXXX")"
+    authority_file="${run_dir}/authority.json"
+    ready_file="${run_dir}/ready.json"
+    coordinator_log="${run_dir}/coordinator.log"
+    reference_log="${run_dir}/reference-miner.log"
+    independent_log="${run_dir}/independent-miner.log"
+    vector_evidence="${run_dir}/sv2-interoperability-evidence.json"
+    endpoint="127.0.0.1:${SV2_PORT}"
+    coordinator_pid=""
+
+    cleanup_interoperability() {
+        if [[ -n "${coordinator_pid}" ]] && kill -0 "${coordinator_pid}" >/dev/null 2>&1; then
+            kill "${coordinator_pid}" >/dev/null 2>&1 || true
+            wait "${coordinator_pid}" >/dev/null 2>&1 || true
+        fi
+    }
+    trap cleanup_interoperability EXIT
+
+    python3 "${INTEROP_RUNNER}" \
+        --reference-helper "${SV2_REFERENCE}" \
+        --independent-miner "${SV2_INDEPENDENT}" \
+        --reference-miner "${AUTONOMY_MINER}" \
+        --fixture "${INTEROP_FIXTURE}" \
+        --output "${vector_evidence}"
+    grep -Fq '"all_exact_results_match": true' "${vector_evidence}" || die "byte-level interoperability vectors disagreed"
+
+    umask 077
+    public_key="$("${SV2_REFERENCE}" generate-authority --output "${authority_file}")"
+    [[ -n "${public_key}" ]] || die "Stratum V2 helper did not return an authority public key"
+    "${SV2_REFERENCE}" serve \
+        --endpoint "${endpoint}" \
+        --authority-file "${authority_file}" \
+        --mode accept \
+        --ready-file "${ready_file}" >"${coordinator_log}" 2>&1 &
+    coordinator_pid="$!"
+    for _ in $(seq 1 100); do
+        [[ -f "${ready_file}" ]] && break
+        kill -0 "${coordinator_pid}" >/dev/null 2>&1 || {
+            sed -n '1,40p' "${coordinator_log}" >&2
+            die "Stratum V2 coordinator stopped before becoming ready"
+        }
+        sleep 0.05
+    done
+    [[ -f "${ready_file}" ]] || die "Stratum V2 coordinator did not become ready"
+
+    before_height="$(cli_call getblockcount)"
+    reference_address="$(wallet_call miner getnewaddress)"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${reference_address}" \
+        --sv2-helper "${SV2_REFERENCE}" \
+        --sv2-endpoint "${endpoint}" \
+        --sv2-authority-public-key "${public_key}" \
+        --sv2-timeout-ms 1000 >"${reference_log}" 2>&1
+    grep -Fq 'Job declaration status: accepted' "${reference_log}" || {
+        sed -n '1,120p' "${reference_log}" >&2
+        die "reference miner did not complete an accepted custom job"
+    }
+
+    independent_address="$(wallet_call miner getnewaddress)"
+    "${SV2_INDEPENDENT}" mine \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${independent_address}" \
+        --endpoint "${endpoint}" \
+        --authority-public-key "${public_key}" \
+        --timeout-ms 1000 >"${independent_log}" 2>&1 || {
+            sed -n '1,160p' "${independent_log}" >&2
+            die "independent miner failed"
+        }
+    grep -Fq 'Job declaration status: accepted' "${independent_log}" || die "independent miner declaration was not accepted"
+    grep -Fq 'Independent miner block accepted:' "${independent_log}" || die "independent miner did not directly publish a block"
+
+    after_height="$(cli_call getblockcount)"
+    [[ "${after_height}" -eq "$((before_height + 2))" ]] || die "interoperability demo did not advance the chain by two"
+    sed -n '1,100p' "${reference_log}"
+    sed -n '1,120p' "${independent_log}"
+    printf '%s\n' 'Reference and independent authentication and wire vectors matched byte-for-byte.'
+    printf '%s\n' 'Both independently built miner-created jobs were accepted and directly published.'
+    printf 'Interoperability evidence retained in: %s\n' "${run_dir}"
+)
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -451,6 +560,10 @@ case "${command}" in
     job-declaration-demo)
         [[ "$#" -eq 1 ]] || die "job-declaration-demo takes no arguments"
         command_job_declaration_demo
+        ;;
+    interoperability-demo)
+        [[ "$#" -eq 1 ]] || die "interoperability-demo takes no arguments"
+        command_interoperability_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"
