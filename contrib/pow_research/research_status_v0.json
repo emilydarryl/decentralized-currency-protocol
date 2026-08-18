@@ -69,7 +69,7 @@
       "id": "template_autonomy",
       "state": "OPEN",
       "assessment": "NOT_ASSESSED",
-      "gap": "One packaged labnet miner process builds and directly publishes two blocks outside the daemon and continues without restart after its optional accounting process is killed between them, but a second interoperable implementation, noncustodial payout path, adversarial switching proof, and Stratum V2 or Job Declaration integration are absent."
+      "gap": "One packaged labnet miner process directly publishes and survives optional accounting loss. The authenticated Job Declaration v0 behavior and nine semantic failure transcripts are frozen, but binary network integration, a second interoperable implementation, noncustodial payouts, and adversarial switching are absent."
     }
   ],
   "latest_evidence": [

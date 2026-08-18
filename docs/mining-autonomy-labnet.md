@@ -82,7 +82,7 @@ demonstrations on every pull request.
 It does **not** yet prove:
 
 - interoperability between two independently written mining programs;
-- Stratum V2 or Job Declaration support;
+- Stratum V2 or Job Declaration network support—the behavior is now specified and tested as semantic transcripts, but no binary connection exists yet;
 - decentralized share accounting or noncustodial pool payouts—the included
   coordinator is one local append-only test service, not a pool design;
 - resilience to network partitions, malicious coordinators, forged payout
@@ -95,9 +95,12 @@ The research ledger therefore keeps the Template Autonomy gate open.
 
 ## Next engineering step
 
-The next bounded milestone is protocol interoperability: connect the
-miner-created job path to an authenticated Stratum V2 and Job Declaration
-profile without weakening the proven direct fallback. A second independently
-written miner must then build compatible jobs and publish blocks. Noncustodial
-payout accounting and adversarial coordinator-switching tests remain separate
+The [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md)
+now pins the upstream specification, authentication boundary, supported
+messages, template commitment, failure behavior, and nine canonical semantic
+transcripts. The next bounded milestone is issue #60: connect the same running
+miner process to that profile, complete one accepted custom-job flow, and prove
+rejection or loss still enters direct fallback without substituting a
+coordinator template. A second independently written miner, noncustodial payout
+accounting, and adversarial coordinator-switching tests remain separate
 requirements; adding a Stratum V2 label alone would not establish autonomy.

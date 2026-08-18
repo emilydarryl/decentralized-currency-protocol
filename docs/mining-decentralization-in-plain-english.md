@@ -41,8 +41,12 @@ A small program outside the node asks the miner's own node for transactions,
 builds the block, performs easy development proof of work, and publishes the
 block directly. A second test lets it report work to a simple accounting
 process, switches that process off, and proves the miner still publishes the
-next block without restarting. This is real progress, but it does not yet include shared payouts,
-Stratum V2, or independent interoperable miners. The exact proof and limits are in
+next block without restarting. The next connection's rules are now frozen in a
+private-labnet Stratum V2 and Job Declaration profile with nine test stories:
+acceptance, rejection, timeout, disconnect, downgrade, malformed data,
+equivocation, replay, and failed server authentication. That is a blueprint and
+test ruler, not a working network connection. Shared payouts and independent
+interoperable miners still do not exist. The exact proof and limits are in
 [Mining autonomy on labnet](mining-autonomy-labnet.md).
 
 The base protocol cannot reliably enforce a rule such as "no pool may exceed 10 percent." A large operator could create many names, keys, and servers. Enforcing real-world identity would require a permissioned authority, which would itself be centralized.
