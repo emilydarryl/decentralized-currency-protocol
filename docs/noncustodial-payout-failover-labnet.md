@@ -65,7 +65,7 @@ miner on a public network saw the same message.
 
 ## Payout-claim rules
 
-Each accepted v1 receipt binds the verified 80-byte header to:
+Each accepted v2 receipt binds the verified 80-byte header to:
 
 - `chain=labnet`;
 - a bounded worker label;

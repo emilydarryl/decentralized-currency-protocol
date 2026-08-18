@@ -40,6 +40,12 @@ accounting service are stopped, it still publishes directly. Verified receipts
 also become deterministic claims tied to the miner wallet's payout script;
 the accounting process holds no key, wallet, funds, or publication authority.
 
+A sixth demonstration gives two accounting replicas separate verified receipt
+histories, reconciles them, stops one, and continues mining through the outage.
+After the stale replica recovers, both must produce the identical deterministic
+payout plan. The miner then creates and directly publishes the multi-output
+coinbase that pays those wallet scripts without an intermediate pool wallet.
+
 ## What is implemented
 
 The external miner in
@@ -65,6 +71,9 @@ The external miner in
 9. When several coordinators are configured, it tries them in declared order
    without changing the template. Conflicting coordinator-state commitments
    quarantine the affected coordinator, while direct fallback remains usable.
+10. When settlement replicas are configured, it requires at least two distinct
+    loopback services to return the byte-identical plan for the current
+    coinbase value. Any absence or disagreement stops pooled settlement.
 
 The daemon's convenient `generatetoaddress` RPC is not used by this autonomy
 demonstration. The distinction matters: the separate miner, rather than the
@@ -133,6 +142,17 @@ accounting failure without mining failure, and a validated canonical evidence
 file. The exact boundary is in
 [Noncustodial payout accounting and coordinator failover](noncustodial-payout-failover-labnet.md).
 
+Run the replicated-share settlement demonstration:
+
+```bash
+./soveroot-labnet share-settlement-demo
+```
+
+Success requires one replica outage and recovery, identical canonical receipt
+sets and plans, exact value conservation, and decoded coinbase outputs that
+match the agreed wallet scripts. See
+[Replicated share accounting and direct coinbase settlement](replicated-share-settlement-labnet.md).
+
 Labnet coins have no value. The node listens only on the local machine, and
 this experiment should never be pointed at assets or secrets of real value.
 
@@ -146,8 +166,8 @@ demonstrations on every pull request.
 
 It does **not** yet prove:
 
-- decentralized share replication or settlement—the included service produces
-  accounting claims but does not move coins or compel payment;
+- a globally ordered decentralized sharechain—the two replicas are local,
+  explicitly peered test services rather than independent public operators;
 - resilience to public-network partitions, colluding coordinators, forged
   identities, or a dishonest accounting majority;
 - resistance to block withholding or payout manipulation;
@@ -164,6 +184,8 @@ and same-process loss/rejection fallback. Issue #61 supplies a separately
 written miner and parser, exact cross-implementation vectors, live protocol
 tests, and two direct block publications. Issue #62 adds deterministic
 noncustodial accounting claims and same-process switching across adversarial
-coordinators without surrendering template or publication authority. The next
-bounded work is independently replicated share state and actual settlement;
-local accounting claims alone do not establish decentralized mining.
+coordinators without surrendering template or publication authority. Issue #67
+adds two independently stored receipt replicas, deterministic recovery and
+agreement, and direct multi-output coinbase settlement on private labnet. The
+next bounded work is a reviewed sharechain protocol and independent networked
+implementation; two loopback replicas do not establish decentralized mining.

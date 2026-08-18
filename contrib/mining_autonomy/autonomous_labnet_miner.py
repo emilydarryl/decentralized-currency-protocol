@@ -145,7 +145,8 @@ def build_coinbase(
     *,
     height: int,
     value: int,
-    payout_script: bytes,
+    payout_script: bytes | None = None,
+    payout_outputs: Sequence[tuple[int, bytes]] | None = None,
     coinbase_flags: bytes = b"",
     witness_commitment: bytes | None = None,
 ) -> Coinbase:
@@ -153,8 +154,22 @@ def build_coinbase(
     script_sig = encode_block_height(height) + coinbase_flags + push_data(tag)
     if not 2 <= len(script_sig) <= 100:
         raise MiningError("coinbase scriptSig must contain between 2 and 100 bytes")
-    if not payout_script:
-        raise MiningError("payout script cannot be empty")
+    if (payout_script is None) == (payout_outputs is None):
+        raise MiningError("supply exactly one payout script or one payout-output plan")
+    if payout_outputs is None:
+        if not payout_script:
+            raise MiningError("payout script cannot be empty")
+        direct_outputs = [(value, payout_script)]
+    else:
+        direct_outputs = list(payout_outputs)
+        if not direct_outputs:
+            raise MiningError("payout-output plan cannot be empty")
+        if any(not script for _, script in direct_outputs):
+            raise MiningError("payout-output scripts cannot be empty")
+        if len({script for _, script in direct_outputs}) != len(direct_outputs):
+            raise MiningError("payout-output scripts must be unique")
+        if sum(output_value for output_value, _ in direct_outputs) != value:
+            raise MiningError("payout-output plan does not conserve the coinbase value")
 
     tx_input = (
         b"\x00" * 32
@@ -163,7 +178,7 @@ def build_coinbase(
         + script_sig
         + struct.pack("<I", 0xFFFFFFFF)
     )
-    outputs: list[tuple[int, bytes]] = [(value, payout_script)]
+    outputs = direct_outputs
     if witness_commitment is not None:
         if not witness_commitment:
             raise MiningError("witness commitment script cannot be empty")
@@ -204,6 +219,172 @@ def build_coinbase(
 def canonical_template_commitment(template: dict[str, Any]) -> str:
     encoded = json.dumps(template, separators=(",", ":"), sort_keys=True).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def validate_settlement_endpoint(endpoint: str) -> str:
+    parsed = urllib.parse.urlsplit(endpoint)
+    if (
+        parsed.scheme != "http"
+        or parsed.hostname != "127.0.0.1"
+        or parsed.path not in ("", "/")
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise MiningError("settlement peer must be an http://127.0.0.1:PORT base URL")
+    try:
+        port = parsed.port
+    except ValueError as error:
+        raise MiningError("settlement peer port is malformed") from error
+    if port is None or not 1024 <= port <= 65535:
+        raise MiningError("settlement peer port must be between 1024 and 65535")
+    return f"http://127.0.0.1:{port}"
+
+
+def validate_payout_plan(document: Any, coinbase_value: int) -> dict[str, Any]:
+    if not isinstance(document, dict):
+        raise MiningError("payout plan must be a JSON object")
+    required = {
+        "format",
+        "chain",
+        "custody",
+        "settlement_status",
+        "coinbase_value",
+        "receipt_set_commitment_sha256",
+        "eligible_receipt_count",
+        "total_work_units",
+        "outputs",
+        "payout_plan_commitment_sha256",
+    }
+    if set(document) != required:
+        raise MiningError("payout plan contains missing or unknown fields")
+    if (
+        document["format"] != "soveroot-labnet-direct-payout-plan-v0"
+        or document["chain"] != "labnet"
+        or document["custody"] != "none"
+        or document["settlement_status"] != "direct_coinbase_test_plan"
+    ):
+        raise MiningError("payout plan has the wrong safety or format boundary")
+    if document["coinbase_value"] != coinbase_value:
+        raise MiningError("payout plan coinbase value does not match the current template")
+    for field in ("receipt_set_commitment_sha256", "payout_plan_commitment_sha256"):
+        value = document[field]
+        if not isinstance(value, str) or len(value) != 64:
+            raise MiningError(f"{field} must be a 32-byte hexadecimal commitment")
+        try:
+            bytes.fromhex(value)
+        except ValueError as error:
+            raise MiningError(f"{field} must be hexadecimal") from error
+    if (
+        not isinstance(document["eligible_receipt_count"], int)
+        or isinstance(document["eligible_receipt_count"], bool)
+        or document["eligible_receipt_count"] <= 0
+        or not isinstance(document["total_work_units"], int)
+        or isinstance(document["total_work_units"], bool)
+        or document["total_work_units"] <= 0
+    ):
+        raise MiningError("payout plan requires positive receipt and work totals")
+    outputs = document["outputs"]
+    if not isinstance(outputs, list) or not 2 <= len(outputs) <= 1000:
+        raise MiningError("pooled payout plan must contain between two and 1000 outputs")
+    scripts = []
+    all_receipt_ids = []
+    total_value = 0
+    total_work = 0
+    for output in outputs:
+        if not isinstance(output, dict) or set(output) != {
+            "payout_script_hex",
+            "value",
+            "work_units",
+            "receipt_ids",
+        }:
+            raise MiningError("payout output contains missing or unknown fields")
+        script = output["payout_script_hex"]
+        if not isinstance(script, str) or not 2 <= len(script) <= 20_000:
+            raise MiningError("payout output script must encode 1-10000 bytes")
+        try:
+            bytes.fromhex(script)
+        except ValueError as error:
+            raise MiningError("payout output script must be hexadecimal") from error
+        value = output["value"]
+        work_units = output["work_units"]
+        receipt_ids = output["receipt_ids"]
+        if not isinstance(value, int) or isinstance(value, bool) or value < 546:
+            raise MiningError("every direct payout must be at least 546 satoshis")
+        if not isinstance(work_units, int) or isinstance(work_units, bool) or work_units <= 0:
+            raise MiningError("every payout output must have positive work units")
+        if (
+            not isinstance(receipt_ids, list)
+            or not receipt_ids
+            or receipt_ids != sorted(receipt_ids)
+            or any(not isinstance(item, str) or len(item) != 64 for item in receipt_ids)
+        ):
+            raise MiningError("payout output receipt identifiers must be sorted 32-byte hashes")
+        try:
+            for receipt_id in receipt_ids:
+                bytes.fromhex(receipt_id)
+        except ValueError as error:
+            raise MiningError("payout output receipt identifiers must be hexadecimal") from error
+        scripts.append(script)
+        all_receipt_ids.extend(receipt_ids)
+        total_value += value
+        total_work += work_units
+    if scripts != sorted(scripts) or len(set(scripts)) != len(scripts):
+        raise MiningError("payout outputs must use unique scripts in canonical order")
+    if total_value != coinbase_value:
+        raise MiningError("payout outputs do not conserve the coinbase value")
+    if total_work != document["total_work_units"]:
+        raise MiningError("payout outputs do not conserve the declared work units")
+    if len(set(all_receipt_ids)) != len(all_receipt_ids):
+        raise MiningError("one receipt cannot be assigned to multiple payout outputs")
+    if len(all_receipt_ids) != document["eligible_receipt_count"]:
+        raise MiningError("payout outputs do not conserve the eligible receipt count")
+    body = {key: value for key, value in document.items() if key != "payout_plan_commitment_sha256"}
+    if canonical_template_commitment(body) != document["payout_plan_commitment_sha256"]:
+        raise MiningError("payout plan commitment does not match its contents")
+    return document
+
+
+class SettlementPlanProvider:
+    """Require multiple accounting replicas to agree before pooled settlement."""
+
+    def __init__(self, endpoints: Sequence[str], timeout: float) -> None:
+        self.endpoints = [validate_settlement_endpoint(endpoint) for endpoint in endpoints]
+        if len(self.endpoints) < 2:
+            raise MiningError("pooled settlement requires at least two accounting replicas")
+        if len(set(self.endpoints)) != len(self.endpoints):
+            raise MiningError("settlement peer endpoints must be unique")
+        if timeout <= 0 or timeout > 5:
+            raise MiningError("settlement timeout must be greater than zero and at most five seconds")
+        self.timeout = timeout
+
+    def fetch(self, coinbase_value: int) -> dict[str, Any]:
+        plans = []
+        for endpoint in self.endpoints:
+            url = f"{endpoint}/plan?coinbase_value={coinbase_value}"
+            try:
+                with urllib.request.urlopen(url, timeout=self.timeout) as response:
+                    body = response.read(1_048_577)
+            except Exception as error:
+                raise MiningError(f"settlement peer {endpoint} is unavailable: {error}") from error
+            if len(body) > 1_048_576:
+                raise MiningError("settlement peer response exceeds the size limit")
+            try:
+                plan = validate_payout_plan(json.loads(body), coinbase_value)
+            except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                raise MiningError(f"settlement peer {endpoint} returned malformed JSON") from error
+            structured_event(
+                "settlement",
+                "replica_plan_received",
+                endpoint=endpoint,
+                payout_plan_commitment_sha256=plan["payout_plan_commitment_sha256"],
+                receipt_set_commitment_sha256=plan["receipt_set_commitment_sha256"],
+            )
+            plans.append(plan)
+        if any(plan != plans[0] for plan in plans[1:]):
+            raise MiningError("accounting replicas returned conflicting payout plans")
+        return plans[0]
 
 
 class JobDeclarator:
@@ -525,6 +706,7 @@ def mine_one_block(
     max_nonce: int,
     share_reporter: ShareReporter | None = None,
     job_declarator: JobDeclarator | CoordinatorSelector | None = None,
+    settlement_provider: SettlementPlanProvider | None = None,
 ) -> dict[str, Any]:
     chain_info = require_dict(rpc.call("getblockchaininfo"), "getblockchaininfo")
     if chain_info.get("chain") != "labnet":
@@ -571,10 +753,26 @@ def mine_one_block(
     if len(previous_hash) != 32:
         raise MiningError("template previous block hash must be 32 bytes")
 
+    payout_plan = None
+    direct_outputs = None
+    if settlement_provider is not None:
+        payout_plan = settlement_provider.fetch(coinbase_value)
+        direct_outputs = [
+            (output["value"], bytes.fromhex(output["payout_script_hex"]))
+            for output in payout_plan["outputs"]
+        ]
+        structured_event(
+            "settlement",
+            "payout_plan_committed",
+            payout_plan_commitment_sha256=payout_plan["payout_plan_commitment_sha256"],
+            receipt_set_commitment_sha256=payout_plan["receipt_set_commitment_sha256"],
+            output_count=len(direct_outputs),
+        )
     coinbase = build_coinbase(
         height=height,
         value=coinbase_value,
-        payout_script=payout_script,
+        payout_script=payout_script if direct_outputs is None else None,
+        payout_outputs=direct_outputs,
         coinbase_flags=flags,
         witness_commitment=witness_commitment,
     )
@@ -603,6 +801,15 @@ def mine_one_block(
         "curtime": block_time,
         "coinbase_value": coinbase_value,
         "payout_script_hex": payout_script.hex(),
+        "payout_mode": "direct_share_settlement" if payout_plan is not None else "solo_wallet",
+        "payout_scripts_hex": (
+            [output["payout_script_hex"] for output in payout_plan["outputs"]]
+            if payout_plan is not None
+            else [payout_script.hex()]
+        ),
+        "payout_plan_commitment_sha256": (
+            payout_plan["payout_plan_commitment_sha256"] if payout_plan is not None else None
+        ),
         "coinbase_tx_version": 2,
         "coinbase_prefix_hex": coinbase.declaration_prefix.hex(),
         "coinbase_suffix_hex": coinbase.declaration_suffix.hex(),
@@ -688,6 +895,14 @@ def mine_one_block(
         block_hash=block_hash,
         template_commitment_sha256=semantic_template["template_commitment_sha256"],
     )
+    if payout_plan is not None:
+        structured_event(
+            "settlement",
+            "direct_coinbase_settlement_published",
+            block_hash=block_hash,
+            payout_plan_commitment_sha256=payout_plan["payout_plan_commitment_sha256"],
+            output_count=len(payout_plan["outputs"]),
+        )
     structured_event(
         "accounting",
         "reporting_summary",
@@ -703,6 +918,9 @@ def mine_one_block(
         "declaration_status": declaration_result["status"],
         "declaration_reason": declaration_result.get("reason"),
         "template_commitment_sha256": semantic_template["template_commitment_sha256"],
+        "payout_plan_commitment_sha256": (
+            payout_plan["payout_plan_commitment_sha256"] if payout_plan is not None else None
+        ),
         "share_reports_delivered": share_reporter.delivered if share_reporter is not None else 0,
         "share_reports_failed": share_reporter.failed if share_reporter is not None else 0,
     }
@@ -722,6 +940,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--worker", default="labnet-miner", help="accounting-only worker label")
     parser.add_argument("--share-report-interval", type=int, default=1, help="report every Nth work attempt")
     parser.add_argument("--share-timeout", type=float, default=0.25, help="maximum seconds per optional report")
+    parser.add_argument(
+        "--settlement-peer",
+        action="append",
+        default=[],
+        metavar="HTTP://127.0.0.1:PORT",
+        help="repeatable accounting replica; every configured peer must return the identical payout plan",
+    )
+    parser.add_argument("--settlement-timeout", type=float, default=2.0, help="maximum seconds per payout-plan peer")
     parser.add_argument("--sv2-helper", type=Path, help="path to the pinned Stratum V2 declaration helper")
     parser.add_argument("--sv2-endpoint", help="loopback host:port for the test Job Declarator Server")
     parser.add_argument("--sv2-authority-public-key", help="pinned coordinator Noise authority public key")
@@ -746,6 +972,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         raise MiningError("block count must be between 1 and 100")
     if not 0 <= args.inter_block_delay <= 60:
         raise MiningError("inter-block delay must be between zero and 60 seconds")
+    if args.settlement_peer and args.blocks != 1:
+        raise MiningError("one agreed payout plan may settle exactly one block")
     share_reporter = None
     if args.share_endpoint:
         share_reporter = ShareReporter(
@@ -754,6 +982,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.share_report_interval,
             args.share_timeout,
         )
+    settlement_provider = None
+    if args.settlement_peer:
+        settlement_provider = SettlementPlanProvider(args.settlement_peer, args.settlement_timeout)
     job_declarator: JobDeclarator | CoordinatorSelector | None = None
     sv2_values = (args.sv2_helper, args.sv2_endpoint, args.sv2_authority_public_key)
     if args.sv2_coordinator:
@@ -797,6 +1028,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             max_nonce=args.max_nonce,
             share_reporter=share_reporter,
             job_declarator=job_declarator,
+            settlement_provider=settlement_provider,
         )
         print(f"Autonomous external block accepted: {result['block_hash']}", flush=True)
         print(f"Height: {result['height']}", flush=True)
@@ -804,6 +1036,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"Transactions selected from the miner's own node: {result['transactions']}", flush=True)
         print(f"Job declaration status: {result['declaration_status']}", flush=True)
         print(f"Template commitment: {result['template_commitment_sha256']}", flush=True)
+        if result["payout_plan_commitment_sha256"] is not None:
+            print(
+                f"Direct payout plan commitment: {result['payout_plan_commitment_sha256']}",
+                flush=True,
+            )
         if share_reporter is not None:
             print(f"Share reports delivered: {result['share_reports_delivered']}", flush=True)
             print(f"Share reports failed without stopping mining: {result['share_reports_failed']}", flush=True)

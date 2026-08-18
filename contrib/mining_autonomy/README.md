@@ -13,6 +13,7 @@ It is packaged by the Labnet Kit and is normally run through:
 ./soveroot-labnet job-declaration-demo
 ./soveroot-labnet interoperability-demo
 ./soveroot-labnet resilience-demo
+./soveroot-labnet share-settlement-demo
 ```
 
 This prototype is evidence for one narrow property: a miner can construct and
@@ -22,8 +23,10 @@ the miner continues. The third command uses the pinned Stratum V2 reference
 helper for authenticated Job Declaration and then proves coordinator loss
 cannot stop the miner. The fourth command compares that reference path with a
 separately written Rust miner, then requires each implementation to declare,
-solve, and directly publish its own block. It is not decentralized accounting,
-a payout protocol, the experimental Soveroot PoW, or production software.
+solve, and directly publish its own block. The sixth command reconciles two
+locally stored receipt sets through one outage, requires identical payout
+plans, and places the agreed outputs directly in coinbase. It is not a global
+sharechain, the experimental Soveroot PoW, or production software.
 
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
@@ -48,6 +51,12 @@ coordinator failover, and final total coordinator loss. The accounting service
 binds verified receipts to miner-wallet payout scripts and emits deterministic
 claims without holding a key or publishing a block. See
 [`docs/noncustodial-payout-failover-labnet.md`](../../docs/noncustodial-payout-failover-labnet.md).
+
+The sixth command uses `share_replica_client.py` to reconcile two independently
+stored v2 receipt ledgers. `build_share_settlement_evidence.py` then checks the
+recovery result, both canonical plans, the miner's commitment events, and the
+decoded settlement coinbase. See
+[`docs/replicated-share-settlement-labnet.md`](../../docs/replicated-share-settlement-labnet.md).
 
 ```bash
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check

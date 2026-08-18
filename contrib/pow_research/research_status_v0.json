@@ -69,7 +69,7 @@
       "id": "template_autonomy",
       "state": "OPEN",
       "assessment": "NOT_ASSESSED",
-      "gap": "Two independently written miners exactly agree on the frozen authenticated message payloads, template commitment, and solved block, and each directly publishes a labnet block. One running miner preserves exact templates through ordered adversarial coordinator failover and total coordinator loss, while a local service emits noncustodial accounting claims. Decentralized share replication, actual settlement, and public adversarial evidence are absent."
+      "gap": "Two independently written miners exactly agree on the frozen authenticated message payloads, template commitment, and solved block, and each directly publishes a labnet block. One running miner preserves exact templates through ordered adversarial coordinator failover and total coordinator loss. Two local accounting replicas recover verified receipts after one outage, agree on a deterministic plan, and drive direct multi-output coinbase settlement. A globally ordered sharechain, independent public operators, Sybil resistance, and adversarial public-network evidence are absent."
     }
   ],
   "latest_evidence": [

@@ -111,6 +111,7 @@ jobs:
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "job-declaration-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "interoperability-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "resilience-demo"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "share-settlement-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -309,6 +310,8 @@ jobs:
           test -x "$kit/libexec/autonomous_labnet_miner.py"
           test -x "$kit/libexec/share_accounting_coordinator.py"
           test -x "$kit/libexec/build_resilience_evidence.py"
+          test -x "$kit/libexec/share_replica_client.py"
+          test -x "$kit/libexec/build_share_settlement_evidence.py"
           test -x "$kit/libexec/soveroot-sv2-reference"
           test -x "$kit/libexec/soveroot-sv2-independent-miner"
           test -x "$kit/libexec/run_interoperability.py"
@@ -346,6 +349,14 @@ jobs:
           resilience_evidence="$(find "$SOVEROOT_LABNET_HOME" -path '*/resilience-demo.*/coordinator-resilience-evidence.json' -print -quit)"
           test -s "$resilience_evidence"
           cp "$resilience_evidence" build/labnet-kit-artifacts/coordinator-resilience-evidence.json
+          settlement_output="$("$kit/soveroot-labnet" share-settlement-demo)"
+          printf '%s\n' "$settlement_output"
+          grep -F -- "Two accounting replicas converged on the same verified receipt set and payout plan." <<<"$settlement_output"
+          grep -F -- "Mining continued while one replica was offline, and the stale replica recovered the missing receipt." <<<"$settlement_output"
+          grep -F -- "The directly published coinbase paid the two agreed wallet scripts without a pool-held key." <<<"$settlement_output"
+          settlement_evidence="$(find "$SOVEROOT_LABNET_HOME" -path '*/share-settlement-demo.*/share-settlement-evidence.json' -print -quit)"
+          test -s "$settlement_evidence"
+          cp "$settlement_evidence" build/labnet-kit-artifacts/share-settlement-evidence.json
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT
@@ -358,6 +369,7 @@ jobs:
             build/labnet-kit-artifacts/*.tar.gz
             build/labnet-kit-artifacts/*.sha256
             build/labnet-kit-artifacts/coordinator-resilience-evidence.json
+            build/labnet-kit-artifacts/share-settlement-evidence.json
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
