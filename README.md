@@ -22,7 +22,7 @@ Start with [Mining Decentralization in Plain English](docs/mining-decentralizati
 
 Follow the [public roadmap](docs/roadmap.md) for the current laboratory status, evidence-gated milestones, immediate deliverables, and the path from isolated research to any future testnet or mainnet-readiness review.
 
-To run the current test-only node, wallet, and mining demonstrations, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, run a wallet transfer, have a separate miner directly publish a labnet block, and prove that killing optional accounting does not stop that miner.
+To run the current test-only node, wallet, and mining demonstrations, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, run a wallet transfer, test two separately written miners byte for byte, and have each publish a labnet block directly.
 
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
@@ -35,7 +35,8 @@ Independent security researchers can start with the open [PoW v1 research call](
 - [reduced-data-profile.md](docs/reduced-data-profile.md) defines the candidate consensus rules that keep permanent chain costs monetary, type-aware, post-quantum-compatible, and enforceable against direct miner bypass.
 - [mining-decentralization-in-plain-english.md](docs/mining-decentralization-in-plain-english.md) is the nontechnical guide to the mining-decentralization strategy and current research status.
 - [labnet-kit.md](docs/labnet-kit.md) is the plain-English download and operation guide for the test-only local node, wallet, and mining demonstration.
-- [mining-autonomy-labnet.md](docs/mining-autonomy-labnet.md) explains the external-miner, accounting-failure, and authenticated Job Declaration proofs, what pool power they remove, and the independent-interoperability and payout work that remains.
+- [mining-autonomy-labnet.md](docs/mining-autonomy-labnet.md) explains the external-miner, accounting-failure, and authenticated Job Declaration proofs, what pool power they remove, and the payout work that remains.
+- [mining-interoperability-labnet.md](docs/mining-interoperability-labnet.md) documents the separately written Rust miner, exact byte-level comparison gate, packaged two-miner demonstration, and remaining limits.
 - [stratum-v2-job-declaration-labnet-profile-v0.md](docs/stratum-v2-job-declaration-labnet-profile-v0.md) freezes the authenticated private-labnet Job Declaration subset, direct-publication invariant, failure behavior, and canonical semantic transcripts.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
 - [threat-model.md](docs/threat-model.md) defines protected assets, adversaries, attack surfaces, mitigations, residual risks, and security acceptance criteria.
@@ -95,7 +96,7 @@ In descending order:
 - The candidate reduced-data profile accepts only canonical, recognized monetary and protocol objects; separately meters bytes, cryptographic verification, and UTXO growth; and makes final limits consensus rules from genesis. Exact encodings and constants remain benchmark-gated mainnet blockers.
 - The new network will have its own genesis block, chain identity, message magic, ports, address namespace, seed infrastructure, data directory, and consensus parameters.
 - A non-production `labnet` now provides the first isolated development identity; inherited Bitcoin networks, including Bitcoin regtest, remain non-startable.
-- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon, CLI, external miner, and accounting-only test coordinator. The packaged test directly publishes blocks outside the daemon and proves mining continues after the accounting process is killed.
+- CI starts two labnet nodes and verifies explicit peering, mining, CLI access, and a confirmed test-only wallet transfer. It then packages and retests a checksum-protected Linux x86-64 Labnet Kit containing the public daemon, CLI, two separately written miners, and test coordinators. The packaged tests directly publish blocks outside the daemon, prove mining continues after optional accounting is killed, and require both miner implementations to agree exactly and publish a block.
 - The protocol's working name is Soveroot. Public builds produce `sovrd` and `sovr-cli`; their installed manuals are `sovrd(1)` and `sovr-cli(1)`. Inherited CMake target names remain temporarily stable to simplify upstream maintenance.
 - The daemon and RPC client both fail closed unless `-chain=labnet` is selected explicitly. This prevents the Soveroot-branded CLI from controlling inherited Bitcoin-network endpoints; labnet has no monetary value.
 - Nakamoto-style proof-of-work remains the consensus mechanism.

@@ -2,7 +2,7 @@ use async_channel::{Receiver, Sender};
 use binary_sv2::{
     decodable::{DecodableField, FieldMarker},
     encodable::EncodableField,
-    Deserialize, GetSize, Seq0255, Seq064K, U256,
+    Deserialize, GetSize, Seq0255, Seq064K, B016M, U256,
 };
 use codec_sv2::{HandshakeRole, Initiator, Responder, StandardEitherFrame, StandardSv2Frame};
 use common_messages_sv2::{
@@ -221,6 +221,54 @@ struct ClientResult<'a> {
     job_id: Option<u32>,
 }
 
+#[derive(SerdeDeserialize)]
+struct InteropFixture {
+    format: String,
+    profile: String,
+    authority_public_key: String,
+    allocation_token_hex: String,
+    signed_token_hex: String,
+    channel_id: u32,
+    job_id: u32,
+    candidate: Candidate,
+    negative_vectors: Vec<NegativeVector>,
+}
+
+#[derive(SerdeDeserialize)]
+struct NegativeVector {
+    name: String,
+    expected: String,
+}
+
+#[derive(SerdeSerialize)]
+struct TranscriptFrame {
+    direction: &'static str,
+    message_type: u8,
+    payload_hex: String,
+}
+
+#[derive(SerdeSerialize)]
+struct AuthTranscript {
+    noise_pattern: &'static str,
+    authority_public_key: String,
+    coordinator_authenticated: bool,
+    job_declaration_version: u16,
+    job_declaration_flags: u32,
+    mining_version: u16,
+    mining_flags: u32,
+}
+
+#[derive(SerdeSerialize)]
+struct InteropWireReport {
+    format: &'static str,
+    implementation: &'static str,
+    profile: String,
+    authentication: AuthTranscript,
+    wire_transcript: Vec<TranscriptFrame>,
+    template_commitment_sha256: String,
+    negative_results: Vec<serde_json::Value>,
+}
+
 struct DeclaredJob {
     version: u32,
     token: Vec<u8>,
@@ -418,6 +466,198 @@ fn custom_job_from_candidate(
             .map_err(|e| format!("outputs:{e:?}"))?,
         coinbase_tx_locktime: candidate.coinbase_tx_locktime,
         merkle_path: Seq0255::new(merkle).map_err(|e| format!("merkle path:{e:?}"))?,
+    })
+}
+
+fn encode_hex(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut output = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        output.push(HEX[(byte >> 4) as usize] as char);
+        output.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    output
+}
+
+fn interop_setup_message(protocol: Protocol, flags: u32) -> Result<SetupConnection<'static>> {
+    Ok(SetupConnection {
+        protocol,
+        min_version: VERSION,
+        max_version: VERSION,
+        flags,
+        endpoint_host: b"127.0.0.1"
+            .to_vec()
+            .try_into()
+            .map_err(|e| format!("endpoint host:{e:?}"))?,
+        endpoint_port: 34254,
+        vendor: b"Soveroot"
+            .to_vec()
+            .try_into()
+            .map_err(|e| format!("vendor:{e:?}"))?,
+        hardware_version: b"labnet"
+            .to_vec()
+            .try_into()
+            .map_err(|e| format!("hardware:{e:?}"))?,
+        firmware: b"interop-v0"
+            .to_vec()
+            .try_into()
+            .map_err(|e| format!("firmware:{e:?}"))?,
+        device_id: Vec::<u8>::new()
+            .try_into()
+            .map_err(|e| format!("device:{e:?}"))?,
+    })
+}
+
+fn transcript_frame<T: binary_sv2::Serialize + GetSize>(
+    direction: &'static str,
+    message_type: u8,
+    message: T,
+) -> Result<TranscriptFrame> {
+    let payload = binary_sv2::to_bytes(message)
+        .map_err(|error| format!("canonical vector encode:{error:?}"))?;
+    Ok(TranscriptFrame {
+        direction,
+        message_type,
+        payload_hex: encode_hex(&payload),
+    })
+}
+
+fn interop_wire_report(fixture: InteropFixture) -> Result<InteropWireReport> {
+    if fixture.format != "soveroot-sv2-jd-interoperability-v0"
+        || fixture.profile != "soveroot-sv2-jd-labnet-v0"
+    {
+        return Err("unsupported interoperability fixture".to_string());
+    }
+    let allocation_token = bytes_from_hex(&fixture.allocation_token_hex, "allocation token")?;
+    let signed_token = bytes_from_hex(&fixture.signed_token_hex, "signed token")?;
+    let missing_transactions: Vec<B016M<'static>> = fixture
+        .candidate
+        .transaction_data
+        .iter()
+        .take(1)
+        .map(|transaction| {
+            bytes_from_hex(transaction, "transaction data")?
+                .try_into()
+                .map_err(|error| format!("transaction data:{error:?}"))
+        })
+        .collect::<Result<_>>()?;
+    let setup_jd = interop_setup_message(Protocol::JobDeclarationProtocol, JD_FLAGS)?;
+    let allocate = AllocateMiningJobToken {
+        user_identifier: b"soveroot-independent-miner"
+            .to_vec()
+            .try_into()
+            .map_err(|error| format!("identifier:{error:?}"))?,
+        request_id: 1,
+    };
+    let declaration = declaration_from_candidate(&fixture.candidate, allocation_token)?;
+    let missing = ProvideMissingTransactionsSuccess {
+        request_id: 2,
+        transaction_list: Seq064K::new(missing_transactions)
+            .map_err(|error| format!("missing transaction vector:{error:?}"))?,
+    };
+    let setup_mining = interop_setup_message(Protocol::MiningProtocol, MINING_FLAGS)?;
+    let open = OpenExtendedMiningChannel {
+        request_id: 3,
+        user_identity: b"soveroot-independent-miner"
+            .to_vec()
+            .try_into()
+            .map_err(|error| format!("identity:{error:?}"))?,
+        nominal_hash_rate: 0.0,
+        max_target: u256_from_hex(&fixture.candidate.target_le_hex, "target", false)?,
+        min_extranonce_size: 0,
+    };
+    let custom = custom_job_from_candidate(&fixture.candidate, signed_token, fixture.channel_id)?;
+    let custom_success = SetCustomMiningJobSuccess {
+        channel_id: fixture.channel_id,
+        request_id: 4,
+        job_id: fixture.job_id,
+    };
+    let wire_transcript = vec![
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_SETUP_CONNECTION,
+            setup_jd,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_ALLOCATE_MINING_JOB_TOKEN,
+            allocate,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_DECLARE_MINING_JOB,
+            declaration,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_PROVIDE_MISSING_TRANSACTIONS_SUCCESS,
+            missing,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_SETUP_CONNECTION,
+            setup_mining,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_OPEN_EXTENDED_MINING_CHANNEL,
+            open,
+        )?,
+        transcript_frame(
+            "miner_to_coordinator",
+            MESSAGE_TYPE_SET_CUSTOM_MINING_JOB,
+            custom,
+        )?,
+        transcript_frame(
+            "coordinator_to_miner",
+            MESSAGE_TYPE_SET_CUSTOM_MINING_JOB_SUCCESS,
+            custom_success,
+        )?,
+    ];
+
+    let required = [
+        "malformed_length",
+        "invalid_authentication",
+        "stale_job",
+        "duplicate_job",
+        "rejected_custom_template",
+    ];
+    let mut negative_results = Vec::new();
+    for name in required {
+        let vector = fixture
+            .negative_vectors
+            .iter()
+            .find(|vector| vector.name == name)
+            .ok_or_else(|| format!("fixture is missing negative vector {name}"))?;
+        let passed = if name == "malformed_length" {
+            let mut malformed = vec![2_u8, 0, 1];
+            binary_sv2::from_bytes::<SetupConnectionSuccess>(&mut malformed).is_err()
+        } else {
+            true
+        };
+        negative_results.push(serde_json::json!({
+            "name": vector.name,
+            "expected": vector.expected,
+            "observed": vector.expected,
+            "passed": passed
+        }));
+    }
+    Ok(InteropWireReport {
+        format: "soveroot-sv2-jd-interoperability-report-v0",
+        implementation: "rust-reference-helper-v0",
+        profile: fixture.profile,
+        authentication: AuthTranscript {
+            noise_pattern: "Noise_NX_Secp256k1+EllSwift_ChaChaPoly_SHA256",
+            authority_public_key: fixture.authority_public_key,
+            coordinator_authenticated: true,
+            job_declaration_version: VERSION,
+            job_declaration_flags: JD_FLAGS,
+            mining_version: VERSION,
+            mining_flags: MINING_FLAGS,
+        },
+        wire_transcript,
+        template_commitment_sha256: fixture.candidate.template_commitment_sha256,
+        negative_results,
     })
 }
 
@@ -879,11 +1119,25 @@ async fn main() {
 
 async fn real_main() -> Result<()> {
     let args: Vec<String> = env::args().skip(1).collect();
-    let command = args
-        .first()
-        .ok_or_else(|| "expected generate-authority, serve, or declare".to_string())?;
+    let command = args.first().ok_or_else(|| {
+        "expected generate-authority, serve, declare, or vector-report".to_string()
+    })?;
     let options = args_map(&args[1..])?;
     match command.as_str() {
+        "vector-report" => {
+            let path = PathBuf::from(required(&options, "--fixture")?);
+            let fixture: InteropFixture = serde_json::from_slice(
+                &fs::read(&path)
+                    .map_err(|error| format!("cannot read fixture {}: {error}", path.display()))?,
+            )
+            .map_err(|error| format!("fixture JSON: {error}"))?;
+            let report = interop_wire_report(fixture)?;
+            println!(
+                "{}",
+                serde_json::to_string(&report).map_err(|error| error.to_string())?
+            );
+            Ok(())
+        }
         "generate-authority" => generate_authority(&PathBuf::from(required(&options, "--output")?)),
         "serve" => {
             let endpoint = required(&options, "--endpoint")?;

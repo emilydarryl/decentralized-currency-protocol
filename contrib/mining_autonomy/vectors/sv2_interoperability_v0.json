@@ -1,0 +1,51 @@
+{
+  "format": "soveroot-sv2-jd-interoperability-v0",
+  "profile": "soveroot-sv2-jd-labnet-v0",
+  "authority_public_key": "1111111111111111111111111111111111111111111111111111111111111111",
+  "allocation_token_hex": "a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "signed_token_hex": "b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+  "channel_id": 7,
+  "job_id": 9,
+  "candidate": {
+    "bits": 545259519,
+    "chain": "labnet",
+    "coinbase_merkle_path": [
+      "76a56aced915d2513dcd84c2c378b2e8aa5cd632b5b71ca2f2ac5b0e3a649bdb"
+    ],
+    "coinbase_outputs_hex": "0100f2052a010000000151",
+    "coinbase_prefix_hex": "02000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2201651f2f536f7665726f6f74206175746f6e6f6d6f7573206c61626e65742076302f",
+    "coinbase_suffix_hex": "ffffffff0100f2052a01000000015100000000",
+    "coinbase_tx_hex": "02000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2201651f2f536f7665726f6f74206175746f6e6f6d6f7573206c61626e65742076302fffffffff0100f2052a01000000015100000000",
+    "coinbase_tx_input_n_sequence": 4294967295,
+    "coinbase_tx_locktime": 0,
+    "coinbase_tx_version": 2,
+    "coinbase_value": 5000000000,
+    "curtime": 1750000000,
+    "height": 101,
+    "merkle_root_internal_hex": "8048f05e67741a6fb0e47be47f72eb664685d82252ba23a80406d1005062e571",
+    "payout_script_hex": "51",
+    "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+    "target_le_hex": "0000000000000000000000000000000000000000000000000000000000ffff7f",
+    "template_commitment_sha256": "bd370b47099b825caa6e82956df71f06c624194e31e10d56ae50a40e540ee91c",
+    "transaction_data": [
+      "0102"
+    ],
+    "transaction_ids": [
+      "db9b643a0e5bacf2a21cb7b532d65caae8b278c3c284cd3d51d215d9ce6aa576"
+    ],
+    "version": 4
+  },
+  "expected_block": {
+    "nonce": 0,
+    "hash": "77e74778c55c1c68e8df1b6b269698743d9dbe7f5b7d1b5b8d1b1e01a6517aca",
+    "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101018048f05e67741a6fb0e47be47f72eb664685d82252ba23a80406d1005062e57180e14e68ffff7f2000000000",
+    "block_hex": "0400000001010101010101010101010101010101010101010101010101010101010101018048f05e67741a6fb0e47be47f72eb664685d82252ba23a80406d1005062e57180e14e68ffff7f20000000000202000000010000000000000000000000000000000000000000000000000000000000000000ffffffff2201651f2f536f7665726f6f74206175746f6e6f6d6f7573206c61626e65742076302fffffffff0100f2052a010000000151000000000102"
+  },
+  "negative_vectors": [
+    {"name": "malformed_length", "expected": "reject"},
+    {"name": "invalid_authentication", "expected": "direct_fallback"},
+    {"name": "stale_job", "expected": "reject_before_solve"},
+    {"name": "duplicate_job", "expected": "reject_second_custom_job"},
+    {"name": "rejected_custom_template", "expected": "direct_fallback"}
+  ]
+}

@@ -4,12 +4,16 @@ Status: **FROZEN TEST PROFILE; PRIVATE LABNET ONLY; NO PRODUCTION OR CONSENSUS C
 
 Profile identifier: `soveroot-sv2-jd-labnet-v0`
 
-Reference implementation status: issue #60 implements this profile with the
+Implementation status: issue #60 implements the reference path with the
 official `stratum-mining/stratum` v1.4.0 Rust libraries pinned at commit
-`0b083ab9411a8a4c74421e90134b77410759b6df`. This does not change the frozen
-specification pin below and is not independent interoperability evidence.
+`0b083ab9411a8a4c74421e90134b77410759b6df`. Issue #61 adds a separately
+written payload parser, encoder, miner, and block builder plus exact
+cross-implementation vectors. Neither changes the frozen specification pin.
 
-This document freezes the behavior that the next reference implementation and an independently written miner must reproduce. It is intentionally written before network code so an implementation cannot quietly redefine acceptance, rejection, or fallback behavior.
+This document freezes the behavior that the reference implementation and any
+independently written miner must reproduce. It was written before network code
+so an implementation cannot quietly redefine acceptance, rejection, or
+fallback behavior.
 
 ## 1. Upstream pin and interpretation
 
@@ -173,13 +177,14 @@ The checked corpus is [`contrib/mining_autonomy/vectors/sv2_job_declaration_prof
 
 Each scenario begins with a miner-created template and ends with direct `submitblock` publication of the same job and template commitment. Each failure scenario includes an explicit `direct_fallback` transition. The generator and validator are [`sv2_job_declaration_vectors.py`](../contrib/mining_autonomy/sv2_job_declaration_vectors.py).
 
-These are canonical semantic state transcripts, not Noise ciphertext or complete SV2 binary vectors. The issue #60 reference path implements the pinned binary mapping and adds live authenticated accept, reject, disconnect, and wrong-authority tests. Issue #61 must independently encode and parse the wire behavior rather than import the reference implementation.
+These are canonical semantic state transcripts, not Noise ciphertext or complete SV2 binary vectors. The issue #60 reference path implements the pinned binary mapping and adds live authenticated accept, reject, disconnect, and wrong-authority tests. Issue #61 adds [`sv2_interoperability_v0.json`](../contrib/mining_autonomy/vectors/sv2_interoperability_v0.json): exact authentication inputs, supported clear-message payloads, five negative vectors, the template commitment, and a complete solved block. The independent miner encodes and parses those payloads and builds the block without importing the reference implementation. The comparison gate hard-fails on any disagreement.
 
 Run:
 
 ```bash
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check
 python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
+python3 contrib/mining_autonomy/run_interoperability.py --help
 ```
 
 ## 10. Threats and residual limits
@@ -198,4 +203,7 @@ python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
 
 This profile milestone is complete when the document, generator, checked corpus, tests, roadmap, and research ledger agree. It does not close the Template Autonomy gate.
 
-The reference accepted path and same-process direct fallback are implemented. An independently written miner must now reproduce the protocol without reusing the reference parser, encoder, or block builder. Adversarial coordinator switching and noncustodial payout work remain separate gates.
+The reference accepted path, same-process direct fallback, and independent
+wire/block implementation are now implemented and checked byte for byte.
+Adversarial coordinator switching and noncustodial payout work remain separate
+gates, so Template Autonomy remains open.
