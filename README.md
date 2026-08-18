@@ -29,6 +29,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 ## Documents
 
 - [roadmap.md](docs/roadmap.md) is the concise public view of current status, milestone exit criteria, immediate deliverables, and mainnet-readiness dependencies.
+- [brand-theme.md](docs/brand-theme.md) preserves the Soveroot network-tree identity, selected working primary mark, supporting visual language, and usage guardrails.
 - [research-ledger.md](docs/research-ledger.md) is the project-level source of truth for design decisions, rejected claims, preserved evidence, every open gate, and the immediate research roadmap.
 - [bip110-blake2b-fork-assessment.md](docs/bip110-blake2b-fork-assessment.md) separates BIP110's reduced-data rules from the proposed BLAKE2b fork and records what Soveroot will adopt, modify, reject, and observe.
 - [reduced-data-profile.md](docs/reduced-data-profile.md) defines the candidate consensus rules that keep permanent chain costs monetary, type-aware, post-quantum-compatible, and enforceable against direct miner bypass.
