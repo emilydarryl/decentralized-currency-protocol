@@ -104,6 +104,23 @@ def merkle_root(hashes: Sequence[bytes]) -> bytes:
     return layer[0]
 
 
+def coinbase_merkle_path(hashes: Sequence[bytes]) -> list[bytes]:
+    if not hashes:
+        raise MiningError("a block must contain at least the coinbase transaction")
+    if any(len(item) != 32 for item in hashes):
+        raise MiningError("merkle leaves must be 32-byte hashes")
+    path: list[bytes] = []
+    layer = list(hashes)
+    index = 0
+    while len(layer) > 1:
+        if len(layer) % 2:
+            layer.append(layer[-1])
+        path.append(layer[index ^ 1])
+        layer = [hash256(layer[offset] + layer[offset + 1]) for offset in range(0, len(layer), 2)]
+        index //= 2
+    return path
+
+
 def _serialize_outputs(outputs: Sequence[tuple[int, bytes]]) -> bytes:
     result = bytearray(encode_varint(len(outputs)))
     for value, script in outputs:
@@ -119,6 +136,9 @@ def _serialize_outputs(outputs: Sequence[tuple[int, bytes]]) -> bytes:
 class Coinbase:
     txid_hash: bytes
     block_bytes: bytes
+    declaration_prefix: bytes
+    declaration_suffix: bytes
+    serialized_outputs: bytes
 
 
 def build_coinbase(
@@ -149,13 +169,17 @@ def build_coinbase(
             raise MiningError("witness commitment script cannot be empty")
         outputs.append((0, witness_commitment))
 
-    base = (
+    serialized_outputs = _serialize_outputs(outputs)
+    declaration_prefix = (
         struct.pack("<I", 2)
         + encode_varint(1)
-        + tx_input
-        + _serialize_outputs(outputs)
-        + struct.pack("<I", 0)
+        + b"\x00" * 32
+        + struct.pack("<I", 0xFFFFFFFF)
+        + encode_varint(len(script_sig))
+        + script_sig
     )
+    declaration_suffix = struct.pack("<I", 0xFFFFFFFF) + serialized_outputs + struct.pack("<I", 0)
+    base = declaration_prefix + declaration_suffix
     block_bytes = base
     if witness_commitment is not None:
         block_bytes = (
@@ -163,12 +187,97 @@ def build_coinbase(
             + b"\x00\x01"
             + encode_varint(1)
             + tx_input
-            + _serialize_outputs(outputs)
+            + serialized_outputs
             + b"\x01\x20"
             + b"\x00" * 32
             + struct.pack("<I", 0)
         )
-    return Coinbase(txid_hash=hash256(base), block_bytes=block_bytes)
+    return Coinbase(
+        txid_hash=hash256(base),
+        block_bytes=block_bytes,
+        declaration_prefix=declaration_prefix,
+        declaration_suffix=declaration_suffix,
+        serialized_outputs=serialized_outputs,
+    )
+
+
+def canonical_template_commitment(template: dict[str, Any]) -> str:
+    encoded = json.dumps(template, separators=(",", ":"), sort_keys=True).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+class JobDeclarator:
+    """Invoke the pinned SV2 helper without granting it mining authority."""
+
+    def __init__(
+        self,
+        helper: Path,
+        endpoint: str,
+        authority_public_key: str,
+        timeout_ms: int,
+    ) -> None:
+        if not helper.is_file():
+            raise MiningError(f"Stratum V2 helper was not found at {helper}")
+        parsed = urllib.parse.urlsplit(f"//{endpoint}")
+        if parsed.hostname not in {"127.0.0.1", "localhost"} or parsed.port is None:
+            raise MiningError("the labnet Stratum V2 endpoint must be a loopback host and port")
+        if not authority_public_key or any(character.isspace() for character in authority_public_key):
+            raise MiningError("the Stratum V2 authority public key is malformed")
+        if timeout_ms <= 0 or timeout_ms > 10_000:
+            raise MiningError("the Stratum V2 timeout must be between 1 and 10000 milliseconds")
+        self.helper = helper
+        self.endpoint = endpoint
+        self.authority_public_key = authority_public_key
+        self.timeout_ms = timeout_ms
+
+    def declare(self, template: dict[str, Any]) -> dict[str, Any]:
+        command = [
+            str(self.helper),
+            "declare",
+            "--endpoint",
+            self.endpoint,
+            "--authority-public-key",
+            self.authority_public_key,
+            "--timeout-ms",
+            str(self.timeout_ms),
+        ]
+        try:
+            completed = subprocess.run(
+                command,
+                input=json.dumps(template, separators=(",", ":"), sort_keys=True),
+                capture_output=True,
+                text=True,
+                timeout=(self.timeout_ms / 1000) + 2,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError) as error:
+            return {"status": "direct_fallback", "reason": f"transport:{type(error).__name__}"}
+        try:
+            response = json.loads(completed.stdout)
+        except json.JSONDecodeError:
+            return {"status": "direct_fallback", "reason": "malformed_helper_reply"}
+        if completed.returncode != 0 or not isinstance(response, dict):
+            return {"status": "direct_fallback", "reason": "helper_failure"}
+        if response.get("template_commitment_sha256") != template["template_commitment_sha256"]:
+            return {"status": "direct_fallback", "reason": "template_commitment_mismatch"}
+        if response.get("status") not in {"accepted", "direct_fallback"}:
+            return {"status": "direct_fallback", "reason": "malformed_helper_status"}
+        if response.get("transport_status") not in {"authenticated", "failed"}:
+            return {"status": "direct_fallback", "reason": "malformed_transport_status"}
+        if response["status"] == "accepted" and response["transport_status"] != "authenticated":
+            return {"status": "direct_fallback", "reason": "unauthenticated_acceptance"}
+        return response
+
+
+def structured_event(component: str, event: str, **fields: Any) -> None:
+    print(
+        json.dumps(
+            {"component": component, "event": event, **fields},
+            separators=(",", ":"),
+            sort_keys=True,
+        ),
+        flush=True,
+    )
 
 
 def solve_header(
@@ -311,6 +420,7 @@ def mine_one_block(
     address: str,
     max_nonce: int,
     share_reporter: ShareReporter | None = None,
+    job_declarator: JobDeclarator | None = None,
 ) -> dict[str, Any]:
     chain_info = require_dict(rpc.call("getblockchaininfo"), "getblockchaininfo")
     if chain_info.get("chain") != "labnet":
@@ -380,6 +490,53 @@ def mine_one_block(
         transaction_bytes.append(raw_transaction)
 
     root = merkle_root(transaction_hashes)
+    semantic_template: dict[str, Any] = {
+        "chain": "labnet",
+        "height": height,
+        "previous_block_hash": template["previousblockhash"],
+        "version": version & 0xFFFFFFFF,
+        "bits": bits,
+        "curtime": block_time,
+        "coinbase_value": coinbase_value,
+        "payout_script_hex": payout_script.hex(),
+        "coinbase_tx_version": 2,
+        "coinbase_prefix_hex": coinbase.declaration_prefix.hex(),
+        "coinbase_suffix_hex": coinbase.declaration_suffix.hex(),
+        "coinbase_tx_hex": coinbase.block_bytes.hex(),
+        "coinbase_outputs_hex": coinbase.serialized_outputs.hex(),
+        "coinbase_tx_input_n_sequence": 0xFFFFFFFF,
+        "coinbase_tx_locktime": 0,
+        "transaction_ids": [item[::-1].hex() for item in transaction_hashes[1:]],
+        "transaction_data": [item.hex() for item in transaction_bytes[1:]],
+        "coinbase_merkle_path": [item.hex() for item in coinbase_merkle_path(transaction_hashes)],
+        "merkle_root_internal_hex": root.hex(),
+        "target_le_hex": compact_target(bits).to_bytes(32, "little").hex(),
+    }
+    semantic_template["template_commitment_sha256"] = canonical_template_commitment(semantic_template)
+    structured_event(
+        "template",
+        "miner_template_committed",
+        height=height,
+        template_commitment_sha256=semantic_template["template_commitment_sha256"],
+        transaction_count=len(transaction_bytes),
+    )
+    declaration_result = {"status": "direct_fallback", "reason": "coordinator_not_configured"}
+    if job_declarator is not None:
+        structured_event("transport", "coordinator_connection_attempted", endpoint=job_declarator.endpoint)
+        declaration_result = job_declarator.declare(semantic_template)
+        structured_event(
+            "transport",
+            "coordinator_session_result",
+            status=declaration_result.get("transport_status", "failed"),
+            reason=declaration_result.get("reason"),
+        )
+    structured_event(
+        "declaration",
+        "job_declaration_result",
+        status=declaration_result["status"],
+        reason=declaration_result.get("reason", "accepted_by_coordinator"),
+        template_commitment_sha256=semantic_template["template_commitment_sha256"],
+    )
     header_prefix = (
         struct.pack("<I", version & 0xFFFFFFFF)
         + previous_hash
@@ -397,20 +554,49 @@ def mine_one_block(
             height=height,
             previous_block_hash=template["previousblockhash"],
         )
+    structured_event(
+        "solving",
+        "started",
+        declaration_status=declaration_result["status"],
+        template_commitment_sha256=semantic_template["template_commitment_sha256"],
+    )
     header, nonce, digest = solve_header(header_prefix, bits, max_nonce, observer)
     block = header + encode_varint(len(transaction_bytes)) + b"".join(transaction_bytes)
     block_hash = digest[::-1].hex()
+    structured_event(
+        "solving",
+        "solution_found",
+        block_hash=block_hash,
+        nonce=nonce,
+        template_commitment_sha256=semantic_template["template_commitment_sha256"],
+    )
 
     submission = rpc.call("submitblock", block.hex())
     if submission not in (None, "null"):
         raise MiningError(f"node rejected the independently built block: {submission}")
     if rpc.call("getbestblockhash") != block_hash:
         raise MiningError("node accepted no error but did not adopt the submitted block")
+    structured_event(
+        "publication",
+        "direct_submitblock_accepted",
+        block_hash=block_hash,
+        template_commitment_sha256=semantic_template["template_commitment_sha256"],
+    )
+    structured_event(
+        "accounting",
+        "reporting_summary",
+        enabled=share_reporter is not None,
+        delivered=share_reporter.delivered if share_reporter is not None else 0,
+        failed=share_reporter.failed if share_reporter is not None else 0,
+    )
     return {
         "block_hash": block_hash,
         "height": height,
         "nonce": nonce,
         "transactions": len(transaction_bytes),
+        "declaration_status": declaration_result["status"],
+        "declaration_reason": declaration_result.get("reason"),
+        "template_commitment_sha256": semantic_template["template_commitment_sha256"],
         "share_reports_delivered": share_reporter.delivered if share_reporter is not None else 0,
         "share_reports_failed": share_reporter.failed if share_reporter is not None else 0,
     }
@@ -430,6 +616,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser.add_argument("--worker", default="labnet-miner", help="accounting-only worker label")
     parser.add_argument("--share-report-interval", type=int, default=1, help="report every Nth work attempt")
     parser.add_argument("--share-timeout", type=float, default=0.25, help="maximum seconds per optional report")
+    parser.add_argument("--sv2-helper", type=Path, help="path to the pinned Stratum V2 declaration helper")
+    parser.add_argument("--sv2-endpoint", help="loopback host:port for the test Job Declarator Server")
+    parser.add_argument("--sv2-authority-public-key", help="pinned coordinator Noise authority public key")
+    parser.add_argument("--sv2-timeout-ms", type=int, default=2000, help="bounded declaration timeout")
     parser.add_argument("--blocks", type=int, default=1, help="number of blocks to mine in this process")
     parser.add_argument("--inter-block-delay", type=float, default=0, help="test-only pause between blocks")
     return parser.parse_args(argv)
@@ -451,6 +641,19 @@ def main(argv: Sequence[str] | None = None) -> int:
             args.share_report_interval,
             args.share_timeout,
         )
+    job_declarator = None
+    sv2_values = (args.sv2_helper, args.sv2_endpoint, args.sv2_authority_public_key)
+    if any(value is not None for value in sv2_values):
+        if not all(value is not None for value in sv2_values):
+            raise MiningError(
+                "--sv2-helper, --sv2-endpoint, and --sv2-authority-public-key must be supplied together"
+            )
+        job_declarator = JobDeclarator(
+            args.sv2_helper,
+            args.sv2_endpoint,
+            args.sv2_authority_public_key,
+            args.sv2_timeout_ms,
+        )
     rpc = LabnetCli(args.cli, args.datadir, args.conf)
     for block_index in range(args.blocks):
         result = mine_one_block(
@@ -459,11 +662,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             address=args.address,
             max_nonce=args.max_nonce,
             share_reporter=share_reporter,
+            job_declarator=job_declarator,
         )
         print(f"Autonomous external block accepted: {result['block_hash']}", flush=True)
         print(f"Height: {result['height']}", flush=True)
         print(f"Nonce: {result['nonce']}", flush=True)
         print(f"Transactions selected from the miner's own node: {result['transactions']}", flush=True)
+        print(f"Job declaration status: {result['declaration_status']}", flush=True)
+        print(f"Template commitment: {result['template_commitment_sha256']}", flush=True)
         if share_reporter is not None:
             print(f"Share reports delivered: {result['share_reports_delivered']}", flush=True)
             print(f"Share reports failed without stopping mining: {result['share_reports_failed']}", flush=True)

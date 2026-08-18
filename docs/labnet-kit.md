@@ -14,6 +14,8 @@ without implying that Soveroot is ready for public money.
   miner used by `autonomy-demo`;
 - `libexec/share_accounting_coordinator.py`: the loopback-only, accounting-only
   test service used by `coordinator-failure-demo`;
+- `libexec/soveroot-sv2-reference`: the pinned official-library Noise and Job
+  Declaration helper used by `job-declaration-demo`;
 - the `sovrd(1)` and `sovr-cli(1)` manual pages;
 - `BUILD-INFO.txt`, this guide, and the MIT license.
 
@@ -97,6 +99,18 @@ then requires the same still-running miner process to directly publish another
 block. It refuses success unless the chain advances by two and the receipt
 ledger stops changing after shutdown.
 
+Exercise authenticated Job Declaration and direct fallback:
+
+```bash
+./soveroot-labnet job-declaration-demo
+```
+
+The helper generates a disposable coordinator authority, declares the miner's
+own first block template over authenticated Stratum V2, then kills the
+coordinator. The same miner process must publish the first accepted job and a
+second direct-fallback block through its own node. The demo fails unless both
+block publications and both distinct declaration states are visible.
+
 Inspect the node and loaded wallets:
 
 ```bash
@@ -143,6 +157,9 @@ This setting applies only to the test-only labnet data directory.
 The accounting-failure demonstration temporarily uses loopback port `29445`
 and retains its receipt ledger and log in a uniquely named
 `accounting-failure-demo.*` directory below the same Labnet Kit data directory.
+The Job Declaration demonstration uses loopback port `29446`, creates its
+private authority key under a mode-`077` temporary
+`job-declaration-demo.*` directory, and never prints that private key.
 
 To use a separate disposable data directory, set it before every command:
 
@@ -161,8 +178,11 @@ labnet node, create and use descriptor wallets, generate development blocks,
 submit a wallet transaction, and confirm it locally. A successful
 `autonomy-demo` additionally proves that the packaged external miner can build,
 solve, and directly publish one inherited-PoW labnet block without a pool
-coordinator. It does **not** prove Stratum V2 interoperability, decentralized
-share accounting, or final Soveroot proof of work. A successful
+coordinator. A successful `job-declaration-demo` proves one reference miner and
+coordinator exchange the pinned encrypted Job Declaration/custom-job messages
+and that coordinator loss cannot halt that miner. It does **not** prove
+independent Stratum V2 interoperability, decentralized share accounting, or
+final Soveroot proof of work. A successful
 `coordinator-failure-demo` proves the same packaged miner process advances the
 chain after its local accounting process is killed; it does not prove noncustodial
 payouts, multi-miner interoperability, malicious-coordinator resistance,

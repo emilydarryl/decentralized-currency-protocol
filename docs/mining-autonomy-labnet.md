@@ -19,6 +19,13 @@ miner's verified work, stops that coordinator process, and proves the same
 still-running miner process builds and directly publishes the next block. Accounting failure is
 visible to the miner but is not allowed to become a mining failure.
 
+A third packaged demonstration adds the reference authenticated coordination
+path. The miner commits its own complete template, authenticates a loopback
+coordinator with the pinned Stratum V2 Noise authority, declares that job,
+opens an extended channel, and receives `SetCustomMiningJob.Success`. The
+helper then kills the coordinator. The same miner process must build, solve,
+and directly publish a second block in visible direct fallback.
+
 ## What is implemented
 
 The external miner in
@@ -34,9 +41,13 @@ The external miner in
    proof of work.
 6. It submits the completed block directly and checks that the node adopted
    the exact block hash it found.
-7. When configured, it sends best-effort, cryptographically checked work
+7. When configured, it declares the committed template through the pinned
+   authenticated Stratum V2 reference helper. Acceptance, rejection, timeout,
+   malformed output, authentication failure, or loss is logged, but none gives
+   the coordinator authority to replace or publish the block.
+8. When configured, it sends best-effort, cryptographically checked work
    receipts to a loopback accounting process. Delivery failures are counted
-   but cannot interrupt steps 1-6.
+   but cannot interrupt block construction or publication.
 
 The daemon's convenient `generatetoaddress` RPC is not used by this autonomy
 demonstration. The distinction matters: the separate miner, rather than the
@@ -68,6 +79,18 @@ that miner's first block and receipt, the helper kills accounting while the
 miner remains alive. The same process must publish a second block. The helper
 checks that the chain advanced twice and that the ledger stopped changing.
 
+Run the authenticated Job Declaration and fallback demonstration:
+
+```bash
+./soveroot-labnet job-declaration-demo
+```
+
+The first block uses a server-authenticated Noise connection and the pinned
+binary Job Declaration and custom-job messages. The helper stops that
+coordinator before the second block. Success requires exactly one accepted
+declaration, exactly one direct fallback, two direct block publications, and a
+two-block chain advance from the same miner process.
+
 Labnet coins have no value. The node listens only on the local machine, and
 this experiment should never be pointed at assets or secrets of real value.
 
@@ -82,7 +105,6 @@ demonstrations on every pull request.
 It does **not** yet prove:
 
 - interoperability between two independently written mining programs;
-- Stratum V2 or Job Declaration network support—the behavior is now specified and tested as semantic transcripts, but no binary connection exists yet;
 - decentralized share accounting or noncustodial pool payouts—the included
   coordinator is one local append-only test service, not a pool design;
 - resilience to network partitions, malicious coordinators, forged payout
@@ -96,11 +118,10 @@ The research ledger therefore keeps the Template Autonomy gate open.
 ## Next engineering step
 
 The [private-labnet profile v0](stratum-v2-job-declaration-labnet-profile-v0.md)
-now pins the upstream specification, authentication boundary, supported
-messages, template commitment, failure behavior, and nine canonical semantic
-transcripts. The next bounded milestone is issue #60: connect the same running
-miner process to that profile, complete one accepted custom-job flow, and prove
-rejection or loss still enters direct fallback without substituting a
-coordinator template. A second independently written miner, noncustodial payout
-accounting, and adversarial coordinator-switching tests remain separate
-requirements; adding a Stratum V2 label alone would not establish autonomy.
+pins the upstream specification and the reference helper pins the official
+Stratum V2 v1.4.0 Rust implementation. Issue #60 now supplies the reference
+accepted path and same-process loss/rejection fallback. The next bounded gate
+is an independently written miner and parser reproducing the wire behavior
+without importing this helper. Noncustodial payout accounting and adversarial
+multi-coordinator switching remain separate requirements; one reference
+connection alone does not establish decentralized mining.

@@ -10,20 +10,27 @@ It is packaged by the Labnet Kit and is normally run through:
 ```bash
 ./soveroot-labnet autonomy-demo
 ./soveroot-labnet coordinator-failure-demo
+./soveroot-labnet job-declaration-demo
 ```
 
 This prototype is evidence for one narrow property: a miner can construct and
 publish a labnet block without a pool coordinator. The second command uses
 `share_accounting_coordinator.py` to record verified work, kills it, and proves
-the miner continues. It is not Stratum V2, decentralized accounting, a payout
-protocol, the experimental Soveroot PoW, or production software.
+the miner continues. The third command uses the pinned Stratum V2 reference
+helper for authenticated Job Declaration and then proves coordinator loss
+cannot stop the miner. It is not independent interoperability, decentralized
+accounting, a payout protocol, the experimental Soveroot PoW, or production
+software.
 
-The next protocol boundary is frozen in
+The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
-transcripts for an accepted custom job and every required fail-closed direct
-fallback. These are state-machine fixtures, not Noise ciphertext vectors or a
-network implementation.
+transcripts. The Rust helper in `sv2-reference/` now implements the pinned
+Noise and binary Job Declaration/custom-job path, while the same Python miner
+keeps template construction, solving, and direct publication. The packaged
+demo kills the authenticated coordinator between two blocks and requires the
+same miner process to continue in direct fallback. This is one reference path,
+not independent interoperability or a payout protocol.
 
 ```bash
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check
