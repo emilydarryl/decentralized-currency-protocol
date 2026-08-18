@@ -1,0 +1,27 @@
+[package]
+name = "soveroot-sv2-reference"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+publish = false
+
+[dependencies]
+async-channel = "1.9.0"
+binary_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "binary_sv2" }
+codec_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "codec_sv2", features = ["noise_sv2"] }
+common_messages_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "common_messages_sv2" }
+job_declaration_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "job_declaration_sv2" }
+key-utils = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "key-utils" }
+mining_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "mining_sv2" }
+network_helpers_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "network_helpers_sv2" }
+noise_sv2 = { git = "https://github.com/stratum-mining/stratum", rev = "0b083ab9411a8a4c74421e90134b77410759b6df", package = "noise_sv2" }
+rand = "0.8.5"
+secp256k1 = { version = "0.28.2", features = ["rand-std"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.9.9"
+tokio = { version = "1.44.1", features = ["full"] }
+
+[profile.release]
+strip = true
+lto = "thin"

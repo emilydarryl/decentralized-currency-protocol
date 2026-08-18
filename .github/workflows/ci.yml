@@ -55,6 +55,18 @@ jobs:
         shell: bash
         run: python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
 
+      - name: Build and test pinned Stratum V2 Job Declaration helper
+        shell: bash
+        run: |
+          cargo test --locked --release --manifest-path contrib/mining_autonomy/sv2-reference/Cargo.toml
+          cargo build --locked --release --manifest-path contrib/mining_autonomy/sv2-reference/Cargo.toml
+
+      - name: Exercise authenticated Stratum V2 accept and fallback paths
+        shell: bash
+        env:
+          SOVEROOT_SV2_HELPER: ${{ github.workspace }}/contrib/mining_autonomy/sv2-reference/target/release/soveroot-sv2-reference
+        run: python3 -m unittest discover -s test/mining_autonomy -p 'test_sv2_reference_integration.py' -v
+
       - name: Check Labnet Kit helper scripts
         shell: bash
         run: |
@@ -63,6 +75,7 @@ jobs:
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "local test-only node"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "autonomy-demo"
           contrib/labnet-kit/soveroot-labnet help | grep -F -- "coordinator-failure-demo"
+          contrib/labnet-kit/soveroot-labnet help | grep -F -- "job-declaration-demo"
 
       - name: Install minimal build dependencies
         shell: bash
@@ -260,6 +273,7 @@ jobs:
           test -x "$kit/soveroot-labnet"
           test -x "$kit/libexec/autonomous_labnet_miner.py"
           test -x "$kit/libexec/share_accounting_coordinator.py"
+          test -x "$kit/libexec/soveroot-sv2-reference"
           export SOVEROOT_LABNET_HOME="$PWD/build/labnet-kit-runtime"
           cleanup() { "$kit/soveroot-labnet" stop >/dev/null 2>&1 || true; }
           trap cleanup EXIT
@@ -276,6 +290,11 @@ jobs:
           grep -F -- "Accounting coordinator stopped before the second block." <<<"$coordinator_output"
           grep -F -- "Mining continued after coordinator shutdown:" <<<"$coordinator_output"
           grep -F -- "The coordinator supplied no template and published no block." <<<"$coordinator_output"
+          declaration_output="$("$kit/soveroot-labnet" job-declaration-demo)"
+          printf '%s\n' "$declaration_output"
+          grep -F -- "Job declaration status: accepted" <<<"$declaration_output"
+          grep -F -- "Job declaration status: direct_fallback" <<<"$declaration_output"
+          grep -F -- "Same miner continued in direct fallback" <<<"$declaration_output"
           "$kit/soveroot-labnet" status >/dev/null
           "$kit/soveroot-labnet" stop
           trap - EXIT

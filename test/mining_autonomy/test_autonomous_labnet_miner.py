@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.util
+import json
 import pathlib
 import sys
 import unittest
@@ -56,6 +57,14 @@ class BlockConstructionTests(unittest.TestCase):
         second = MINER.hash256(leaves[2] + leaves[2])
         self.assertEqual(MINER.merkle_root(leaves), MINER.hash256(first + second))
 
+    def test_coinbase_merkle_path_reconstructs_the_same_root(self):
+        leaves = [bytes([value]) * 32 for value in (1, 2, 3)]
+        path = MINER.coinbase_merkle_path(leaves)
+        reconstructed = leaves[0]
+        for sibling in path:
+            reconstructed = MINER.hash256(reconstructed + sibling)
+        self.assertEqual(reconstructed, MINER.merkle_root(leaves))
+
     def test_easy_labnet_header_is_solved_and_valid(self):
         prefix = b"\x00" * 68 + (1).to_bytes(4, "little") + (0x207FFFFF).to_bytes(4, "little")
         header, nonce, digest = MINER.solve_header(prefix, 0x207FFFFF, 100)
@@ -96,6 +105,39 @@ class ShareReporterTests(unittest.TestCase):
             )
         self.assertEqual(reporter.delivered, 0)
         self.assertEqual(reporter.failed, 1)
+
+
+class JobDeclaratorTests(unittest.TestCase):
+    def declarator(self):
+        return MINER.JobDeclarator(
+            pathlib.Path(__file__),
+            "127.0.0.1:29446",
+            "test-public-key",
+            1000,
+        )
+
+    def test_malformed_helper_output_enters_direct_fallback(self):
+        completed = mock.Mock(returncode=0, stdout="not-json")
+        with mock.patch.object(MINER.subprocess, "run", return_value=completed):
+            result = self.declarator().declare({"template_commitment_sha256": "11" * 32})
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertEqual(result["reason"], "malformed_helper_reply")
+
+    def test_helper_cannot_switch_the_committed_template(self):
+        completed = mock.Mock(
+            returncode=0,
+            stdout=json.dumps(
+                {
+                    "status": "accepted",
+                    "transport_status": "authenticated",
+                    "template_commitment_sha256": "22" * 32,
+                }
+            ),
+        )
+        with mock.patch.object(MINER.subprocess, "run", return_value=completed):
+            result = self.declarator().declare({"template_commitment_sha256": "11" * 32})
+        self.assertEqual(result["status"], "direct_fallback")
+        self.assertEqual(result["reason"], "template_commitment_mismatch")
 
 
 class FakeLabnetRpc:
@@ -151,6 +193,61 @@ class MiningWorkflowTests(unittest.TestCase):
         self.assertEqual(result["block_hash"], rpc.best_hash)
         self.assertEqual(rpc.test_wallet, "miner")
         self.assertIsNotNone(rpc.submitted_block)
+        self.assertEqual(result["declaration_status"], "direct_fallback")
+
+    def test_accepted_declaration_solves_and_directly_publishes_exact_committed_template(self):
+        class AcceptingDeclarator:
+            endpoint = "127.0.0.1:34254"
+
+            def declare(self, template):
+                self.template = template
+                return {
+                    "status": "accepted",
+                    "transport_status": "authenticated",
+                    "template_commitment_sha256": template["template_commitment_sha256"],
+                }
+
+        rpc = FakeLabnetRpc()
+        declarator = AcceptingDeclarator()
+        result = MINER.mine_one_block(
+            rpc,
+            wallet="miner",
+            address="labnet-address",
+            max_nonce=100,
+            job_declarator=declarator,
+        )
+        self.assertEqual(result["declaration_status"], "accepted")
+        self.assertEqual(
+            result["template_commitment_sha256"],
+            declarator.template["template_commitment_sha256"],
+        )
+        self.assertEqual(declarator.template["previous_block_hash"], "00" * 32)
+        self.assertEqual(declarator.template["coinbase_tx_hex"], rpc.submitted_block[81:].hex())
+        self.assertEqual(result["block_hash"], rpc.best_hash)
+
+    def test_rejected_declaration_cannot_stop_direct_publication(self):
+        class RejectingDeclarator:
+            endpoint = "127.0.0.1:34254"
+
+            def declare(self, template):
+                return {
+                    "status": "direct_fallback",
+                    "transport_status": "authenticated",
+                    "reason": "declaration:policy-rejection",
+                    "template_commitment_sha256": template["template_commitment_sha256"],
+                }
+
+        rpc = FakeLabnetRpc()
+        result = MINER.mine_one_block(
+            rpc,
+            wallet="miner",
+            address="labnet-address",
+            max_nonce=100,
+            job_declarator=RejectingDeclarator(),
+        )
+        self.assertEqual(result["declaration_status"], "direct_fallback")
+        self.assertEqual(result["declaration_reason"], "declaration:policy-rejection")
+        self.assertEqual(result["block_hash"], rpc.best_hash)
 
     def test_external_miner_fails_closed_on_another_chain(self):
         with self.assertRaisesRegex(MINER.MiningError, "chain=labnet"):

@@ -14,7 +14,9 @@ SOVRD="${BIN_DIR}/sovrd"
 SOVR_CLI="${BIN_DIR}/sovr-cli"
 AUTONOMY_MINER="${SOVEROOT_AUTONOMY_MINER:-${SCRIPT_DIR}/libexec/autonomous_labnet_miner.py}"
 ACCOUNTING_COORDINATOR="${SOVEROOT_ACCOUNTING_COORDINATOR:-${SCRIPT_DIR}/libexec/share_accounting_coordinator.py}"
+SV2_REFERENCE="${SOVEROOT_SV2_REFERENCE:-${SCRIPT_DIR}/libexec/soveroot-sv2-reference}"
 ACCOUNTING_PORT="${SOVEROOT_ACCOUNTING_PORT:-29445}"
+SV2_PORT="${SOVEROOT_SV2_PORT:-29446}"
 CONFIG_FILE="${DATA_DIR}/soveroot-labnet.conf"
 COMMON_ARGS=(-chain=labnet "-datadir=${DATA_DIR}" "-conf=${CONFIG_FILE}")
 
@@ -34,6 +36,9 @@ Commands:
   coordinator-failure-demo
                       Report work to optional accounting, stop the
                       coordinator, then prove direct mining continues.
+  job-declaration-demo
+                      Declare a miner-built job over authenticated Stratum V2,
+                      stop the coordinator, and prove direct fallback.
   mine [blocks]       Mine blocks to the miner wallet (default: 1).
   cli <args...>       Run an arbitrary sovr-cli command on this labnet.
   stop                Stop the local labnet node cleanly.
@@ -67,6 +72,13 @@ require_accounting_coordinator() {
     [[ -r "${ACCOUNTING_COORDINATOR}" ]] || die "${ACCOUNTING_COORDINATOR} is missing or unreadable"
     [[ "${ACCOUNTING_PORT}" =~ ^[0-9]+$ ]] || die "SOVEROOT_ACCOUNTING_PORT must be a whole number"
     ((ACCOUNTING_PORT >= 1024 && ACCOUNTING_PORT <= 65535)) || die "SOVEROOT_ACCOUNTING_PORT must be between 1024 and 65535"
+}
+
+require_sv2_reference() {
+    require_autonomy_miner
+    [[ -x "${SV2_REFERENCE}" ]] || die "${SV2_REFERENCE} is missing or not executable"
+    [[ "${SV2_PORT}" =~ ^[0-9]+$ ]] || die "SOVEROOT_SV2_PORT must be a whole number"
+    ((SV2_PORT >= 1024 && SV2_PORT <= 65535)) || die "SOVEROOT_SV2_PORT must be between 1024 and 65535"
 }
 
 write_config() {
@@ -298,6 +310,105 @@ command_coordinator_failure_demo() (
     printf 'Evidence retained in: %s\n' "${run_dir}"
 )
 
+command_job_declaration_demo() (
+    set -euo pipefail
+    require_binaries
+    require_sv2_reference
+    require_running
+    ensure_wallet miner
+
+    local run_dir authority_file ready_file coordinator_log coordinator_pid endpoint public_key
+    local miner_log miner_pid before_height current_height after_height address accepted_blocks
+    run_dir="$(mktemp -d "${DATA_DIR}/job-declaration-demo.XXXXXX")"
+    authority_file="${run_dir}/authority.json"
+    ready_file="${run_dir}/ready.json"
+    coordinator_log="${run_dir}/coordinator.log"
+    coordinator_pid=""
+    miner_pid=""
+    endpoint="127.0.0.1:${SV2_PORT}"
+
+    cleanup_job_declaration() {
+        if [[ -n "${miner_pid}" ]] && kill -0 "${miner_pid}" >/dev/null 2>&1; then
+            kill "${miner_pid}" >/dev/null 2>&1 || true
+            wait "${miner_pid}" >/dev/null 2>&1 || true
+        fi
+        if [[ -n "${coordinator_pid}" ]] && kill -0 "${coordinator_pid}" >/dev/null 2>&1; then
+            kill "${coordinator_pid}" >/dev/null 2>&1 || true
+            wait "${coordinator_pid}" >/dev/null 2>&1 || true
+        fi
+    }
+    trap cleanup_job_declaration EXIT
+
+    umask 077
+    public_key="$("${SV2_REFERENCE}" generate-authority --output "${authority_file}")"
+    [[ -n "${public_key}" ]] || die "Stratum V2 helper did not return an authority public key"
+    "${SV2_REFERENCE}" serve \
+        --endpoint "${endpoint}" \
+        --authority-file "${authority_file}" \
+        --mode accept \
+        --ready-file "${ready_file}" >"${coordinator_log}" 2>&1 &
+    coordinator_pid="$!"
+    for _ in $(seq 1 100); do
+        [[ -f "${ready_file}" ]] && break
+        kill -0 "${coordinator_pid}" >/dev/null 2>&1 || {
+            sed -n '1,40p' "${coordinator_log}" >&2
+            die "Stratum V2 coordinator stopped before becoming ready"
+        }
+        sleep 0.05
+    done
+    [[ -f "${ready_file}" ]] || die "Stratum V2 coordinator did not become ready"
+
+    before_height="$(cli_call getblockcount)"
+    address="$(wallet_call miner getnewaddress)"
+    miner_log="${run_dir}/miner.log"
+    python3 "${AUTONOMY_MINER}" \
+        --cli "${SOVR_CLI}" \
+        --datadir "${DATA_DIR}" \
+        --conf "${CONFIG_FILE}" \
+        --wallet miner \
+        --address "${address}" \
+        --sv2-helper "${SV2_REFERENCE}" \
+        --sv2-endpoint "${endpoint}" \
+        --sv2-authority-public-key "${public_key}" \
+        --sv2-timeout-ms 500 \
+        --blocks 2 \
+        --inter-block-delay 2 >"${miner_log}" 2>&1 &
+    miner_pid="$!"
+
+    for _ in $(seq 1 200); do
+        current_height="$(cli_call getblockcount)"
+        if grep -Fq 'Job declaration status: accepted' "${miner_log}" 2>/dev/null && [[ "${current_height}" -ge "$((before_height + 1))" ]]; then
+            break
+        fi
+        kill -0 "${miner_pid}" >/dev/null 2>&1 || {
+            sed -n '1,100p' "${miner_log}" >&2
+            die "miner stopped before its authenticated declaration block"
+        }
+        sleep 0.05
+    done
+    grep -Fq 'Job declaration status: accepted' "${miner_log}" || die "first job was not accepted over Stratum V2"
+    kill "${coordinator_pid}"
+    wait "${coordinator_pid}" >/dev/null 2>&1 || true
+    coordinator_pid=""
+    printf '%s\n' 'Authenticated Stratum V2 coordinator stopped before the second block.'
+
+    wait "${miner_pid}" || {
+        sed -n '1,140p' "${miner_log}" >&2
+        die "the continuing miner process failed after Stratum V2 coordinator shutdown"
+    }
+    miner_pid=""
+    sed -n '1,140p' "${miner_log}"
+    [[ "$(grep -c '^Job declaration status: accepted' "${miner_log}")" -eq 1 ]] || die "expected exactly one accepted declaration"
+    [[ "$(grep -c '^Job declaration status: direct_fallback' "${miner_log}")" -eq 1 ]] || die "expected exactly one direct fallback"
+    accepted_blocks="$(grep -c '^Autonomous external block accepted:' "${miner_log}")"
+    [[ "${accepted_blocks}" -eq 2 ]] || die "the same miner process did not directly publish two blocks"
+    after_height="$(cli_call getblockcount)"
+    [[ "${after_height}" -eq "$((before_height + 2))" ]] || die "job-declaration demo did not advance the chain by two"
+    printf 'Same miner continued in direct fallback to height %s.\n' "${after_height}"
+    printf '%s\n' 'The coordinator authenticated and accepted the first miner-created job but published neither block.'
+    printf 'Evidence retained in: %s\n' "${run_dir}"
+)
+
 command_stop() {
     require_binaries
     if ! node_is_running; then
@@ -336,6 +447,10 @@ case "${command}" in
     coordinator-failure-demo)
         [[ "$#" -eq 1 ]] || die "coordinator-failure-demo takes no arguments"
         command_coordinator_failure_demo
+        ;;
+    job-declaration-demo)
+        [[ "$#" -eq 1 ]] || die "job-declaration-demo takes no arguments"
+        command_job_declaration_demo
         ;;
     mine)
         [[ "$#" -le 2 ]] || die "mine accepts at most one block count"
