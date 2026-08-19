@@ -122,7 +122,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Two separate calculators now agree on a frozen linked-share notebook and 15 honest or hostile examples; it is still an offline file test, not a public pool |
+| Decentralized pool system | Three separate loopback processes exchange the frozen share notebook and recover from partition, selective relay, and restart; independent public operators remain unfinished |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 
@@ -142,12 +142,24 @@ forks, delayed pages, fake difficulty, copied proofs, bad parents, malformed
 headers, and stale work.
 
 That result prevents one software implementation from quietly inventing its
-own interpretation of the notebook. It does not yet stop a real network
-attacker. The pages are local files, the test round information is supplied by
-a trusted fixture, and no independently operated peers exchange them. The next
-experiment must connect three authenticated processes and attack delayed and
-selective relay, partitions, equivocation, restart recovery, and bounded orphan
-storage. See [Sharechain private-lab profile v0](sharechain-v0.md).
+own interpretation of the notebook. By itself it did not stop a real network
+attacker: the pages were local files and the test round information came from
+a trusted fixture. See [Sharechain private-lab profile v0](sharechain-v0.md).
+
+That three-process experiment is now working. Each notebook process has a
+different prearranged secret for each neighbor. Repeated, altered, oversized,
+or storage-flooding messages fail closed. We separate the processes, deliver
+pages late, let one process relay only part of the notebook, restart another,
+and reconnect them. They end with the same winning history and payout
+calculation, and they preserve two conflicting authenticated claims instead of
+hiding the conflict.
+
+This is still one computer talking to itself. Prearranged shared secrets do not
+solve public identity, and they cannot stop one attacker from inventing many
+peers or surrounding a miner. The next step is an independently operated
+multi-computer experiment with reviewed session keys, admission limits, peer
+rotation, long partitions, and eclipse attacks. See
+[Authenticated three-process share synchronization v0](sharechain-sync-v0.md).
 
 ## Short glossary
 

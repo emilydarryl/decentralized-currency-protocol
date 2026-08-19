@@ -94,11 +94,13 @@ maintain a reviewed share history under adversarial public-network conditions.
 
 ## Next bounded step
 
-The [sharechain private-lab profile v0](sharechain-v0.md) now specifies the
-minimal entry, fixed target, accumulated-work fork choice, finality and payout
-window. Two separately written offline validators agree on 15 honest and
-hostile histories. The next step is to connect three independent processes over
-an authenticated test network. Tests must bound orphan storage and messages and
-cover competing histories, partitions, delayed and selectively relayed shares,
-restart recovery, equivocation evidence, coinbase maturity, and reorganizations
-without giving any coordinator custody or publication power.
+The [sharechain private-lab profile v0](sharechain-v0.md) specifies the minimal
+entry, fixed target, accumulated-work fork choice, finality and payout window.
+Two separately written validators agree on 15 histories. The
+[three-process synchronization profile](sharechain-sync-v0.md) now bounds
+loopback messages and orphan storage and covers partitions, delayed and
+selectively relayed shares, restart recovery, and equivocation evidence. The
+next step moves to independently operated hosts with reviewed identity and
+admission controls, peer diversity, long-partition catch-up, eclipse tests,
+coinbase maturity, and reorganizations without giving any coordinator custody
+or publication power.

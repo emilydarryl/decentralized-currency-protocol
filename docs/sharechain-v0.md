@@ -156,12 +156,14 @@ independent report with the existing mining interoperability evidence.
 
 ## What remains before a public sharechain
 
-The next bounded experiment is authenticated synchronization among three
-independent processes. It must bound orphan memory and message sizes and test
-partitions, delayed and selective relay, equivocation, restart recovery, and
-peer disagreement. Later work must address peer discovery, Sybil and eclipse
-resistance, payout maturity and reorganization economics, payout privacy,
-real-node round sourcing, and independently operated public infrastructure.
+The [authenticated three-process share-sync experiment](sharechain-sync-v0.md)
+now bounds orphan memory and message sizes and tests partitions, delayed and
+selective relay, equivocation, restart recovery, and peer disagreement over
+loopback. The next bounded experiment moves to independently operated hosts
+with reviewed session identity, admission and rate rules, peer rotation,
+long-partition catch-up, and eclipse simulations. Later work must still address
+permissionless discovery, Sybil resistance, payout maturity and reorganization
+economics, payout privacy, real-node round sourcing, and public infrastructure.
 
 Until those properties are implemented and attacked, the Template Autonomy
 research gate remains **OPEN**.

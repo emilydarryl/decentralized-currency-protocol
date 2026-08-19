@@ -242,11 +242,17 @@ encoding, a fixed share target, trusted-round binding, proof-reassignment
 prevention, accumulated-work fork choice, finality, and payout grouping through
 15 vectors checked by two independently written validators.
 
-**Residual risk:** The profile is offline and trusts fixture round context. It
-has no peer transport, discovery, independent operators, Sybil or eclipse
-defense, or production settlement. Decentralized pooling also has variance,
-bandwidth, payout-size, reorganization, and temporary-majority problems. The
-final design is unresolved.
+The [three-process synchronization profile](sharechain-sync-v0.md) adds pinned
+pairwise message authentication, monotonic replay protection, fixed message and
+orphan limits, restart persistence, and adversarial partition, selective-relay,
+equivocation, flood, and oversized-frame tests over loopback.
+
+**Residual risk:** All three peers run on one machine and trust prearranged
+symmetric keys and fixture round context. Pairwise HMAC evidence is not portable
+proof of authorship. There is no public discovery, independently operated host,
+Sybil or eclipse defense, or production settlement. Decentralized pooling also
+has variance, bandwidth, payout-size, reorganization, and temporary-majority
+problems. The final design is unresolved.
 
 Worker block withholding is distinct from ordinary share withholding. A worker may submit payable shares while discarding the rare shares that would form blocks. The [XOR-key study](xor-key-block-withholding-study.md) evaluates hiding the final block condition from a worker, but the construction is not an approved control. A coordinator-held reveal key can itself prevent direct publication during coordinator failure or refusal, and it does not prevent a coordinator from withholding blocks.
 
