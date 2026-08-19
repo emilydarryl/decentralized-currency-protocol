@@ -29,7 +29,9 @@ replay, flood, and convergence attacks run again.
 This is a safety-profile milestone, not proof of decentralization. All three
 processes still run on one physical computer. Operator and transport labels are
 configured claims, which a Sybil attacker can lie about. The listener is still
-restricted to loopback. Separate network namespaces, independently operated
+restricted to loopback. The follow-on
+[routed namespace experiment](sharechain-routed-namespace-v1.md) now supplies
+the separate-namespace and live signed-frame evidence. Independently operated
 machines, hostile Internet routes, and external cryptographic review remain
 required before issue #73 can close.
 
@@ -147,10 +149,6 @@ mining-interoperability artifact. It adds no job or matrix.
 
 ## What remains before issue #73 can close
 
-- make the signed handshake and admission layer the live process boundary
-  instead of a deterministic preflight that supplies per-run v0 frame keys;
-- run the complete share exchange across separate Linux network namespaces or
-  containers with distinct routed addresses;
 - obtain independent machines, operators, networks, and jurisdictions;
 - review constant-time production cryptography and a post-quantum hybrid;
 - design safe peer-key distribution, rotation, revocation, and recovery;
@@ -164,3 +162,7 @@ mining-interoperability artifact. It adds no job or matrix.
 Template Autonomy therefore remains **OPEN**. Passing this profile does not
 create a public pool, production settlement network, consensus rule, final
 proof of work, mainnet, ticker, or coin with monetary value.
+
+The routed namespace follow-on completed the live-boundary and namespace steps
+without changing this conclusion: it remains one host, kernel, and administrator
+and must not be described as independent multi-host evidence.

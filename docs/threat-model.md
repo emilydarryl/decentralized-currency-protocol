@@ -511,6 +511,13 @@ not proof of independence. Operator labels can be forged, addresses can be
 rented, transports can share upstream control, and routing can defeat apparent
 diversity. Accumulated-work and complete-data validation remain authoritative.
 
+The [routed namespace experiment](sharechain-routed-namespace-v1.md) exercises
+four pinned source prefixes on the live socket boundary and rejects an identity
+arriving from another configured route. All four namespaces still share one
+host router, kernel, and administrator. Its two transport values are labels on
+the same TCP stack, so the result does not materially reduce the residual risk
+from forged labels, upstream capture, or a hostile Internet route.
+
 ### T24. Resource-exhaustion denial of service
 
 **Attack:** Use large post-quantum signatures, malformed proofs, expensive scripts, peer flooding, or share spam to exhaust nodes.
@@ -531,9 +538,11 @@ The share-sync v1 safety profile additionally freezes 32,768-byte hellos,
 131,072-byte frames, 16 active sessions, two sessions per identity, four per
 IPv4 `/24` or IPv6 `/48`, deterministic handshake and message buckets, 256
 replay nonces, 128 quarantines, 512 admission-bucket records per family, 128
-peer candidates, and a 1,024-share catch-up ceiling. Limit state
-persists across restart. The present implementation is a preflight and does not
-yet protect a publicly reachable live listener.
+peer candidates, and a 1,024-share catch-up ceiling. Limit state persists across
+restart. The routed v1 listener now enforces the signed handshake, source pin,
+session frame, and message admission on four namespace sockets with a frozen
+30-second laboratory timeout. It is deliberately not publicly reachable and
+does not establish safe hostile-Internet denial-of-service behavior.
 
 ### T25. Data withholding
 
