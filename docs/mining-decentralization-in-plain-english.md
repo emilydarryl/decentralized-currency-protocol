@@ -122,7 +122,7 @@ That is encouraging because reducing memory was very expensive in this experimen
 | Independent Python and C++ comparison | Fixed-vector parity is enforced in CI |
 | Commodity CPU/GPU fairness | Not demonstrated |
 | ASIC, FPGA, and quantum analysis | Not complete |
-| Decentralized pool system | Two local replicas recover and agree, and direct coinbase payouts work on labnet; a public sharechain and independent operators remain unfinished |
+| Decentralized pool system | Two separate calculators now agree on a frozen linked-share notebook and 15 honest or hostile examples; it is still an offline file test, not a public pool |
 | Public testnet | Not launched |
 | Production or mainnet readiness | Not ready |
 
@@ -131,6 +131,23 @@ That is encouraging because reducing memory was very expensive in this experimen
 The external attack challenge and [public research call](pow-v1-independent-research-call.md) are now specified. Think of them as publishing the exam, the half-size notebook rule, the scoring ruler, the form for showing every hidden pocket, and the instructions for independent graders. An outside researcher first proves that their program produces correct small answers, freezes its source code, and then receives eight fresh cases. Reviewers inspect every claimed memory pocket and unit of work before running the code on an isolated computer. The project keeps successful, partial, failed, invalid, and ineligible results. The next step is to obtain and independently review a genuinely different attack submission. If an exact half-memory miner eventually finishes, we will measure its speed and resident memory on controlled physical computers. No submission—or many failed submissions—would still not prove the design secure. There is currently no bounty or token reward for participation.
 
 Even a successful proof-of-work result would address only one source of mining concentration. Stratum V2 job declaration, decentralized share accounting, independent block publication, accessible node operation, conservative governance, and a fair launch must work together.
+
+The pool work has also advanced by one deliberately small step. Imagine a
+notebook in which each page points to the previous page and contains a small
+mining proof plus the wallet script that earned it. Two calculators written
+separately now read that notebook and agree on which history has the most work,
+which pages are old enough to count, and how the last four settled pages are
+grouped for payout. They also agree on 15 examples involving honest histories,
+forks, delayed pages, fake difficulty, copied proofs, bad parents, malformed
+headers, and stale work.
+
+That result prevents one software implementation from quietly inventing its
+own interpretation of the notebook. It does not yet stop a real network
+attacker. The pages are local files, the test round information is supplied by
+a trusted fixture, and no independently operated peers exchange them. The next
+experiment must connect three authenticated processes and attack delayed and
+selective relay, partitions, equivocation, restart recovery, and bounded orphan
+storage. See [Sharechain private-lab profile v0](sharechain-v0.md).
 
 ## Short glossary
 
@@ -142,5 +159,6 @@ Even a successful proof-of-work result would address only one source of mining c
 - **Node:** software that independently checks blocks and rejects any block that violates consensus rules.
 - **Consensus:** the objective rules that every validating node applies.
 - **Labnet:** Soveroot's private development network; it has no monetary value.
+- **Sharechain:** An off-chain linked history of lower-difficulty mining proofs used to choose a payout history without giving one pool operator control of block validity.
 
 Readers who want to participate can continue with the [public research call](pow-v1-independent-research-call.md). Technical readers can continue with the [external attack challenge](pow-v1-external-attack-challenge.md), [evaluator runbook](pow-v1-external-evaluator-runbook.md), [latest cost-aware frontier result](pow-v1-frontier-pebbling-attacker.md), and [research ledger](research-ledger.md).

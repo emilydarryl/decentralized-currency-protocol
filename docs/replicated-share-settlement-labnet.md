@@ -94,8 +94,11 @@ maintain a reviewed share history under adversarial public-network conditions.
 
 ## Next bounded step
 
-Specify a minimal sharechain entry and fork-choice rule, then build a third,
-independently written replica that synchronizes over an authenticated test
-network. Tests must cover competing histories, delayed and selectively relayed
-shares, restart recovery, equivocation evidence, coinbase maturity, and
-reorganizations without giving any coordinator custody or publication power.
+The [sharechain private-lab profile v0](sharechain-v0.md) now specifies the
+minimal entry, fixed target, accumulated-work fork choice, finality and payout
+window. Two separately written offline validators agree on 15 honest and
+hostile histories. The next step is to connect three independent processes over
+an authenticated test network. Tests must bound orphan storage and messages and
+cover competing histories, partitions, delayed and selectively relayed shares,
+restart recovery, equivocation evidence, coinbase maturity, and reorganizations
+without giving any coordinator custody or publication power.

@@ -53,7 +53,12 @@ jobs:
 
       - name: Run labnet mining-autonomy tests
         shell: bash
-        run: python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
+        run: |
+          python3 -m unittest discover -s test/mining_autonomy -p 'test_*.py'
+          mkdir -p build
+          python3 contrib/mining_autonomy/sharechain_v0.py --check
+          python3 contrib/mining_autonomy/independent_sharechain_v0.py \
+            --check --output build/sharechain-v0-independent-report.json
 
       - name: Build and test pinned Stratum V2 Job Declaration helper
         shell: bash
@@ -96,7 +101,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sv2-miner-interoperability-${{ github.run_id }}
-          path: build/sv2-interoperability-evidence.json
+          path: |
+            build/sv2-interoperability-evidence.json
+            build/sharechain-v0-independent-report.json
           if-no-files-found: error
           retention-days: 14
 

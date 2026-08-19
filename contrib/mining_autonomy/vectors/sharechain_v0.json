@@ -1,0 +1,1376 @@
+{
+  "chain": "labnet",
+  "constants": {
+    "finality_depth": 2,
+    "max_shares": 4096,
+    "max_trusted_rounds": 64,
+    "network_bits": "207fffff",
+    "network_target_hex": "7fffff0000000000000000000000000000000000000000000000000000000000",
+    "payout_window": 4,
+    "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "share_work_units": 2,
+    "tie_break": "lowest_share_id_sha256"
+  },
+  "corpus_commitment_sha256": "007d15d580ed4751e8726b2adca74edfd99fd804e1e9effb6a5175cca72b4f5c",
+  "format": "soveroot-sharechain-adversarial-v0",
+  "limits": [
+    "offline_private_lab_profile_only",
+    "no_peer_protocol_or_discovery",
+    "no_sybil_or_eclipse_resistance",
+    "no_production_settlement",
+    "not_final_soveroot_pow"
+  ],
+  "profile": "soveroot-sharechain-labnet-v0",
+  "scenarios": [
+    {
+      "expected": {
+        "accepted": true,
+        "state": {
+          "finalized_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "payout_claims": [
+            {
+              "payout_script_hex": "51",
+              "share_count": 2,
+              "share_ids": [
+                "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+                "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+              ],
+              "work_units": 4
+            },
+            {
+              "payout_script_hex": "52",
+              "share_count": 1,
+              "share_ids": [
+                "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7"
+              ],
+              "work_units": 2
+            }
+          ],
+          "payout_window_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "selected_cumulative_work": 10,
+          "selected_path_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+            "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+            "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+          ],
+          "selected_tip_share_id": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+        }
+      },
+      "name": "valid_linear_chain",
+      "scenario_commitment_sha256": "5fb8917de63f0325bfc29d22abeba6366faf71f752841892649e6577d7a9e589",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        },
+        {
+          "block_candidate": true,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101030303030303030303030303030303030303030303030303030303030303030383e14e68ffff7f2004000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "b0a0366d0ce31ef6dc8b6a43d4e90eeee93d2df894e607a2d44bc47c7a79277e"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8b317c586a8ef497f3b77e556bf094f7d15c16a176100cf5bf16133629b725b6",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a040404040404040404040404040404040404040404040404040404040404040484e14e68ffff7f2003000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 3,
+          "share_id_sha256": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "e64a7d569b3344a8b9943e1aab86453911dfbae7b979da102dfe1372345e43d2"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "86ea2ace24efebabc04968b701ccf09da93f27141282013a68c2fa332a88b5eb",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a050505050505050505050505050505050505050505050505050505050505050585e14e68ffff7f2005000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 4,
+          "share_id_sha256": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "f0031780dbed70b1da4c01e088f5a015081ed112ba7177cb31ded2d40653fd87"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": true,
+        "state": {
+          "finalized_share_ids": [
+            "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+            "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6"
+          ],
+          "payout_claims": [
+            {
+              "payout_script_hex": "51",
+              "share_count": 1,
+              "share_ids": [
+                "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81"
+              ],
+              "work_units": 2
+            },
+            {
+              "payout_script_hex": "52",
+              "share_count": 1,
+              "share_ids": [
+                "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6"
+              ],
+              "work_units": 2
+            }
+          ],
+          "payout_window_share_ids": [
+            "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+            "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6"
+          ],
+          "selected_cumulative_work": 8,
+          "selected_path_share_ids": [
+            "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+            "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6",
+            "49e9372ab58151a40b2b6798336cd8813c71e0f6ed112650ca62bf5b8f100e8c",
+            "5b4052f78203bf4f07f1dcb623420de212994ac389bcefd34a52f41c8635f3dd"
+          ],
+          "selected_tip_share_id": "5b4052f78203bf4f07f1dcb623420de212994ac389bcefd34a52f41c8635f3dd"
+        }
+      },
+      "name": "longer_competing_fork",
+      "scenario_commitment_sha256": "e870f8808e360ec0b4e8c0511da90da51f7ab3769392a04a892dc8ad095930ec",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "bb65763bef1c05937700583551d6ebefc66d911727ccd161f072ec8951e19bea",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a8ae14e68ffff7f2001000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "9339d1cfcfc0f5efbebfbbc205423011525e2fcf12b71bfdafc0b63c58bf2a71"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "a57c90c3d37346b94a462960ee5789a11d3069469a30e7976e4fd038d255b42b",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b8be14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "011f5955c5d5b3e74855c1d638a24b06392ded4aae2e7fd6f48adeea09813d65",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "52007a51a56d4e5a5547a695a5e05b85746e39cb7fd6cb3077707075aa450b89"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9347eb8e965ac4666bc0668e50c1d65a542072bd2820a4beb3afcedb780705b8",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c8ce14e68ffff7f2003000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "011f5955c5d5b3e74855c1d638a24b06392ded4aae2e7fd6f48adeea09813d65",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "5acf1695848ed98118fc0802dd5656c1e9724cc00181f160133ecd3e19ce2918",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "e31f3ee409fbbc732a7c6bf292a8d5d745001d657b87a499c107ef318e9281e8"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9701c67c2de951c146991a0eccf789cc405f7e160e4ea9c94a6301213842752d",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d8de14e68ffff7f2001000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "000b572e9f94074759aabb2bc410600c1220703738a1a59964ccb9f202daaf81",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "d75e5967dc79a06473775b97c400cdaa6b9cd153cfe9a52300df538f61525a7d"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "95cbc77fe88718d3f5dd937699ae9de94ee4515a0aec3e67b60bdf09d3127112",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e8ee14e68ffff7f2001000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "4b7a51f300f9330ceaac7697d71b63e0fffe3e898eb8329faa6d5ea8be2556d6",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "49e9372ab58151a40b2b6798336cd8813c71e0f6ed112650ca62bf5b8f100e8c",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c4a0634cd9fd8b33537c8c6d8d0419c71d2858efaee04df252c84e203e446969"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "a9fdbf8188c9bd4f017f214c22f0014c471161697e618cd4e68208652f03e322",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101010f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f8fe14e68ffff7f2004000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "49e9372ab58151a40b2b6798336cd8813c71e0f6ed112650ca62bf5b8f100e8c",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 3,
+          "share_id_sha256": "5b4052f78203bf4f07f1dcb623420de212994ac389bcefd34a52f41c8635f3dd",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "ae83b6bd8e0568c3705b8d596f9e77a729d567acf1850fe68ff03ec1726cfd25"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": true,
+        "state": {
+          "finalized_share_ids": [],
+          "payout_claims": [],
+          "payout_window_share_ids": [],
+          "selected_cumulative_work": 4,
+          "selected_path_share_ids": [
+            "9c04e43153e673b96d3b35cafb79bcb88dbf91ab600223afe100a29663eaf5a0",
+            "50df60ac4e960c69c2a3c686f138132916a85f3891cb3059c67bdb6190271294"
+          ],
+          "selected_tip_share_id": "50df60ac4e960c69c2a3c686f138132916a85f3891cb3059c67bdb6190271294"
+        }
+      },
+      "name": "equal_work_tie_break",
+      "scenario_commitment_sha256": "64ebd65ed0226a69b889dd8ec9073355cca7911bc254552f009c70413dcddf93",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9fa7ed0916d82e55791c06cbf09c498135d6c97ddde2eae29de30b932b5bd2ac",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101141414141414141414141414141414141414141414141414141414141414141494e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "9c04e43153e673b96d3b35cafb79bcb88dbf91ab600223afe100a29663eaf5a0",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "e1d2d664b31e57553f4030e5e11d5b71cf705b72e6765c3e2ce49201aa64f4ea"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "93597ed9041825c37e5527d24a8f8c41a0d84b5f27a37abe121c1ebbdc6d37ce",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101151515151515151515151515151515151515151515151515151515151515151595e14e68ffff7f2001000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "9c04e43153e673b96d3b35cafb79bcb88dbf91ab600223afe100a29663eaf5a0",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "c846f9c02121de5f0af90e08f3839ba6ac4abef71934fa156c56e5578cdbaa2c",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "596f02cca20fbcafc6cdb2af5610c0a4f90291625a902c8d51eb300e82a8a2dc"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9409f65bae7572c8b80bc5141f84ce3c62d56171102c166a77f03d4502a9c19c",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101161616161616161616161616161616161616161616161616161616161616161696e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "9c04e43153e673b96d3b35cafb79bcb88dbf91ab600223afe100a29663eaf5a0",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "50df60ac4e960c69c2a3c686f138132916a85f3891cb3059c67bdb6190271294",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "1059df32d312442ed3d831c6a1cb6f5ed65b8076796330546297034705ffd506"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": true,
+        "state": {
+          "finalized_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "payout_claims": [
+            {
+              "payout_script_hex": "51",
+              "share_count": 2,
+              "share_ids": [
+                "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+                "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+              ],
+              "work_units": 4
+            },
+            {
+              "payout_script_hex": "52",
+              "share_count": 1,
+              "share_ids": [
+                "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7"
+              ],
+              "work_units": 2
+            }
+          ],
+          "payout_window_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "selected_cumulative_work": 10,
+          "selected_path_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+            "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+            "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+          ],
+          "selected_tip_share_id": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+        }
+      },
+      "name": "delayed_order_reconstruction",
+      "scenario_commitment_sha256": "59d23b37426253f0c240f244ff4272fa20595aa5afacfab3374f3c31e57b8c2b",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "86ea2ace24efebabc04968b701ccf09da93f27141282013a68c2fa332a88b5eb",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a050505050505050505050505050505050505050505050505050505050505050585e14e68ffff7f2005000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 4,
+          "share_id_sha256": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "f0031780dbed70b1da4c01e088f5a015081ed112ba7177cb31ded2d40653fd87"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8b317c586a8ef497f3b77e556bf094f7d15c16a176100cf5bf16133629b725b6",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a040404040404040404040404040404040404040404040404040404040404040484e14e68ffff7f2003000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 3,
+          "share_id_sha256": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "e64a7d569b3344a8b9943e1aab86453911dfbae7b979da102dfe1372345e43d2"
+        },
+        {
+          "block_candidate": true,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101030303030303030303030303030303030303030303030303030303030303030383e14e68ffff7f2004000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "b0a0366d0ce31ef6dc8b6a43d4e90eeee93d2df894e607a2d44bc47c7a79277e"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": true,
+        "state": {
+          "finalized_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "payout_claims": [
+            {
+              "payout_script_hex": "51",
+              "share_count": 2,
+              "share_ids": [
+                "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+                "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+              ],
+              "work_units": 4
+            },
+            {
+              "payout_script_hex": "52",
+              "share_count": 1,
+              "share_ids": [
+                "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7"
+              ],
+              "work_units": 2
+            }
+          ],
+          "payout_window_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3"
+          ],
+          "selected_cumulative_work": 10,
+          "selected_path_share_ids": [
+            "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+            "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+            "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+            "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+            "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+          ],
+          "selected_tip_share_id": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717"
+        }
+      },
+      "name": "restart_reconstruction",
+      "scenario_commitment_sha256": "e990f50780793f853dc02ac7d20711b14d8f346a4df93abc1ddd3498bc8026f7",
+      "shares": [
+        {
+          "block_candidate": true,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101030303030303030303030303030303030303030303030303030303030303030383e14e68ffff7f2004000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "b0a0366d0ce31ef6dc8b6a43d4e90eeee93d2df894e607a2d44bc47c7a79277e"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "86ea2ace24efebabc04968b701ccf09da93f27141282013a68c2fa332a88b5eb",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a050505050505050505050505050505050505050505050505050505050505050585e14e68ffff7f2005000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 4,
+          "share_id_sha256": "40c1bde15a5247251ae2bf50ef4a8700a465d7b8b1411f1d229124e54dc2d717",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "f0031780dbed70b1da4c01e088f5a015081ed112ba7177cb31ded2d40653fd87"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8b317c586a8ef497f3b77e556bf094f7d15c16a176100cf5bf16133629b725b6",
+          "header_hex": "040000000e0f34384daf92c8d9aff551d38ce6dd1b8677733c9f30bc5d87a0031d989c3a040404040404040404040404040404040404040404040404040404040404040484e14e68ffff7f2003000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 102,
+          "round_previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "sequence": 3,
+          "share_id_sha256": "906bf7dbd1f50f6d66636fdf52cbcf5432d6d6e15cf46907eee32e01cd869070",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
+          "work_id_sha256": "e64a7d569b3344a8b9943e1aab86453911dfbae7b979da102dfe1372345e43d2"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "unknown_parent"
+      },
+      "name": "unknown_parent",
+      "scenario_commitment_sha256": "1dfd89e1f5e03c9d50682fbffa4c0abe62a9b74ca1b68cfcc80286621138ff85",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "c0068eedf6de5fa1be5d12aa34d2f99007b54f0a60e83d316a94d26352a3cf38",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "share_target_mismatch"
+      },
+      "name": "miner_supplied_share_target",
+      "scenario_commitment_sha256": "6f12097b92a9831557131a59442450fed384c6ccd0abfa621d4e55e4af66413f",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "b435389c8878e7a1f8d054aae476bbe9e3fd6c419408472af8089911ad0ba884",
+          "share_target_hex": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "network_bits_mismatch"
+      },
+      "name": "fabricated_network_bits",
+      "scenario_commitment_sha256": "b30cdf42c01380f225be4cfe08a7d744ab508ee0f2914793c8256fecd74e3a19",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "1d00ffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "a21859948651a1c2a23bd6f577d8dbd3086de289d0f72245b4daf8d0b0ad1a8e",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "untrusted_round_context"
+      },
+      "name": "untrusted_round_context",
+      "scenario_commitment_sha256": "0313b21d274b0fe27d803597cf2b524f0e618b3308973a672d270cff53e29a7b",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8630c2f48d6db4acef1e8e05039bc1769e6ce8209ede71187e6ea171f55d2b35",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "proof_above_share_target"
+      },
+      "name": "proof_above_share_target",
+      "scenario_commitment_sha256": "3a31c760a35fcc5cd307017840d68cd3b3d8922fcf14d2126da30851ee9d8dff",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "ebb147e87efc9bc2d48d7ea174c0505b59cbad5444047af20ccc33fed0176f2a",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101011e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e9ee14e68ffff7f2005000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "1006c9aa6ac84baf0d3818c6728f60ca17cb226f5d48221313a8845d0f10c6fd",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "d9977bf6a572bf299d59b14b48d2715d6243be64476f12a390f98be9472726bb"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "duplicate_share_id"
+      },
+      "name": "duplicate_share",
+      "scenario_commitment_sha256": "60a67faed4cf631efd0bdec5a9cc39a4e37f275c42370010ea9ccf59a28f5b96",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "work_reassigned"
+      },
+      "name": "proof_reassigned_to_other_payout",
+      "scenario_commitment_sha256": "6f51ad513632ff87c26462c569e27fdfe401c42dc3061ec5177954823649fdad",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "53",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "3fc8124ec4d9eaf087dd8b0f5b454bc5f02324a0e4cdc88fdb483fec5085fea6",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "parent_sequence"
+      },
+      "name": "invalid_parent_sequence",
+      "scenario_commitment_sha256": "eff03551da669958248b4807bb66dbbd2d875defe34184dae41cdace4aa391d0",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 3,
+          "share_id_sha256": "fa6c768cde44268d189f5f11ac7e908ae371a8239e3a012139bf57787b18bcce",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "malformed_header"
+      },
+      "name": "malformed_header",
+      "scenario_commitment_sha256": "02db7a45e79e2698e99d34f0ccb8d28a4ce040c20b172eb5b6ba21e0ed5dd4bd",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "00",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "f8d38d08316140a7796e800f362f2bc80d7ecafc8af22d74b403bbb6d655a930",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "f958cd1ebf15f0f6c031e448d05a4fc29ac70f11fcb6dc8e0c132c2c77236891"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    },
+    {
+      "expected": {
+        "accepted": false,
+        "reason": "round_transition"
+      },
+      "name": "stale_extension_after_block",
+      "scenario_commitment_sha256": "393e4435e50710463bd831497dab0980c3a4fd94b8c76ce7ff1edf77f17c47da",
+      "shares": [
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "8d82234d4ebd78b943c9c7222bda86ad9e0c61b7f26ea66028d35b7c9d57c845",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010181e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "0000000000000000000000000000000000000000000000000000000000000000",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 0,
+          "share_id_sha256": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "c90fee24da3a5fab29687d8fa9c6a34edd572a94fdee16cad3b8788225c0b6af"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "9508fb66260438adb81253689d69690bacffd219535d1777825c59ebc2348c00",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101020202020202020202020202020202020202020202020202020202020202020282e14e68ffff7f2002000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "898fe94ffbdeffbc662579c3af0589deea84b5062ac424e1259b44dba1f09440",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 1,
+          "share_id_sha256": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "db5d96bacce1f40df3e45efef8bfc33d0be493d80bd4fdf980ca18878a8b2c14"
+        },
+        {
+          "block_candidate": true,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "header_hex": "040000000101010101010101010101010101010101010101010101010101010101010101030303030303030303030303030303030303030303030303030303030303030383e14e68ffff7f2004000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "51",
+          "previous_share_id": "8cbcb8a0ee205d38c5d1fb79e47b26ea186eac1e65ad3cb854c5cfab985494c7",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 2,
+          "share_id_sha256": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "b0a0366d0ce31ef6dc8b6a43d4e90eeee93d2df894e607a2d44bc47c7a79277e"
+        },
+        {
+          "block_candidate": false,
+          "chain": "labnet",
+          "format": "soveroot-labnet-share-v0",
+          "header_hash": "a6b3104a38222519c4b3f4db22a1f7ea9a3e0df21503d96554ced2e016c751f5",
+          "header_hex": "0400000001010101010101010101010101010101010101010101010101010101010101012828282828282828282828282828282828282828282828282828282828282828a8e14e68ffff7f2000000000",
+          "network_bits": "207fffff",
+          "payout_script_hex": "52",
+          "previous_share_id": "55b8ee421f9d92172440904f85513a0e2a7b10969a4188a02794499b540814b3",
+          "profile": "soveroot-sharechain-labnet-v0",
+          "round_height": 101,
+          "round_previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "sequence": 3,
+          "share_id_sha256": "3996c1bf9ff0e76fa81947e452e5cb42317187c613863e1ae0cd9951d13f7e77",
+          "share_target_hex": "bfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+          "work_id_sha256": "0fa9ceb8e2ee230ebfc79a1f54c95559b660d8983cf0a02c8a38ceaa170f3680"
+        }
+      ],
+      "trusted_rounds": [
+        {
+          "height": 101,
+          "network_bits": "207fffff",
+          "previous_block_hash": "0101010101010101010101010101010101010101010101010101010101010101",
+          "template_commitment_sha256": "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        {
+          "height": 102,
+          "network_bits": "207fffff",
+          "previous_block_hash": "3a9c981d03a0875dbc309f3c7377861bdde68cd351f5afd9c892af4d38340f0e",
+          "template_commitment_sha256": "a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+        }
+      ]
+    }
+  ]
+}
