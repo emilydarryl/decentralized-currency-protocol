@@ -420,6 +420,15 @@ reused unchanged through an in-memory authenticated adapter. This advances the
 transport evidence but remains one machine, kernel, and administrator. It is
 neither post-quantum nor independently operated, so issue #73 remains open.
 
+The [four-operator kit v1](sharechain-operator-kit-v1.md) packages that exact
+routed profile without reducing its three-peer diversity requirement. Private
+identity seeds and controller keys are generated and retained per operator;
+only self-signed route and public-key manifests are exchanged. Config assembly
+requires four distinct identities, endpoints, prefixes, and operator labels,
+plus at least two transport labels in every local three-peer view. Four signed
+snapshots must commit to one non-empty validator state. These are laboratory
+software rules, not base consensus or proof of real-world independence.
+
 ### 11.4 Automatic fallback
 
 Standard miner software SHOULD switch to another accounting service or decentralized sharechain when a valid custom job is rejected. Observed concentration warnings MAY influence defaults, but MUST NOT be represented as proof of real-world ownership.

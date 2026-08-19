@@ -518,6 +518,14 @@ host router, kernel, and administrator. Its two transport values are labels on
 the same TCP stack, so the result does not materially reduce the residual risk
 from forged labels, upstream capture, or a hostile Internet route.
 
+The [four-operator kit](sharechain-operator-kit-v1.md) removes centralized
+fixture-key distribution from the intended field workflow: every operator
+creates their own private seed and exchanges only a signed public manifest.
+It refuses repeated identities, endpoints, prefixes, or operator groups and a
+transport monoculture. Self-signed manifests remain trust-on-first-use data,
+however. They do not prove separate ownership, and the deterministic CI
+packaging run sends no packet over an independently administered route.
+
 ### T24. Resource-exhaustion denial of service
 
 **Attack:** Use large post-quantum signatures, malformed proofs, expensive scripts, peer flooding, or share spam to exhaust nodes.
@@ -543,6 +551,11 @@ restart. The routed v1 listener now enforces the signed handshake, source pin,
 session frame, and message admission on four namespace sockets with a frozen
 30-second laboratory timeout. It is deliberately not publicly reachable and
 does not establish safe hostile-Internet denial-of-service behavior.
+
+The operator kit does not relax those bounds or install a public firewall. Its
+runbook requires operators to restrict port `19444` to the declared experiment
+routes. Safe Internet exposure, constant-time hybrid authentication, and
+adversarial volumetric testing remain unresolved.
 
 ### T25. Data withholding
 

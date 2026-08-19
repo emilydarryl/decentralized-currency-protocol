@@ -24,6 +24,13 @@ Follow the [public roadmap](docs/roadmap.md) for the current laboratory status, 
 
 To run the current test-only node, wallet, and mining demonstrations, use the [Soveroot Labnet Kit](docs/labnet-kit.md). Its plain-English guide explains how to download the checked Linux bundle from GitHub Actions, verify it, run a wallet transfer, test two separately written miners byte for byte, exercise hostile-coordinator failover, reconcile two accounting replicas, and inspect direct multi-output coinbase settlement.
 
+Four separate research operators can prepare the next share-synchronization
+experiment with the [four-operator share-sync kit](docs/sharechain-operator-kit-v1.md).
+Each operator creates and keeps their own private identity, exchanges only a
+self-signed public manifest, and produces a signed convergence snapshot. The
+kit is laboratory tooling, not evidence that independent operators have
+already run it.
+
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
 ## Documents
@@ -41,6 +48,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 - [sharechain-v0.md](docs/sharechain-v0.md) freezes the first offline share format, fork choice, finality and payout window, two independent validators, 15 hostile vectors, and the boundary before public peer synchronization.
 - [sharechain-sync-v0.md](docs/sharechain-sync-v0.md) documents the authenticated three-process loopback experiment, frozen resource limits, partition and relay attacks, restart recovery, equivocation evidence, and public-network limits.
 - [sharechain-routed-namespace-v1.md](docs/sharechain-routed-namespace-v1.md) documents the four-process routed Linux namespace experiment, live signed-session boundary, restart-persistent replay evidence, deterministic CI artifact, and remaining independent-host limits.
+- [sharechain-operator-kit-v1.md](docs/sharechain-operator-kit-v1.md) is the fail-closed four-operator preparation and evidence-collection runbook for a genuinely separate-host experiment.
 - [mining-interoperability-labnet.md](docs/mining-interoperability-labnet.md) documents the separately written Rust miner, exact byte-level comparison gate, packaged two-miner demonstration, and remaining limits.
 - [stratum-v2-job-declaration-labnet-profile-v0.md](docs/stratum-v2-job-declaration-labnet-profile-v0.md) freezes the authenticated private-labnet Job Declaration subset, direct-publication invariant, failure behavior, and canonical semantic transcripts.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
@@ -120,6 +128,7 @@ In descending order:
 - The standard mining stack uses miner-created templates, direct block publication, decentralized share accounting, and noncustodial payouts.
 - The first sharechain profile is an offline labnet conformance test: two independently written validators agree on 15 accepted and rejected histories, while public synchronization, independent operators, Sybil resistance, and production settlement remain open.
 - Three authenticated loopback processes now exchange those shares under frozen message, inventory, orphan, replay, and equivocation limits and converge after partition, selective relay, and restart. This is private-lab networking evidence, not a public pool.
+- Four routed namespace processes now exercise signed live sessions, and a portable four-operator kit creates operator-local keys, verifies public manifests, assembles private configurations, and collects signed convergence reports. CI validates the package but does not count as an independent-host run.
 - The official wallet uses an isolated, fail-closed anonymity broadcaster. Consensus does not claim to prove that Tor or another route was used.
 - When a person delegates spending to software, AI models may propose structured payment intents but never receive master signing authority.
 
@@ -132,7 +141,7 @@ The Bitcoin Core foundation does not remove the improvements developed in this d
 | Chain ancestry | Fork Bitcoin Core code, but launch an entirely new genesis and network | Committed architecture |
 | Knots | Review and port selected Bitcoin Knots policy, privacy, and node-control improvements with provenance | Committed workflow |
 | Proof of work | Use a permanent, chain-specific, memory-oriented algorithm family with deterministic workload variation instead of governance-selected six-month swaps | Research blocker |
-| Mining concentration | Do not use a Sybil-vulnerable 10% identity cap; reduce coordinator power through miner-created templates, direct publication, easy switching, and decentralized share accounting | Three-process sync and a 37-check multi-address identity/admission/diversity safety profile implemented; independent routed hosts and operators remain research blockers |
+| Mining concentration | Do not use a Sybil-vulnerable 10% identity cap; reduce coordinator power through miner-created templates, direct publication, easy switching, and decentralized share accounting | Live four-namespace sync plus a fail-closed four-operator deployment kit implemented; an actual independently administered run remains a research blocker |
 | Mining protocol | Require the standard mining stack to use an encrypted, authenticated Stratum V2 profile with custom job declaration; disable legacy Stratum V1 | Committed standard profile |
 | Pool custody | Prefer direct, noncustodial payouts and publicly verifiable shares | Direct labnet coinbase prototype plus deterministic sharechain accounting; production settlement unresolved |
 | Post-quantum ownership | Use ML-DSA-65 authorization from genesis, with an independent SLH-DSA recovery/high-assurance path | Candidate suite; benchmark and review blocker |

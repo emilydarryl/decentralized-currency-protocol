@@ -130,7 +130,10 @@ resistance to a hostile ISP or Internet route, anonymity, safe production key
 distribution, constant-time cryptography, post-quantum authentication,
 production payout settlement, a consensus rule, or a final proof of work.
 
-Issue #73 and Template Autonomy remain **OPEN**. The next honest gate requires
-separately administered machines and networks, reviewed hybrid post-quantum
-identity and key lifecycle, discovery/rotation evidence, and adversarial route
-testing without a privileged seed or operator authority.
+Issue #73 and Template Autonomy remain **OPEN**. The
+[four-operator kit v1](sharechain-operator-kit-v1.md) packages this boundary
+without centralized field keys, but only a run by separately administered
+machines and networks can supply the next evidence. Reviewed hybrid
+post-quantum identity and key lifecycle, discovery/rotation evidence, and
+adversarial route testing without a privileged seed or operator authority also
+remain required.

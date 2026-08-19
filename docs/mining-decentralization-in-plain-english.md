@@ -171,13 +171,21 @@ just a setup step, and a repeated hello stays blocked after one process is
 restarted. The four notebooks again finish with the same history. See the
 [Routed namespace experiment v1](sharechain-routed-namespace-v1.md).
 
-This is still one computer talking to itself. All four compartments share one
-kernel and administrator, and the two configured transport labels still use
-the same TCP stack. Labels are not proof of independence; an attacker can
-invent them. The readable Ed25519 and X25519 test implementation is classical,
-not post-quantum or production reviewed. Independent operators, hostile
-Internet evidence, safe key distribution, peer discovery, and reviewed hybrid
-authentication are still required. See also the earlier
+We have also packaged the next experiment for four separate people. Each person
+creates their own private key on their own machine and shares only a signed
+public contact card. The software refuses to build the group with only three
+people because each notebook must keep three diverse neighbors. At the end,
+each person signs a snapshot, and the collector accepts it only when all four
+notebooks report the same non-empty history. See the
+[Four-operator share synchronization kit](sharechain-operator-kit-v1.md).
+
+The automated proof is still one computer preparing all four packages and
+talking to itself. The kit makes a real separate-operator run possible; it does
+not pretend that run has happened. Labels are not proof of independence; an
+attacker can invent them. The readable Ed25519 and X25519 test implementation
+is classical, not post-quantum or production reviewed. Independent operators,
+hostile Internet evidence, peer discovery, and reviewed hybrid authentication
+are still required. See also the earlier
 [Multi-host share synchronization safety profile v1](sharechain-multihost-v1.md).
 
 ## Short glossary
