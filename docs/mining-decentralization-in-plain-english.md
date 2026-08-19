@@ -154,12 +154,24 @@ and reconnect them. They end with the same winning history and payout
 calculation, and they preserve two conflicting authenticated claims instead of
 hiding the conflict.
 
-This is still one computer talking to itself. Prearranged shared secrets do not
-solve public identity, and they cannot stop one attacker from inventing many
-peers or surrounding a miner. The next step is an independently operated
-multi-computer experiment with reviewed session keys, admission limits, peer
-rotation, long partitions, and eclipse attacks. See
-[Authenticated three-process share synchronization v0](sharechain-sync-v0.md).
+The next safety layer is also working. Each test peer signs fresh connection
+information with a pinned public key, both sides derive a one-session secret,
+and altered identities, networks, algorithms, transcripts, old connections,
+and repeated messages fail. Exact limits now apply per identity and address
+prefix. A deterministic selector refuses peer sets concentrated in one address
+prefix or configured operator group, and long-disconnected peers may catch up
+only within a fixed 1,024-share budget. Conflicting signed claims can be checked
+by someone who knows the public key instead of by only the two holders of a
+shared password.
+
+This remains one computer talking to itself, now through three distinct
+loopback address prefixes. Configured operator and transport labels are not
+proof of real independence; an attacker can invent them. The readable Ed25519
+and X25519 test implementation is classical, not post-quantum or production
+reviewed, and the signed preflight does not yet sit directly on every live
+share frame. Separate routed namespaces, independent operators, hostile
+Internet evidence, key distribution, and reviewed hybrid authentication are
+still required. See [Multi-host share synchronization safety profile v1](sharechain-multihost-v1.md).
 
 ## Short glossary
 

@@ -100,7 +100,10 @@ Two separately written validators agree on 15 histories. The
 [three-process synchronization profile](sharechain-sync-v0.md) now bounds
 loopback messages and orphan storage and covers partitions, delayed and
 selectively relayed shares, restart recovery, and equivocation evidence. The
-next step moves to independently operated hosts with reviewed identity and
-admission controls, peer diversity, long-partition catch-up, eclipse tests,
-coinbase maturity, and reorganizations without giving any coordinator custody
-or publication power.
+[multi-host safety profile v1](sharechain-multihost-v1.md) adds signed session
+preflight, admission accounting, peer-diversity selection, bounded
+long-partition catch-up, portable equivocation evidence, and 37 deterministic
+checks on three loopback prefixes. Issue #73 remains open until the live
+boundary runs across routed namespaces and independently operated hosts.
+Coinbase maturity and reorganizations must also be tested without giving any
+coordinator custody or publication power.

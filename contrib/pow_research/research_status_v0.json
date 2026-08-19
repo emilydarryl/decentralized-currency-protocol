@@ -1,6 +1,6 @@
 {
   "format": "soveroot-research-status-v0",
-  "as_of": "2026-08-18",
+  "as_of": "2026-08-19",
   "evidence_cutoff_revision": "02efd12038c1a7f58d67b2449778f640db5286ec",
   "network_status": "research_and_isolated_labnet_only",
   "consensus_status": "no_candidate_approved_for_production",
@@ -69,7 +69,7 @@
       "id": "template_autonomy",
       "state": "OPEN",
       "assessment": "NOT_ASSESSED",
-      "gap": "Two independently written miners exactly agree on authenticated payloads, template commitment, and solved block, and each directly publishes a labnet block. One running miner preserves exact templates through hostile coordinator failover and total loss. Two local accounting replicas recover and drive direct multi-output settlement. Two offline sharechain validators agree on a frozen format and 15 adversarial histories. Three authenticated loopback processes converge after partition, selective relay, and restart under fixed replay, message, inventory, orphan, and equivocation limits. Independent multi-host operators, public identity and admission, Sybil and eclipse resistance, and adversarial Internet evidence are absent."
+      "gap": "Two independently written miners exactly agree on authenticated payloads, template commitment, and solved block, and each directly publishes a labnet block. One running miner preserves exact templates through hostile coordinator failover and total loss. Two local accounting replicas recover and drive direct multi-output settlement. Two offline sharechain validators agree on a frozen format and 15 adversarial histories. Three authenticated processes converge after partition, selective relay, and restart. A 37-check multi-address preflight covers classical signed sessions, exact admission and catch-up limits, peer-diversity failures, and portable equivocation evidence. The signed layer is not yet the live frame boundary; routed namespaces, independent operators, reviewed post-quantum identity and key distribution, Sybil and eclipse evidence, and adversarial Internet operation remain absent."
     }
   ],
   "latest_evidence": [

@@ -502,6 +502,15 @@ Worker block withholding is distinct from ordinary share withholding. A worker m
 
 **Residual risk:** A fully isolated user can be delayed or shown a lower-work valid chain until honest connectivity returns.
 
+The non-consensus [multi-host share-sync safety profile](sharechain-multihost-v1.md)
+turns part of this list into exact laboratory checks: at least three configured
+prefixes and operator groups, at least two transports, no more than one selected
+peer per prefix or operator group, bounded connection churn, and refusal of
+prefix- or operator-concentrated candidate sets. These are local heuristics,
+not proof of independence. Operator labels can be forged, addresses can be
+rented, transports can share upstream control, and routing can defeat apparent
+diversity. Accumulated-work and complete-data validation remain authoritative.
+
 ### T24. Resource-exhaustion denial of service
 
 **Attack:** Use large post-quantum signatures, malformed proofs, expensive scripts, peer flooding, or share spam to exhaust nodes.
@@ -517,6 +526,14 @@ Worker block withholding is distinct from ordinary share withholding. A worker m
 - adversarial benchmarks.
 
 **Residual risk:** Post-quantum and privacy features inherently consume more bandwidth and computation. Limits reduce throughput to preserve node accessibility.
+
+The share-sync v1 safety profile additionally freezes 32,768-byte hellos,
+131,072-byte frames, 16 active sessions, two sessions per identity, four per
+IPv4 `/24` or IPv6 `/48`, deterministic handshake and message buckets, 256
+replay nonces, 128 quarantines, 512 admission-bucket records per family, 128
+peer candidates, and a 1,024-share catch-up ceiling. Limit state
+persists across restart. The present implementation is a preflight and does not
+yet protect a publicly reachable live listener.
 
 ### T25. Data withholding
 

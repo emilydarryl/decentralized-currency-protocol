@@ -402,6 +402,17 @@ inventory and orphan storage, restart recovery, and partition, selective-relay,
 and equivocation tests. It does not define permissionless discovery, public
 identity, Sybil or eclipse defenses, public operation, or production settlement.
 
+The [multi-host safety profile v1](sharechain-multihost-v1.md) now specifies a
+non-consensus preflight for the next experiment. Pinned Ed25519 lab identities
+sign both ephemeral X25519 hellos; HKDF-SHA256 binds the complete transcript;
+per-identity and per-prefix admission, message buckets, replay state,
+quarantine, peer-diversity selection, and long-partition catch-up all have
+frozen bounds. Signed conflicting announcements are portable evidence but
+cause no automatic punishment. The profile uses classical readable reference
+cryptography and three loopback prefixes on one machine. It does not yet place
+the signed layer on the live process boundary and is neither post-quantum nor
+independently operated. Issue #73 remains open.
+
 ### 11.4 Automatic fallback
 
 Standard miner software SHOULD switch to another accounting service or decentralized sharechain when a valid custom job is rejected. Observed concentration warnings MAY influence defaults, but MUST NOT be represented as proof of real-world ownership.

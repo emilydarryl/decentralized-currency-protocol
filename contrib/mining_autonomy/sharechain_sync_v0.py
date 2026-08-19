@@ -7,6 +7,7 @@ import argparse
 import copy
 import hashlib
 import hmac
+import ipaddress
 import json
 import socket
 import socketserver
@@ -77,6 +78,18 @@ def require_hex(value: Any, size: int, reason: str, label: str) -> str:
         bytes.fromhex(value)
     except ValueError as error:
         raise SyncError(reason, f"{label} must be hexadecimal") from error
+    return value
+
+
+def require_loopback(value: Any, reason: str, label: str) -> str:
+    if not isinstance(value, str):
+        raise SyncError(reason, f"{label} must be a loopback IP address")
+    try:
+        parsed = ipaddress.ip_address(value)
+    except ValueError as error:
+        raise SyncError(reason, f"{label} must be a loopback IP address") from error
+    if not parsed.is_loopback:
+        raise SyncError(reason, f"{label} must be a loopback IP address")
     return value
 
 
@@ -154,8 +167,7 @@ def load_config(path: Path) -> dict[str, Any]:
     node_id = document["node_id"]
     if not isinstance(node_id, str) or not node_id or len(node_id) > 32 or not node_id.isascii():
         raise SyncError("node_id", "node id must be 1-32 ASCII characters")
-    if document["listen_host"] not in {"127.0.0.1", "::1"}:
-        raise SyncError("non_loopback", "private-lab peer listeners must use loopback")
+    require_loopback(document["listen_host"], "non_loopback", "private-lab listener")
     if not isinstance(document["listen_port"], int) or not 1 <= document["listen_port"] <= 65535:
         raise SyncError("listen_port", "listen port is invalid")
     if not isinstance(document["state_path"], str) or not document["state_path"]:
@@ -176,8 +188,7 @@ def load_config(path: Path) -> dict[str, Any]:
             raise SyncError("peer_table", "peer ids must be unique and exclude the local node")
         if not isinstance(peer["node_id"], str) or not peer["node_id"].isascii():
             raise SyncError("peer_table", "peer id is invalid")
-        if peer["host"] not in {"127.0.0.1", "::1"}:
-            raise SyncError("non_loopback", "private-lab peers must use loopback")
+        require_loopback(peer["host"], "non_loopback", "private-lab peer")
         if not isinstance(peer["port"], int) or not 1 <= peer["port"] <= 65535:
             raise SyncError("peer_table", "peer port is invalid")
         require_hex(peer["shared_key_hex"], 32, "peer_table", "peer shared key")

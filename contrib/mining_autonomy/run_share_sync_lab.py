@@ -22,9 +22,9 @@ FORMAT = "soveroot-share-sync-evidence-v0"
 SCRIPT = Path(__file__).resolve().parent / "sharechain_sync_v0.py"
 
 
-def free_port() -> int:
+def free_port(host: str = "127.0.0.1") -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as listener:
-        listener.bind(("127.0.0.1", 0))
+        listener.bind((host, 0))
         return int(listener.getsockname()[1])
 
 
@@ -33,9 +33,17 @@ def write_json(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
-def build_configs(runtime: Path) -> dict[str, dict[str, Any]]:
-    ports = {node_id: free_port() for node_id in ("alpha", "bravo", "charlie")}
-    pair_keys = {
+def build_configs(
+    runtime: Path,
+    *,
+    hosts: dict[str, str] | None = None,
+    pair_keys: dict[frozenset[str], str] | None = None,
+) -> dict[str, dict[str, Any]]:
+    hosts = hosts or {node_id: "127.0.0.1" for node_id in ("alpha", "bravo", "charlie")}
+    if set(hosts) != {"alpha", "bravo", "charlie"}:
+        raise RuntimeError("share-sync lab requires exact alpha, bravo, and charlie hosts")
+    ports = {node_id: free_port(hosts[node_id]) for node_id in ("alpha", "bravo", "charlie")}
+    pair_keys = pair_keys or {
         frozenset(("alpha", "bravo")): "ab" * 32,
         frozenset(("alpha", "charlie")): "ac" * 32,
         frozenset(("bravo", "charlie")): "bc" * 32,
@@ -50,7 +58,7 @@ def build_configs(runtime: Path) -> dict[str, dict[str, Any]]:
             peers.append(
                 {
                     "node_id": peer_id,
-                    "host": "127.0.0.1",
+                    "host": hosts[peer_id],
                     "port": ports[peer_id],
                     "shared_key_hex": pair_keys[frozenset((node_id, peer_id))],
                 }
@@ -58,7 +66,7 @@ def build_configs(runtime: Path) -> dict[str, dict[str, Any]]:
         config = {
             "format": sync.PROTOCOL,
             "node_id": node_id,
-            "listen_host": "127.0.0.1",
+            "listen_host": hosts[node_id],
             "listen_port": ports[node_id],
             "state_path": str(runtime / f"{node_id}-state.json"),
             "control_key_hex": controls[node_id],
@@ -166,8 +174,12 @@ def hostile_orphans(count: int) -> list[dict[str, Any]]:
     return shares
 
 
-def run_lab(runtime: Path) -> dict[str, Any]:
-    configs = build_configs(runtime)
+def run_lab(
+    runtime: Path,
+    *,
+    configs: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    configs = build_configs(runtime) if configs is None else configs
     processes = {node_id: start_node(config) for node_id, config in configs.items()}
     checks: dict[str, bool] = {}
     observations: dict[str, Any] = {}
