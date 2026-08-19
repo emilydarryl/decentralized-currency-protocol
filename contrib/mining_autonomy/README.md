@@ -45,6 +45,17 @@ requires deterministic convergence. See
 [`docs/sharechain-sync-v0.md`](../../docs/sharechain-sync-v0.md). This remains a
 private-lab transport experiment, not a public pool or production settlement.
 
+`sharechain_multihost_v1.py` adds the next safety preflight: RFC-vector-checked
+lab identity signatures and ephemeral session derivation, exact connection and
+traffic admission limits, persisted replay and quarantine state, deterministic
+peer-diversity selection, bounded long-partition recovery, and portable signed
+equivocation evidence. `run_share_multihost_lab.py` derives all three pairwise
+v0 frame keys from signed transcripts and reruns the complete share-sync attack
+suite on three distinct loopback prefixes. See
+[`docs/sharechain-multihost-v1.md`](../../docs/sharechain-multihost-v1.md).
+The signed preflight is not yet the live network boundary, and one machine with
+three addresses is not an independently operated multi-host deployment.
+
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
@@ -81,4 +92,6 @@ python3 contrib/mining_autonomy/sharechain_v0.py --check
 python3 contrib/mining_autonomy/independent_sharechain_v0.py --check
 python3 contrib/mining_autonomy/run_share_sync_lab.py \
   --output build/share-sync-v0-evidence.json
+python3 contrib/mining_autonomy/run_share_multihost_lab.py \
+  --output build/share-sync-multihost-v1-evidence.json
 ```

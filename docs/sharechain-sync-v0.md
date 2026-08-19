@@ -140,9 +140,15 @@ The experiment does not provide:
 
 ## Next bounded step
 
-The next research step is an independently operated multi-host test profile.
-Before exposing a listener beyond loopback, it needs reviewed authenticated
-sessions, explicit inbound admission and rate policy, peer rotation and
-diversity rules, bounded catch-up under long partitions, eclipse simulations,
-and a safe method for distributing peer identity keys. Production payout and
-privacy rules remain separate later milestones.
+The [multi-host safety profile v1](sharechain-multihost-v1.md) now freezes the
+first preflight for that research step: classical signed ephemeral sessions,
+explicit admission and rate policy, deterministic peer-diversity rules,
+bounded long-partition catch-up, eclipse simulations, and portable signed
+equivocation evidence. It derives v0 frame keys and reruns this experiment on
+three distinct loopback prefixes.
+
+It does not yet expose a listener beyond loopback or place the signed layer on
+the live frame boundary. Routed namespaces, independent hosts and operators,
+reviewed post-quantum hybrid authentication, safe identity-key distribution,
+peer discovery/rotation, hostile Internet evidence, and production payout and
+privacy rules remain later milestones under issue #73.

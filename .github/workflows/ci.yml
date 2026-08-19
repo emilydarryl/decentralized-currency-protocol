@@ -61,6 +61,8 @@ jobs:
             --check --output build/sharechain-v0-independent-report.json
           python3 contrib/mining_autonomy/run_share_sync_lab.py \
             --output build/share-sync-v0-evidence.json
+          python3 contrib/mining_autonomy/run_share_multihost_lab.py \
+            --output build/share-sync-multihost-v1-evidence.json
 
       - name: Build and test pinned Stratum V2 Job Declaration helper
         shell: bash
@@ -107,6 +109,7 @@ jobs:
             build/sv2-interoperability-evidence.json
             build/sharechain-v0-independent-report.json
             build/share-sync-v0-evidence.json
+            build/share-sync-multihost-v1-evidence.json
           if-no-files-found: error
           retention-days: 14
 
