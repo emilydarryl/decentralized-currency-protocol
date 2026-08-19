@@ -36,6 +36,15 @@ same result for every case. This is a file-based private-lab conformance gate,
 not peer synchronization or a public pool. See
 [`docs/sharechain-v0.md`](../../docs/sharechain-v0.md).
 
+`sharechain_sync_v0.py` advances that format across three independent loopback
+processes with pinned pairwise authentication, replay protection, bounded
+messages and orphan storage, restart persistence, and equivocation evidence.
+`run_share_sync_lab.py` partitions and reconnects the processes, delays and
+selectively relays shares, restarts one process, floods unknown parents, and
+requires deterministic convergence. See
+[`docs/sharechain-sync-v0.md`](../../docs/sharechain-sync-v0.md). This remains a
+private-lab transport experiment, not a public pool or production settlement.
+
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
@@ -70,4 +79,6 @@ decoded settlement coinbase. See
 python3 contrib/mining_autonomy/sv2_job_declaration_vectors.py --check
 python3 contrib/mining_autonomy/sharechain_v0.py --check
 python3 contrib/mining_autonomy/independent_sharechain_v0.py --check
+python3 contrib/mining_autonomy/run_share_sync_lab.py \
+  --output build/share-sync-v0-evidence.json
 ```

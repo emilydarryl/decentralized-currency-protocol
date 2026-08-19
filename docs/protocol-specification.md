@@ -396,8 +396,11 @@ The share system is not part of base consensus in v0.1. Making it consensus-nati
 Implementation note: the [sharechain private-lab profile v0](sharechain-v0.md)
 freezes an offline canonical entry, proof binding, accumulated-work fork choice,
 finality and payout window, and 15 adversarial vectors checked by two separately
-written validators. It does not yet define peer transport, discovery, Sybil or
-eclipse defenses, public operation, or production settlement.
+written validators. The [three-process synchronization profile](sharechain-sync-v0.md)
+adds pairwise-authenticated loopback transport, replay protection, bounded
+inventory and orphan storage, restart recovery, and partition, selective-relay,
+and equivocation tests. It does not define permissionless discovery, public
+identity, Sybil or eclipse defenses, public operation, or production settlement.
 
 ### 11.4 Automatic fallback
 

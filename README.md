@@ -39,6 +39,7 @@ Independent security researchers can start with the open [PoW v1 research call](
 - [noncustodial-payout-failover-labnet.md](docs/noncustodial-payout-failover-labnet.md) documents the deterministic payout-claim boundary, hostile-coordinator sequence, retained evidence, and work that remains before real settlement.
 - [replicated-share-settlement-labnet.md](docs/replicated-share-settlement-labnet.md) explains the two-replica recovery test, deterministic payout agreement, direct coinbase outputs, adversarial checks, and remaining sharechain limits.
 - [sharechain-v0.md](docs/sharechain-v0.md) freezes the first offline share format, fork choice, finality and payout window, two independent validators, 15 hostile vectors, and the boundary before public peer synchronization.
+- [sharechain-sync-v0.md](docs/sharechain-sync-v0.md) documents the authenticated three-process loopback experiment, frozen resource limits, partition and relay attacks, restart recovery, equivocation evidence, and public-network limits.
 - [mining-interoperability-labnet.md](docs/mining-interoperability-labnet.md) documents the separately written Rust miner, exact byte-level comparison gate, packaged two-miner demonstration, and remaining limits.
 - [stratum-v2-job-declaration-labnet-profile-v0.md](docs/stratum-v2-job-declaration-labnet-profile-v0.md) freezes the authenticated private-labnet Job Declaration subset, direct-publication invariant, failure behavior, and canonical semantic transcripts.
 - [protocol-specification.md](docs/protocol-specification.md) defines the proposed architecture, consensus boundary, wallet and mining profiles, optional delegated-payment layer, and normative invariants.
@@ -117,6 +118,7 @@ In descending order:
 - Consensus does not attempt to identify mining organizations or impose a percentage cap on pool identities.
 - The standard mining stack uses miner-created templates, direct block publication, decentralized share accounting, and noncustodial payouts.
 - The first sharechain profile is an offline labnet conformance test: two independently written validators agree on 15 accepted and rejected histories, while public synchronization, independent operators, Sybil resistance, and production settlement remain open.
+- Three authenticated loopback processes now exchange those shares under frozen message, inventory, orphan, replay, and equivocation limits and converge after partition, selective relay, and restart. This is private-lab networking evidence, not a public pool.
 - The official wallet uses an isolated, fail-closed anonymity broadcaster. Consensus does not claim to prove that Tor or another route was used.
 - When a person delegates spending to software, AI models may propose structured payment intents but never receive master signing authority.
 
@@ -129,7 +131,7 @@ The Bitcoin Core foundation does not remove the improvements developed in this d
 | Chain ancestry | Fork Bitcoin Core code, but launch an entirely new genesis and network | Committed architecture |
 | Knots | Review and port selected Bitcoin Knots policy, privacy, and node-control improvements with provenance | Committed workflow |
 | Proof of work | Use a permanent, chain-specific, memory-oriented algorithm family with deterministic workload variation instead of governance-selected six-month swaps | Research blocker |
-| Mining concentration | Do not use a Sybil-vulnerable 10% identity cap; reduce coordinator power through miner-created templates, direct publication, easy switching, and decentralized share accounting | Offline sharechain format and adversarial vectors implemented; public network remains a research blocker |
+| Mining concentration | Do not use a Sybil-vulnerable 10% identity cap; reduce coordinator power through miner-created templates, direct publication, easy switching, and decentralized share accounting | Three-process authenticated loopback share sync implemented; independent multi-host operation remains a research blocker |
 | Mining protocol | Require the standard mining stack to use an encrypted, authenticated Stratum V2 profile with custom job declaration; disable legacy Stratum V1 | Committed standard profile |
 | Pool custody | Prefer direct, noncustodial payouts and publicly verifiable shares | Direct labnet coinbase prototype plus deterministic sharechain accounting; production settlement unresolved |
 | Post-quantum ownership | Use ML-DSA-65 authorization from genesis, with an independent SLH-DSA recovery/high-assurance path | Candidate suite; benchmark and review blocker |
