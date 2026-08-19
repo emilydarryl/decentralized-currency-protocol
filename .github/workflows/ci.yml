@@ -68,6 +68,8 @@ jobs:
             --output build/share-sync-routed-namespace-v1-evidence.json
           sudo chown "$(id -u):$(id -g)" \
             build/share-sync-routed-namespace-v1-evidence.json
+          python3 contrib/mining_autonomy/run_operator_kit_lab.py \
+            --output build/share-sync-operator-kit-v1-evidence.json
 
       - name: Build and test pinned Stratum V2 Job Declaration helper
         shell: bash
@@ -116,6 +118,7 @@ jobs:
             build/share-sync-v0-evidence.json
             build/share-sync-multihost-v1-evidence.json
             build/share-sync-routed-namespace-v1-evidence.json
+            build/share-sync-operator-kit-v1-evidence.json
           if-no-files-found: error
           retention-days: 14
 

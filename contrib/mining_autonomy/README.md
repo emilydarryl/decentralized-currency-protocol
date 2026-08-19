@@ -66,6 +66,15 @@ and requires all four share graphs to converge. See
 This is still one machine, kernel, and administrator; it is not independent
 Internet-host evidence.
 
+`operator_kit_v1.py` packages the routed v1 boundary for four separate
+operators without centralizing their private identities. Each operator creates
+an owner-only private seed and controller key, shares one self-signed public
+manifest, assembles a config from the other three manifests, and signs a final
+convergence snapshot. `run_operator_kit_lab.py` checks the packaging,
+fail-closed downgrade behavior, secret separation, and evidence verifier in CI.
+See [`docs/sharechain-operator-kit-v1.md`](../../docs/sharechain-operator-kit-v1.md).
+The CI fixture is not a separate-host run and does not close issue #73.
+
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
@@ -107,4 +116,6 @@ python3 contrib/mining_autonomy/run_share_multihost_lab.py \
 sudo --preserve-env=PATH python3 \
   contrib/mining_autonomy/run_share_routed_namespace_lab.py \
   --output build/share-sync-routed-namespace-v1-evidence.json
+python3 contrib/mining_autonomy/run_operator_kit_lab.py \
+  --output build/share-sync-operator-kit-v1-evidence.json
 ```
