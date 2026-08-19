@@ -56,6 +56,16 @@ suite on three distinct loopback prefixes. See
 The signed preflight is not yet the live network boundary, and one machine with
 three addresses is not an independently operated multi-host deployment.
 
+`sharechain_routed_v1.py` places those signed hellos, admission checks, fresh
+session keys, and authenticated frames on the real peer TCP boundary while
+reusing the unchanged v0 validator behind an in-memory adapter.
+`run_share_routed_namespace_lab.py` starts four processes in four routed Linux
+network namespaces, restarts one, proves a captured hello remains rejected,
+and requires all four share graphs to converge. See
+[`docs/sharechain-routed-namespace-v1.md`](../../docs/sharechain-routed-namespace-v1.md).
+This is still one machine, kernel, and administrator; it is not independent
+Internet-host evidence.
+
 The authenticated protocol boundary is frozen in
 [`docs/stratum-v2-job-declaration-labnet-profile-v0.md`](../../docs/stratum-v2-job-declaration-labnet-profile-v0.md).
 `sv2_job_declaration_vectors.py` generates and validates nine semantic
@@ -94,4 +104,7 @@ python3 contrib/mining_autonomy/run_share_sync_lab.py \
   --output build/share-sync-v0-evidence.json
 python3 contrib/mining_autonomy/run_share_multihost_lab.py \
   --output build/share-sync-multihost-v1-evidence.json
+sudo --preserve-env=PATH python3 \
+  contrib/mining_autonomy/run_share_routed_namespace_lab.py \
+  --output build/share-sync-routed-namespace-v1-evidence.json
 ```

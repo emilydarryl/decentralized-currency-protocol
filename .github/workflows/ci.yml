@@ -63,6 +63,11 @@ jobs:
             --output build/share-sync-v0-evidence.json
           python3 contrib/mining_autonomy/run_share_multihost_lab.py \
             --output build/share-sync-multihost-v1-evidence.json
+          sudo --preserve-env=PATH python3 \
+            contrib/mining_autonomy/run_share_routed_namespace_lab.py \
+            --output build/share-sync-routed-namespace-v1-evidence.json
+          sudo chown "$(id -u):$(id -g)" \
+            build/share-sync-routed-namespace-v1-evidence.json
 
       - name: Build and test pinned Stratum V2 Job Declaration helper
         shell: bash
@@ -110,6 +115,7 @@ jobs:
             build/sharechain-v0-independent-report.json
             build/share-sync-v0-evidence.json
             build/share-sync-multihost-v1-evidence.json
+            build/share-sync-routed-namespace-v1-evidence.json
           if-no-files-found: error
           retention-days: 14
 

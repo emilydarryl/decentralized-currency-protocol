@@ -164,14 +164,21 @@ only within a fixed 1,024-share budget. Conflicting signed claims can be checked
 by someone who knows the public key instead of by only the two holders of a
 shared password.
 
-This remains one computer talking to itself, now through three distinct
-loopback address prefixes. Configured operator and transport labels are not
-proof of real independence; an attacker can invent them. The readable Ed25519
-and X25519 test implementation is classical, not post-quantum or production
-reviewed, and the signed preflight does not yet sit directly on every live
-share frame. Separate routed namespaces, independent operators, hostile
-Internet evidence, key distribution, and reviewed hybrid authentication are
-still required. See [Multi-host share synchronization safety profile v1](sharechain-multihost-v1.md).
+We have now removed one important shortcut. Four notebook processes run in
+four separate Linux network compartments with four routed address ranges. The
+signed hello and one-session secret protect the actual socket messages, not
+just a setup step, and a repeated hello stays blocked after one process is
+restarted. The four notebooks again finish with the same history. See the
+[Routed namespace experiment v1](sharechain-routed-namespace-v1.md).
+
+This is still one computer talking to itself. All four compartments share one
+kernel and administrator, and the two configured transport labels still use
+the same TCP stack. Labels are not proof of independence; an attacker can
+invent them. The readable Ed25519 and X25519 test implementation is classical,
+not post-quantum or production reviewed. Independent operators, hostile
+Internet evidence, safe key distribution, peer discovery, and reviewed hybrid
+authentication are still required. See also the earlier
+[Multi-host share synchronization safety profile v1](sharechain-multihost-v1.md).
 
 ## Short glossary
 

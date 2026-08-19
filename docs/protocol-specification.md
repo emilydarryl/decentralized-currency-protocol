@@ -402,16 +402,23 @@ inventory and orphan storage, restart recovery, and partition, selective-relay,
 and equivocation tests. It does not define permissionless discovery, public
 identity, Sybil or eclipse defenses, public operation, or production settlement.
 
-The [multi-host safety profile v1](sharechain-multihost-v1.md) now specifies a
-non-consensus preflight for the next experiment. Pinned Ed25519 lab identities
+The [multi-host safety profile v1](sharechain-multihost-v1.md) specifies a
+non-consensus preflight. Pinned Ed25519 lab identities
 sign both ephemeral X25519 hellos; HKDF-SHA256 binds the complete transcript;
 per-identity and per-prefix admission, message buckets, replay state,
 quarantine, peer-diversity selection, and long-partition catch-up all have
 frozen bounds. Signed conflicting announcements are portable evidence but
 cause no automatic punishment. The profile uses classical readable reference
-cryptography and three loopback prefixes on one machine. It does not yet place
-the signed layer on the live process boundary and is neither post-quantum nor
-independently operated. Issue #73 remains open.
+cryptography and three loopback prefixes on one machine.
+
+The [routed namespace experiment v1](sharechain-routed-namespace-v1.md) places
+that classical signed-session layer on the live peer socket boundary. Four
+processes occupy four routed Linux namespaces and prefixes; peer configurations
+contain public keys but no pairwise wire secret; replay state survives a
+process restart; and every validator converges. The underlying v0 validator is
+reused unchanged through an in-memory authenticated adapter. This advances the
+transport evidence but remains one machine, kernel, and administrator. It is
+neither post-quantum nor independently operated, so issue #73 remains open.
 
 ### 11.4 Automatic fallback
 
