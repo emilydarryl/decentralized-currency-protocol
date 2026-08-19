@@ -22,6 +22,7 @@ import sharechain_multihost_v1 as safety  # noqa: E402
 import sharechain_routed_v1 as routed  # noqa: E402
 import sharechain_sync_v0 as sync  # noqa: E402
 import sharechain_v0 as reference  # noqa: E402
+import run_share_routed_namespace_lab as namespace_lab  # noqa: E402
 
 
 SCRIPT = MODULE_DIR / "sharechain_routed_v1.py"
@@ -128,6 +129,18 @@ def stop(config: dict[str, Any], process: subprocess.Popen[str]) -> None:
 
 
 class RoutedConfigTests(unittest.TestCase):
+    def test_namespace_configs_pin_one_separate_controller_network(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            built = namespace_lab.build_configs(Path(directory))
+            self.assertEqual(
+                {config["control_host"] for config in built.values()},
+                {namespace_lab.CONTROL_HOST},
+            )
+            self.assertNotIn(
+                safety.source_prefix(namespace_lab.CONTROL_HOST),
+                {safety.source_prefix(config["listen_host"]) for config in built.values()},
+            )
+
     def test_config_has_pinned_public_peers_and_no_wire_secret(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             built = configs(Path(directory))

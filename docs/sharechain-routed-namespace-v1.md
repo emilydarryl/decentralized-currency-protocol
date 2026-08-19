@@ -12,7 +12,9 @@ was therefore not protecting the real socket boundary.
 
 This experiment removes that shortcut. Four notebook validators run as four
 separate Linux processes in four network namespaces. Each namespace has a
-private address in a different `/24`, and packets route through the host kernel.
+private address in a different `/24`. A fifth, disposable router namespace
+forwards packets between them, so the experiment does not depend on or alter
+the GitHub host's forwarding policy.
 Before one validator can exchange a share page with another, it must:
 
 1. connect from its pinned namespace address;
@@ -91,11 +93,16 @@ sudo --preserve-env=PATH python3 \
   --output build/share-sync-routed-namespace-v1-evidence.json
 ```
 
-The runner creates four temporary namespaces and four veth pairs, enables IPv4
-forwarding for the run, restores the prior forwarding value, and removes every
-namespace and interface during cleanup. Evidence records stable checks and
-counts, not random ephemeral keys, nonces, or wall-clock values, so its
-commitment is reproducible.
+The runner creates four temporary validator namespaces, one temporary router
+namespace, four routed veth pairs, and one controller veth pair. IPv4
+forwarding is enabled only inside that disposable router namespace. Four
+narrow controller routes are installed for the run. Cleanup removes those
+routes, interfaces, and all five namespaces without changing the host's global
+forwarding setting. Evidence records stable checks and counts, not random
+ephemeral keys, nonces, or wall-clock values, so its commitment is
+reproducible. If the run fails, its error identifies the active phase (for
+example topology setup, fixture seeding, synchronization, or replay testing)
+instead of reporting only a generic socket timeout.
 
 The retained checks require:
 

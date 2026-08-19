@@ -24,6 +24,9 @@ import sharechain_v0 as reference
 FORMAT = "soveroot-share-sync-routed-namespace-evidence-v1"
 SCRIPT = Path(__file__).resolve().parent / "sharechain_routed_v1.py"
 PORT = 19444
+CONTROL_HOST = "10.200.1.2"
+CONTROL_GATEWAY = "10.200.1.1"
+CONTROL_NETWORK = "10.200.1.0/30"
 NODES = {
     "alpha": {
         "host": "10.201.1.2", "gateway": "10.201.1.1",
@@ -76,7 +79,7 @@ def build_configs(runtime: Path) -> dict[str, dict[str, Any]]:
             "listen_host": row["host"],
             "listen_port": PORT,
             "endpoint": f"{row['host']}:{PORT}",
-            "control_host": row["gateway"],
+            "control_host": CONTROL_HOST,
             "state_path": str(runtime / f"{node_id}-state.json"),
             "transport_state_path": str(runtime / f"{node_id}-transport.json"),
             "control_key_hex": fixture_secret(f"control:{node_id}"),
@@ -114,28 +117,62 @@ class NamespaceTopology:
         self.rows = {
             node_id: {
                 "namespace": f"sovr-{suffix}-{index}",
-                "host_if": f"sr{suffix}{index}h",
+                "router_if": f"sr{suffix}{index}r",
                 "node_if": f"sr{suffix}{index}n",
             }
             for index, node_id in enumerate(configs)
         }
+        self.router_namespace = f"sovr-{suffix}-router"
+        self.control_host_if = f"sr{suffix}mh"
+        self.control_router_if = f"sr{suffix}mr"
         self.processes: dict[str, subprocess.Popen[str]] = {}
-        self.original_forwarding: str | None = None
 
     @staticmethod
     def _run(command: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
         return subprocess.run(command, check=check, text=True, capture_output=True, encoding="utf-8")
 
     def setup(self) -> None:
-        self.original_forwarding = Path("/proc/sys/net/ipv4/ip_forward").read_text(encoding="ascii").strip()
-        self._run(["sysctl", "-q", "-w", "net.ipv4.ip_forward=1"])
+        self._run(["ip", "netns", "add", self.router_namespace])
+        self._run([
+            "ip", "link", "add", self.control_host_if, "type", "veth",
+            "peer", "name", self.control_router_if,
+        ])
+        self._run(["ip", "link", "set", self.control_router_if, "netns", self.router_namespace])
+        self._run(["ip", "addr", "add", f"{CONTROL_HOST}/30", "dev", self.control_host_if])
+        self._run(["ip", "link", "set", self.control_host_if, "up"])
+        self._run([
+            "ip", "netns", "exec", self.router_namespace,
+            "ip", "link", "set", "lo", "up",
+        ])
+        self._run([
+            "ip", "netns", "exec", self.router_namespace,
+            "ip", "addr", "add", f"{CONTROL_GATEWAY}/30", "dev", self.control_router_if,
+        ])
+        self._run([
+            "ip", "netns", "exec", self.router_namespace,
+            "ip", "link", "set", self.control_router_if, "up",
+        ])
+        self._run([
+            "ip", "netns", "exec", self.router_namespace,
+            "sysctl", "-q", "-w", "net.ipv4.ip_forward=1",
+        ])
         for node_id, config in self.configs.items():
             row = self.rows[node_id]
             self._run(["ip", "netns", "add", row["namespace"]])
-            self._run(["ip", "link", "add", row["host_if"], "type", "veth", "peer", "name", row["node_if"]])
+            self._run([
+                "ip", "link", "add", row["router_if"], "type", "veth",
+                "peer", "name", row["node_if"],
+            ])
+            self._run(["ip", "link", "set", row["router_if"], "netns", self.router_namespace])
             self._run(["ip", "link", "set", row["node_if"], "netns", row["namespace"]])
-            self._run(["ip", "addr", "add", f"{config['control_host']}/24", "dev", row["host_if"]])
-            self._run(["ip", "link", "set", row["host_if"], "up"])
+            self._run([
+                "ip", "netns", "exec", self.router_namespace, "ip", "addr", "add",
+                f"{NODES[node_id]['gateway']}/24", "dev", row["router_if"],
+            ])
+            self._run([
+                "ip", "netns", "exec", self.router_namespace,
+                "ip", "link", "set", row["router_if"], "up",
+            ])
             self._run(["ip", "netns", "exec", row["namespace"], "ip", "link", "set", "lo", "up"])
             self._run([
                 "ip", "netns", "exec", row["namespace"], "ip", "addr", "add",
@@ -144,7 +181,12 @@ class NamespaceTopology:
             self._run(["ip", "netns", "exec", row["namespace"], "ip", "link", "set", row["node_if"], "up"])
             self._run([
                 "ip", "netns", "exec", row["namespace"], "ip", "route", "add", "default",
-                "via", config["control_host"],
+                "via", NODES[node_id]["gateway"],
+            ])
+            network = f"{config['listen_host'].rsplit('.', 1)[0]}.0/24"
+            self._run([
+                "ip", "route", "add", network, "via", CONTROL_GATEWAY,
+                "dev", self.control_host_if,
             ])
 
     def start_node(self, node_id: str) -> subprocess.Popen[str]:
@@ -206,11 +248,14 @@ class NamespaceTopology:
             self.stop_node(node_id)
         for row in reversed(list(self.rows.values())):
             self._run(["ip", "netns", "del", row["namespace"]], check=False)
-            self._run(["ip", "link", "del", row["host_if"]], check=False)
-        if self.original_forwarding is not None:
+        for config in self.configs.values():
+            network = f"{config['listen_host'].rsplit('.', 1)[0]}.0/24"
             self._run([
-                "sysctl", "-q", "-w", f"net.ipv4.ip_forward={self.original_forwarding}"
+                "ip", "route", "del", network, "via", CONTROL_GATEWAY,
+                "dev", self.control_host_if,
             ], check=False)
+        self._run(["ip", "link", "del", self.control_host_if], check=False)
+        self._run(["ip", "netns", "del", self.router_namespace], check=False)
 
 
 def control(config: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
@@ -229,11 +274,14 @@ def run_lab(runtime: Path) -> dict[str, Any]:
     topology = NamespaceTopology(configs)
     checks: dict[str, bool] = {}
     observations: dict[str, Any] = {}
+    phase = "topology setup"
     try:
         topology.setup()
         for node_id in configs:
+            phase = f"start node {node_id}"
             topology.start_node(node_id)
 
+        phase = "validate topology configuration"
         prefixes = {safety.source_prefix(row["listen_host"]) for row in configs.values()}
         checks["four_non_loopback_routed_prefixes"] = (
             len(prefixes) == 4
@@ -254,21 +302,25 @@ def run_lab(runtime: Path) -> dict[str, Any]:
             item for item in reference.build_corpus()["scenarios"] if item["name"] == "valid_linear_chain"
         )
         root, one, two, three, four = copy.deepcopy(scenario["shares"])
+        phase = "seed delayed-delivery fixtures"
         control(configs["alpha"], {"op": "import", "shares": [root]})
         control(configs["bravo"], {"op": "import", "shares": [two]})
         control(configs["charlie"], {"op": "import", "shares": [four, three]})
         control(configs["delta"], {"op": "import", "shares": [root]})
 
+        phase = "capture initial node status"
         initial = {node_id: status(config) for node_id, config in configs.items()}
         checks["delayed_delivery_crosses_live_process_boundaries"] = (
             initial["alpha"]["accepted_share_count"] == initial["delta"]["accepted_share_count"] == 1
             and initial["bravo"]["orphan_count"] == 1
             and initial["charlie"]["orphan_count"] == 2
         )
+        phase = "synchronize alpha with bravo"
         control(configs["alpha"], {"op": "sync", "peer_id": "bravo"})
         control(configs["alpha"], {"op": "import", "shares": [one]})
         control(configs["alpha"], {"op": "sync", "peer_id": "bravo"})
 
+        phase = "exercise replay protection across charlie restart"
         replay_nonce = fixture_secret("replay:bravo-charlie")
         first_probe = topology.probe("bravo", "charlie", replay_nonce)
         before_restart = status(configs["charlie"])
@@ -284,6 +336,7 @@ def run_lab(runtime: Path) -> dict[str, Any]:
         )
         checks["replayed_live_handshake_is_rejected_after_restart"] = replay_probe.returncode != 0
 
+        phase = "converge all four routed nodes"
         control(configs["bravo"], {"op": "sync", "peer_id": "charlie"})
         control(configs["charlie"], {"op": "sync", "peer_id": "alpha"})
         control(configs["delta"], {"op": "sync", "peer_id": "alpha"})
@@ -313,6 +366,7 @@ def run_lab(runtime: Path) -> dict[str, Any]:
         }
         checks["pinned_source_prefixes_are_observed_on_wire"] = prefixes.issubset(observed)
 
+        phase = "validate persisted signed announcements"
         signed_records = []
         for config in configs.values():
             state = json.loads(Path(config["state_path"]).read_text(encoding="utf-8"))
@@ -325,6 +379,7 @@ def run_lab(runtime: Path) -> dict[str, Any]:
             set(record) == {"signed_announcement"} for record in signed_records
         )
 
+        phase = "assemble routed namespace evidence"
         observations = {
             "final_state_commitment_sha256": final["alpha"]["state_commitment_sha256"],
             "final_selected_tip_share_id": final["alpha"]["selected_state"]["selected_tip_share_id"],
@@ -348,9 +403,12 @@ def run_lab(runtime: Path) -> dict[str, Any]:
             "format": FORMAT,
             "profile": safety.PROTOCOL,
             "topology": {
-                "kind": "linux-network-namespaces-with-routed-veth-prefixes",
+                "kind": "linux-network-namespaces-with-isolated-router",
                 "process_count": 4,
-                "namespace_count": 4,
+                "namespace_count": 5,
+                "node_namespace_count": 4,
+                "router_namespace_count": 1,
+                "control_network": CONTROL_NETWORK,
                 "listener_prefixes": sorted(prefixes),
                 "operator_group_count": 4,
                 "configured_transport_label_count": 2,
@@ -379,6 +437,8 @@ def run_lab(runtime: Path) -> dict[str, Any]:
             failed = [name for name, passed in checks.items() if not passed]
             raise RuntimeError(f"routed namespace lab failed checks: {failed}")
         return evidence
+    except Exception as error:
+        raise RuntimeError(f"{phase}: {error}") from error
     finally:
         topology.cleanup()
 
