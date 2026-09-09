@@ -16,8 +16,12 @@
     "researcher_guide": "docs/pow-v1-independent-research-call.md",
     "challenge_guide": "docs/pow-v1-external-attack-challenge.md",
     "evaluator_runbook": "docs/pow-v1-external-evaluator-runbook.md",
+    "challenge_campaign": "docs/pow-v1-challenge-campaign.md",
+    "ai_assisted_attack_policy": "docs/pow-v1-ai-assisted-attack-policy.md",
+    "challenge_pack_manifest": "contrib/pow_research_v1/challenge_pack_manifest_v0.json",
     "submission_template": ".github/ISSUE_TEMPLATE/pow-attack-submission.md",
     "evaluator_template": ".github/ISSUE_TEMPLATE/pow-attack-evaluator.md",
+    "hardware_review_template": ".github/ISSUE_TEMPLATE/pow-hardware-review.md",
     "submission_manifest_template": "contrib/pow_research_v1/external_attack_submission_template_v0.json",
     "results_template": "contrib/pow_research_v1/external_attack_results_template_v0.json",
     "qualification_cases": "contrib/pow_research_v1/vectors/external_attack_qualification_v0.json"
@@ -44,6 +48,14 @@
     ],
     "separately_developed_model": "A language port, parameter change, or direct derivative is useful evidence but does not count as a separately developed second attack model.",
     "pseudonymous_participation": true
+  },
+  "ai_assistance_policy": {
+    "allowed": true,
+    "required_disclosure": true,
+    "human_accountability_required": true,
+    "counts_as_independent_evaluator": false,
+    "multiple_related_agents_establish_independence": false,
+    "policy": "docs/pow-v1-ai-assisted-attack-policy.md"
   },
   "safety_policy": {
     "execute_submissions_in_project_ci": false,

@@ -28,6 +28,7 @@ Check any areas you can review:
 - [ ] Compiler stack evidence
 - [ ] Physical-memory measurement
 - [ ] Canonical proof and artifact verification
+- [ ] AI provenance and derivative-work review
 
 ## Relevant experience
 
@@ -52,3 +53,4 @@ Disclose project contributions, copied code, shared authorship, private coordina
 - [ ] I will not publish or reuse an evaluator salt before the corresponding source freeze.
 - [ ] I will disclose conflicts and preserve favorable, unfavorable, partial, invalid, and ineligible evidence.
 - [ ] I understand that artifact validation does not prove physical-memory eligibility and that no successful submission does not prove security.
+- [ ] I will not count an AI model or multiple related AI agents as independent evaluators or accountable reviewers.
