@@ -1,0 +1,106 @@
+{
+  "files": [
+    {
+      "bytes": 6221,
+      "path": "docs/pow-v1-candidate-spec.md",
+      "sha3_384": "d9babc5d08a99a1b720df301e48525129a2f6806a35b75f28dea0ecd3ab7b89c99f833f45cb56b9a8befa9841b724079"
+    },
+    {
+      "bytes": 9247,
+      "path": "docs/pow-v1-external-attack-challenge.md",
+      "sha3_384": "5a2865ba7a0aea0cd5dce9323da37b3cf6532b9ad2b0810ef60643462e72963c54396019326c085e428e3db9163e7c0a"
+    },
+    {
+      "bytes": 6826,
+      "path": "docs/pow-v1-external-evaluator-runbook.md",
+      "sha3_384": "c369f9db6887047c1c7a8c0f2ca0f271c7632d8686cce0135a2d50ec19bb97e73e7ca11924706a685d3ad7f4160ef529"
+    },
+    {
+      "bytes": 5694,
+      "path": "docs/pow-v1-independent-research-call.md",
+      "sha3_384": "1587c440fabff4b439b6c6a701083e2f8c5d96820957f77fe58444a0d3b6712b37dc81553e6537c7229a1e550520655b"
+    },
+    {
+      "bytes": 4043,
+      "path": "docs/pow-v1-challenge-campaign.md",
+      "sha3_384": "87ec73e8f8e626a2396386ea12df0b527c6dc74b9a08dff70745bf6709c336cf3838b0511608c090dd4fb25a14a3e79f"
+    },
+    {
+      "bytes": 3763,
+      "path": "docs/pow-v1-ai-assisted-attack-policy.md",
+      "sha3_384": "724e09e8ab225b4ee9bd628ebf1eb33e94cd7606d9d0360cf158670951852d93aa36217ff98a046491c741b935a81ee1"
+    },
+    {
+      "bytes": 4147,
+      "path": "contrib/pow_research_v1/challenge_pack.py",
+      "sha3_384": "2550c885001bf052969b2668bc482cc3c6fc9f2c0cec637d33da18534a0b5a0efebbd7a5fc6684372f82a18c5dc548d2"
+    },
+    {
+      "bytes": 13566,
+      "path": "contrib/pow_research_v1/powvm.py",
+      "sha3_384": "3eba2065cc3711a9d63e7e93f8c6e119f11f3bdc1a772982051115ff7f82bb8d9999bf377de51ba85bfb27c319b84c2d"
+    },
+    {
+      "bytes": 27692,
+      "path": "contrib/pow_research_v1/external_attack_challenge.py",
+      "sha3_384": "a235be6da7558ff459190bf2bc54112d527cb3836beafd7a29e80b6628e825d2e51b5afab506838e0490b2fd21529a64"
+    },
+    {
+      "bytes": 5875,
+      "path": "contrib/pow_research_v1/external_attack_challenge_v0.json",
+      "sha3_384": "bd567d050720cd44ada807e241ff64d3b820a4f823058be567b0abd1755671b4ec71165c608f38d8876739b6c0948293"
+    },
+    {
+      "bytes": 1883,
+      "path": "contrib/pow_research_v1/external_attack_submission_template_v0.json",
+      "sha3_384": "23df29b85de4701fbfbed157d6ffd1dd7e12a2d953f08337aa75381ca5a34d9892524a3fee2458b218d6b8f56f30fc6e"
+    },
+    {
+      "bytes": 1000,
+      "path": "contrib/pow_research_v1/external_attack_results_template_v0.json",
+      "sha3_384": "2136d03b23acfa058f1ad25f61c9d7cff0a865d7546cf00eeed76c6d2da3e6ac8f66d1e1ed75204de099758a40b104eb"
+    },
+    {
+      "bytes": 3834,
+      "path": "contrib/pow_research_v1/independent_research_call_v0.json",
+      "sha3_384": "fff3428daf3048dfcd73dd6d0e7f1c89d5271f1043ea9da49fafdbc637b825add3d8f8667bd06bc9997651d3d51a4480"
+    },
+    {
+      "bytes": 3722,
+      "path": "contrib/pow_research_v1/vectors/v1.json",
+      "sha3_384": "559a3b4817bcea6ca8d5904cc436b202ba0959b98135892e610bf4c011a8a93f694c38423c024a3f1ec709bdda00c7b5"
+    },
+    {
+      "bytes": 4861,
+      "path": "contrib/pow_research_v1/vectors/external_attack_qualification_v0.json",
+      "sha3_384": "2626f5478c231ae889bed5c8048419328f19793477e93cd22e79c479400f10148d0161fc42d4c1f27d127e8e147ca101"
+    },
+    {
+      "bytes": 3105,
+      "path": ".github/ISSUE_TEMPLATE/pow-attack-submission.md",
+      "sha3_384": "b6966e7f9c53dd74269ed02faeea4049bc67ef2760f063453dcfa32a114af92164f7f890ad2ae222109c819bfa0ed0ec"
+    },
+    {
+      "bytes": 2615,
+      "path": ".github/ISSUE_TEMPLATE/pow-attack-evaluator.md",
+      "sha3_384": "1cd52ccdbbfb4ef8e809233810a18cc3f13474cef1c5bb8d0e4641df7a9e9194180f6ac9c80e5c7dbdf4ce5bda8f1a3d"
+    },
+    {
+      "bytes": 1910,
+      "path": ".github/ISSUE_TEMPLATE/pow-hardware-review.md",
+      "sha3_384": "65140966d1f4c573657a65f01efe4e8e012f8a1ed05706464968f3c14b2d50db253691147e33dfaf4fd9aa82c3cd50ca"
+    },
+    {
+      "bytes": 946,
+      "path": "test/pow_research/test_challenge_pack_v1.py",
+      "sha3_384": "b34b95a3be51a6227d70866b1bea6e4b9264be8a16d5df2fea8461f83eba031b37e367ea0147fc46b81f46d4ebb3e34f"
+    }
+  ],
+  "format": "soveroot-pow-v1-challenge-pack-v0",
+  "freeze_rule": "The release tag, commit, archive digest, manifest digest, and verification log must be published before a campaign round opens.",
+  "hash_algorithm": "SHA3-384 over exact file bytes",
+  "purpose": "isolated non-consensus PoW v1 external attack and hardware-review campaign",
+  "self_included": false,
+  "status": "PRE-RELEASE; FREEZE REQUIRES AN ATTRIBUTABLE GIT TAG",
+  "version": "0.1"
+}

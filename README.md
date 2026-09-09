@@ -33,6 +33,8 @@ already run it.
 
 Independent security researchers can start with the open [PoW v1 research call](docs/pow-v1-independent-research-call.md). It explains how to submit a new reduced-memory attack or volunteer as an evaluator, including the project's no-bounty status and untrusted-code safety rules.
 
+The [challenge campaign](docs/pow-v1-challenge-campaign.md) defines a verifiable frozen pack and honest closure criteria. AI-assisted attacks are permitted under a separate [provenance and human-verification policy](docs/pow-v1-ai-assisted-attack-policy.md); AI output never substitutes for independent evaluators or hardware specialists.
+
 ## Documents
 
 - [roadmap.md](docs/roadmap.md) is the concise public view of current status, milestone exit criteria, immediate deliverables, and mainnet-readiness dependencies.

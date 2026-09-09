@@ -33,6 +33,10 @@ Evaluators can help without designing an attack. Useful work includes source rev
 
 Evaluators should read the [external evaluator runbook](pow-v1-external-evaluator-runbook.md) and open an evaluator-interest issue through the repository's issue chooser.
 
+### Use AI to search for attacks
+
+AI-assisted attacks are welcome when their provenance and human verification follow the [AI-assisted attack policy](pow-v1-ai-assisted-attack-policy.md). AI can generate valid adverse evidence, but it is not an independent evaluator or accountable reviewer by itself. Multiple related agents do not satisfy the independent-participation requirement.
+
 ## Submission path
 
 1. Read the [challenge guide](pow-v1-external-attack-challenge.md) and run the public qualification cases.
@@ -44,6 +48,8 @@ Evaluators should read the [external evaluator runbook](pow-v1-external-evaluato
 7. Publish the cases, raw results, commands, environment, review findings, and every favorable or unfavorable row.
 
 Use the [GitHub issue chooser](https://github.com/emilydarryl/decentralized-currency-protocol/issues/new/choose) to begin. Pseudonymous participation is welcome when the code, build, accounting, and evidence are public and reproducible.
+
+Hardware specialists may instead open a **PoW v1 hardware review** issue. The time-bounded public-round procedure and minimum participation targets are defined in the [challenge campaign](pow-v1-challenge-campaign.md).
 
 ## What makes a submission valuable
 

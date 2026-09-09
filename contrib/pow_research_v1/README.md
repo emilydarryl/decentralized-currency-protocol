@@ -27,6 +27,8 @@ The independent attack interface is frozen in [`external_attack_challenge_v0.jso
 
 The open participation state is recorded in [`independent_research_call_v0.json`](independent_research_call_v0.json). Researchers should begin with the [public call](../../docs/pow-v1-independent-research-call.md); reviewers should follow the [external evaluator runbook](../../docs/pow-v1-external-evaluator-runbook.md). The call offers no bounty or token allocation, never sends submitted code through project CI, and cannot treat a lack of successful submissions as evidence of security.
 
+The [challenge campaign](../../docs/pow-v1-challenge-campaign.md) adds a verifiable release pack, minimum participation targets, and explicit inconclusive closure outcomes. AI-assisted work follows the [AI-assisted attack policy](../../docs/pow-v1-ai-assisted-attack-policy.md): it can produce attack evidence, but it cannot act as an independent evaluator or accountable reviewer.
+
 Adversarial methods are versioned separately. The no-spill exact-output replay baseline is documented in [`recomputation_baseline_v0.json`](recomputation_baseline_v0.json) and [the corresponding method note](../../docs/pow-v1-recomputation-baseline.md). Its 150% peak scratch allocation makes it explicitly ineligible for the half-memory gate.
 
 The metadata-aware cache lower-bound method is frozen in [`budgeted_cache_screen_v0.json`](budgeted_cache_screen_v0.json) and [its method note](../../docs/pow-v1-budgeted-cache-screen.md). It compares online LRU with an offline-optimal oracle under an explicit half-scratch byte budget; misses remain diagnostic rather than valid proofs.

@@ -32,6 +32,18 @@ Explain the strategy, expected advantage, and how it differs from the repository
 
 Disclose copied code, shared authorship, prior collaboration, and conceptual dependence on earlier attacks.
 
+## AI assistance
+
+- Classification: human-origin/AI-assisted, AI-origin/human-verified, AI derivative, none, or provenance insufficient
+- Provider and model/version:
+- Human operators and dates:
+- Public prompt-and-action record or `none`:
+- Files and prior attacks supplied as model context:
+- Model-generated or model-modified artifacts:
+- Human verification performed:
+
+Follow the [AI-assisted attack policy](https://github.com/emilydarryl/decentralized-currency-protocol/blob/main/docs/pow-v1-ai-assisted-attack-policy.md). Do not publish private chain-of-thought, credentials, personal data, or unrevealed evaluator salts.
+
 ## Accounting
 
 - Declared peak mutable per-attempt attack bytes:
@@ -55,3 +67,4 @@ Disclose copied code, shared authorship, prior collaboration, and conceptual dep
 - [ ] The runner does not use spill files, databases, memory-mapped backing, network helpers, hidden workers, or future-aware retained traces.
 - [ ] I understand that artifact validation does not prove physical-memory eligibility and that reviewers will run untrusted code only in a disposable, network-disabled environment.
 - [ ] I agree that complete, partial, refused, invalid, and unfavorable evaluation rows may be published.
+- [ ] I disclosed material AI assistance and accept human responsibility for every submitted claim.
