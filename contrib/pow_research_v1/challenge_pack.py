@@ -42,12 +42,13 @@ class PackError(ValueError):
     """The challenge pack is incomplete or differs from its manifest."""
 
 
+def _canonical_file_bytes(path: Path) -> bytes:
+    """Return repository-canonical bytes independent of Git EOL checkout mode."""
+    return path.read_bytes().replace(b"\r\n", b"\n")
+
+
 def _sha3_384(path: Path) -> str:
-    digest = hashlib.sha3_384()
-    with path.open("rb") as source:
-        for block in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+    return hashlib.sha3_384(_canonical_file_bytes(path)).hexdigest()
 
 
 def build_document(root: Path = ROOT) -> dict[str, object]:
@@ -59,7 +60,7 @@ def build_document(root: Path = ROOT) -> dict[str, object]:
         files.append(
             {
                 "path": relative,
-                "bytes": path.stat().st_size,
+                "canonical_bytes": len(_canonical_file_bytes(path)),
                 "sha3_384": _sha3_384(path),
             }
         )
@@ -68,7 +69,7 @@ def build_document(root: Path = ROOT) -> dict[str, object]:
         "version": "0.1",
         "status": "PRE-RELEASE; FREEZE REQUIRES AN ATTRIBUTABLE GIT TAG",
         "purpose": "isolated non-consensus PoW v1 external attack and hardware-review campaign",
-        "hash_algorithm": "SHA3-384 over exact file bytes",
+        "hash_algorithm": "SHA3-384 over repository-canonical bytes after CRLF-to-LF normalization",
         "self_included": False,
         "freeze_rule": "The release tag, commit, archive digest, manifest digest, and verification log must be published before a campaign round opens.",
         "files": files,
