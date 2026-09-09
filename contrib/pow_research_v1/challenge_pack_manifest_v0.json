@@ -1,104 +1,104 @@
 {
   "files": [
     {
-      "bytes": 6221,
+      "canonical_bytes": 6089,
       "path": "docs/pow-v1-candidate-spec.md",
-      "sha3_384": "d9babc5d08a99a1b720df301e48525129a2f6806a35b75f28dea0ecd3ab7b89c99f833f45cb56b9a8befa9841b724079"
+      "sha3_384": "9c24408d25d9140bd954c548699e6bda13513bbf70a327f03d5923ba66e63dd0cec1764c69e153052eb1dbcddc884dc3"
     },
     {
-      "bytes": 9247,
+      "canonical_bytes": 9111,
       "path": "docs/pow-v1-external-attack-challenge.md",
-      "sha3_384": "5a2865ba7a0aea0cd5dce9323da37b3cf6532b9ad2b0810ef60643462e72963c54396019326c085e428e3db9163e7c0a"
+      "sha3_384": "509c9f79c5459d6e9af2950515e70a6bb3ef911d2a09809806c95b36690f05a2f76e426f10e75ca7dcc1fafb0cc20cf4"
     },
     {
-      "bytes": 6826,
+      "canonical_bytes": 6697,
       "path": "docs/pow-v1-external-evaluator-runbook.md",
-      "sha3_384": "c369f9db6887047c1c7a8c0f2ca0f271c7632d8686cce0135a2d50ec19bb97e73e7ca11924706a685d3ad7f4160ef529"
+      "sha3_384": "5bd0c7ffc49314b56290ed84c0fbafa749a991b569d2b4d7b3ba5c35960f1aca59187e53ca2fb83e6e488fd7bf1ca6a3"
     },
     {
-      "bytes": 5694,
+      "canonical_bytes": 5627,
       "path": "docs/pow-v1-independent-research-call.md",
-      "sha3_384": "1587c440fabff4b439b6c6a701083e2f8c5d96820957f77fe58444a0d3b6712b37dc81553e6537c7229a1e550520655b"
+      "sha3_384": "c6a97b828624f2f40f311100bfa19f5aa0545a9906cc476df114165b97fde15d8dbe2a160fb655196f3cda0857acbbd5"
     },
     {
-      "bytes": 4043,
+      "canonical_bytes": 4043,
       "path": "docs/pow-v1-challenge-campaign.md",
       "sha3_384": "87ec73e8f8e626a2396386ea12df0b527c6dc74b9a08dff70745bf6709c336cf3838b0511608c090dd4fb25a14a3e79f"
     },
     {
-      "bytes": 3763,
+      "canonical_bytes": 3763,
       "path": "docs/pow-v1-ai-assisted-attack-policy.md",
       "sha3_384": "724e09e8ab225b4ee9bd628ebf1eb33e94cd7606d9d0360cf158670951852d93aa36217ff98a046491c741b935a81ee1"
     },
     {
-      "bytes": 4147,
+      "canonical_bytes": 4268,
       "path": "contrib/pow_research_v1/challenge_pack.py",
-      "sha3_384": "2550c885001bf052969b2668bc482cc3c6fc9f2c0cec637d33da18534a0b5a0efebbd7a5fc6684372f82a18c5dc548d2"
+      "sha3_384": "37e65749f736479b646e4521adf4b8f4f33864673cff9552c7b52f27c3cac0b3b00e17c7409c04f6eccb95306f687934"
     },
     {
-      "bytes": 13566,
+      "canonical_bytes": 13205,
       "path": "contrib/pow_research_v1/powvm.py",
-      "sha3_384": "3eba2065cc3711a9d63e7e93f8c6e119f11f3bdc1a772982051115ff7f82bb8d9999bf377de51ba85bfb27c319b84c2d"
+      "sha3_384": "3be69b185a3d5df8be3f154bc23d4a849bc50a1d211caca472d505d5d307bfd946e1d9778f7b698e4812d286e4b1a85e"
     },
     {
-      "bytes": 27692,
+      "canonical_bytes": 27110,
       "path": "contrib/pow_research_v1/external_attack_challenge.py",
-      "sha3_384": "a235be6da7558ff459190bf2bc54112d527cb3836beafd7a29e80b6628e825d2e51b5afab506838e0490b2fd21529a64"
+      "sha3_384": "7f3a70b23bbaff9cd370d501ddd3d66f98e2fd52ba1af904f8f1937ce8304aeeda0f797438777959d7bc7d7d300814fb"
     },
     {
-      "bytes": 5875,
+      "canonical_bytes": 5765,
       "path": "contrib/pow_research_v1/external_attack_challenge_v0.json",
-      "sha3_384": "bd567d050720cd44ada807e241ff64d3b820a4f823058be567b0abd1755671b4ec71165c608f38d8876739b6c0948293"
+      "sha3_384": "141a99c849b66dc8459db4edfb2dbc712cf76bd6f21709ac897c92bedfb44c363988a358b08d05cc9792d2785e8ed040"
     },
     {
-      "bytes": 1883,
+      "canonical_bytes": 1838,
       "path": "contrib/pow_research_v1/external_attack_submission_template_v0.json",
-      "sha3_384": "23df29b85de4701fbfbed157d6ffd1dd7e12a2d953f08337aa75381ca5a34d9892524a3fee2458b218d6b8f56f30fc6e"
+      "sha3_384": "b7331e5de458f90cb80010e30483a67f469aaaf25525fbb86f3d1d8becbf654740fc7ba4a6023cfb37dcd7c666868bf6"
     },
     {
-      "bytes": 1000,
+      "canonical_bytes": 973,
       "path": "contrib/pow_research_v1/external_attack_results_template_v0.json",
-      "sha3_384": "2136d03b23acfa058f1ad25f61c9d7cff0a865d7546cf00eeed76c6d2da3e6ac8f66d1e1ed75204de099758a40b104eb"
+      "sha3_384": "8963055996d7b65672144aedeb9ca7b18a55312f3240e877d438db09d1613d14c1277b02f806b4c979662d925b4396ff"
     },
     {
-      "bytes": 3834,
+      "canonical_bytes": 3766,
       "path": "contrib/pow_research_v1/independent_research_call_v0.json",
-      "sha3_384": "fff3428daf3048dfcd73dd6d0e7f1c89d5271f1043ea9da49fafdbc637b825add3d8f8667bd06bc9997651d3d51a4480"
+      "sha3_384": "3ad12e799e0fc4ffb7bfa20d212cd5113bac99b2fcc8f86a6932e225bcf1d71b76b0c9953cd871265444e36b6a788e6a"
     },
     {
-      "bytes": 3722,
+      "canonical_bytes": 3645,
       "path": "contrib/pow_research_v1/vectors/v1.json",
-      "sha3_384": "559a3b4817bcea6ca8d5904cc436b202ba0959b98135892e610bf4c011a8a93f694c38423c024a3f1ec709bdda00c7b5"
+      "sha3_384": "3993967dfb024f6844c9087526936e360c58268aad7e3d396cf5bef72e5dd69b2dd75649ac8700d589465529e24b9383"
     },
     {
-      "bytes": 4861,
+      "canonical_bytes": 4783,
       "path": "contrib/pow_research_v1/vectors/external_attack_qualification_v0.json",
-      "sha3_384": "2626f5478c231ae889bed5c8048419328f19793477e93cd22e79c479400f10148d0161fc42d4c1f27d127e8e147ca101"
+      "sha3_384": "9f4c29fbee606bb9de2f2b7880e90ec488668658ec729b6024c0e4ef7db5a9d4b332ce97d459fb0d0c57febdb7ed3556"
     },
     {
-      "bytes": 3105,
+      "canonical_bytes": 3052,
       "path": ".github/ISSUE_TEMPLATE/pow-attack-submission.md",
-      "sha3_384": "b6966e7f9c53dd74269ed02faeea4049bc67ef2760f063453dcfa32a114af92164f7f890ad2ae222109c819bfa0ed0ec"
+      "sha3_384": "4926e0ce68fc9d3981ae881278ea020460d667b0c60310fe0aae008cc38ac65d365075ea322aa033011fe99201f9d0f4"
     },
     {
-      "bytes": 2615,
+      "canonical_bytes": 2563,
       "path": ".github/ISSUE_TEMPLATE/pow-attack-evaluator.md",
-      "sha3_384": "1cd52ccdbbfb4ef8e809233810a18cc3f13474cef1c5bb8d0e4641df7a9e9194180f6ac9c80e5c7dbdf4ce5bda8f1a3d"
+      "sha3_384": "4b18f430129909e2564bd4db57de4d58daf7a7b459ce66cd47051cfb2a568b1a0e8ce471ba6c8357a1a269a114c7f984"
     },
     {
-      "bytes": 1910,
+      "canonical_bytes": 1910,
       "path": ".github/ISSUE_TEMPLATE/pow-hardware-review.md",
       "sha3_384": "65140966d1f4c573657a65f01efe4e8e012f8a1ed05706464968f3c14b2d50db253691147e33dfaf4fd9aa82c3cd50ca"
     },
     {
-      "bytes": 946,
+      "canonical_bytes": 1414,
       "path": "test/pow_research/test_challenge_pack_v1.py",
-      "sha3_384": "b34b95a3be51a6227d70866b1bea6e4b9264be8a16d5df2fea8461f83eba031b37e367ea0147fc46b81f46d4ebb3e34f"
+      "sha3_384": "0c2dd1c5f9801de0171ddc98e3c3c52c5c0b731862e282337774895502580f24d2bdee3fa26352e33eff10959876c6db"
     }
   ],
   "format": "soveroot-pow-v1-challenge-pack-v0",
   "freeze_rule": "The release tag, commit, archive digest, manifest digest, and verification log must be published before a campaign round opens.",
-  "hash_algorithm": "SHA3-384 over exact file bytes",
+  "hash_algorithm": "SHA3-384 over repository-canonical bytes after CRLF-to-LF normalization",
   "purpose": "isolated non-consensus PoW v1 external attack and hardware-review campaign",
   "self_included": false,
   "status": "PRE-RELEASE; FREEZE REQUIRES AN ATTRIBUTABLE GIT TAG",
